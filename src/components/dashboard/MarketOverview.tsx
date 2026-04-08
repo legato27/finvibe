@@ -1,6 +1,8 @@
 "use client";
 import { useEffect, useRef } from "react";
 
+const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
+
 /**
  * TradingView Market Overview widget — shows major indices with mini-charts.
  */
@@ -20,15 +22,12 @@ export function MarketOverview() {
       dateRange: "1D",
       showChart: true,
       locale: "en",
-      largeChartUrl: "",
+      largeChartUrl: `https://www.tradingview.com/chart/${AFF_PARAMS}&`,
       isTransparent: true,
       showSymbolLogo: true,
       showFloatingTooltip: true,
       width: "100%",
       height: "100%",
-      utm_source: "finvibe",
-      utm_medium: "widget",
-      utm_campaign: "market-overview",
       tabs: [
         {
           title: "Indices",
@@ -74,25 +73,19 @@ export function MarketOverview() {
 
     const wrapper = document.createElement("div");
     wrapper.className = "tradingview-widget-container__widget";
-    wrapper.style.height = "100%";
+    wrapper.style.height = "calc(100% - 32px)";
     wrapper.style.width = "100%";
     containerRef.current.appendChild(wrapper);
+
+    // Copyright attribution with affiliate link
+    const copyright = document.createElement("div");
+    copyright.className = "tradingview-widget-copyright";
+    copyright.innerHTML = `<a href="https://www.tradingview.com/markets/${AFF_PARAMS}" target="_blank" rel="noopener noreferrer"><span class="blue-text">Track all markets on TradingView</span></a>`;
+    containerRef.current.appendChild(copyright);
+
     containerRef.current.appendChild(script);
 
-    // Inject affiliate ID into TradingView copyright links
-    const observer = new MutationObserver(() => {
-      containerRef.current?.querySelectorAll<HTMLAnchorElement>('a[href*="tradingview.com"]').forEach((a) => {
-        if (!a.href.includes("aff_id")) {
-          const url = new URL(a.href);
-          url.searchParams.set("aff_id", "165399");
-          a.href = url.toString();
-        }
-      });
-    });
-    if (containerRef.current) observer.observe(containerRef.current, { childList: true, subtree: true });
-
     return () => {
-      observer.disconnect();
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
   }, []);
