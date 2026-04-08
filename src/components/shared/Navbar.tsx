@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, LogOut } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 export default function Navbar() {
@@ -48,6 +48,13 @@ export default function Navbar() {
           >
             <BarChart2 className="w-4 h-4" />
             Dashboard
+          </Link>
+          <Link
+            href="/watchlist"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-slate-400 hover:text-foreground hover:bg-white/5 transition-colors"
+          >
+            <BookOpen className="w-4 h-4" />
+            Watchlists
           </Link>
           <Link
             href="/portfolio"
