@@ -10,8 +10,17 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "VibeFin | Market Dashboard",
-  description: "Real-time market intelligence dashboard",
+  title: "VibeFin | Your Daily Market Vibe Check",
+  description: "Real-time market intelligence dashboard — macro regime, VIX, GEX, sector rotation, breadth, crypto, and news sentiment in one view.",
+  icons: {
+    icon: "/vibefin-icon.svg",
+    apple: "/vibefin-icon.svg",
+  },
+  openGraph: {
+    title: "VibeFin",
+    description: "Your daily market vibe check",
+    type: "website",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

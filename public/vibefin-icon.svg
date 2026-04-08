@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="VibeFin icon">
+  <rect width="64" height="64" rx="14" fill="#0F172A"/>
+  <text x="32" y="38" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="28" font-weight="600" fill="#E2E8F0" letter-spacing="-1">vf</text>
+  <path d="M14 46 Q22 36 30 46 T46 46" fill="none" stroke="#0891B2" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="46" cy="46" r="3" fill="#0891B2"/>
+</svg>

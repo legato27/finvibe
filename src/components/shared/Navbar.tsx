@@ -1,15 +1,19 @@
 "use client";
 import Link from "next/link";
-import { Activity, BarChart2 } from "lucide-react";
+import Image from "next/image";
+import { BarChart2 } from "lucide-react";
 
 export default function Navbar() {
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
       <div className="container mx-auto px-4 max-w-[1600px] flex items-center h-14 gap-6">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2 font-bold text-primary">
-          <Activity className="w-5 h-5" />
-          <span className="font-mono text-sm">VIBEFIN</span>
+        <Link href="/" className="flex items-center gap-2">
+          <Image src="/vibefin-icon.svg" alt="VibeFin" width={28} height={28} />
+          <div className="flex flex-col">
+            <span className="text-sm font-semibold text-foreground leading-tight">vibefin</span>
+            <span className="text-[10px] text-slate-500 leading-tight hidden sm:block">your daily market vibe check</span>
+          </div>
         </Link>
 
         {/* Nav */}

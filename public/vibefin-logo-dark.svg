@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" role="img" aria-label="VibeFin logo">
+  <title>VibeFin</title>
+  <desc>VibeFin wordmark with wave underline and tagline: your daily market vibe check</desc>
+  <text x="300" y="120" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="96" font-weight="500" fill="#E2E8F0" letter-spacing="-3">vibefin</text>
+  <path d="M150 152 Q187 118 225 152 T300 152 T375 152 T450 152" fill="none" stroke="#0891B2" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="450" cy="152" r="8" fill="#0891B2"/>
+  <text x="300" y="200" text-anchor="middle" font-family="-apple-system, 'Helvetica Neue', Arial, sans-serif" font-size="22" font-weight="400" fill="#94A3B8" letter-spacing="0.5">your daily market vibe check</text>
+</svg>

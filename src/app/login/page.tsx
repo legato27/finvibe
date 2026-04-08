@@ -1,19 +1,14 @@
 "use client";
 import { signIn } from "next-auth/react";
-import { Activity } from "lucide-react";
+import Image from "next/image";
 
 export default function LoginPage() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="card max-w-sm w-full mx-4 p-8 text-center">
-        <div className="flex items-center justify-center gap-2 mb-6">
-          <Activity className="w-8 h-8 text-primary" />
-          <h1 className="text-2xl font-bold font-mono text-primary">VIBEFIN</h1>
+        <div className="flex justify-center mb-6">
+          <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={240} height={96} priority />
         </div>
-
-        <p className="text-sm text-slate-400 mb-8">
-          Market intelligence dashboard. Sign in to continue.
-        </p>
 
         <button
           onClick={() => signIn("github", { callbackUrl: "/" })}
