@@ -26,6 +26,9 @@ export function MarketOverview() {
       showFloatingTooltip: true,
       width: "100%",
       height: "100%",
+      utm_source: "finvibe",
+      utm_medium: "widget",
+      utm_campaign: "market-overview",
       tabs: [
         {
           title: "Indices",
@@ -76,7 +79,20 @@ export function MarketOverview() {
     containerRef.current.appendChild(wrapper);
     containerRef.current.appendChild(script);
 
+    // Inject affiliate ID into TradingView copyright links
+    const observer = new MutationObserver(() => {
+      containerRef.current?.querySelectorAll<HTMLAnchorElement>('a[href*="tradingview.com"]').forEach((a) => {
+        if (!a.href.includes("aff_id")) {
+          const url = new URL(a.href);
+          url.searchParams.set("aff_id", "165399");
+          a.href = url.toString();
+        }
+      });
+    });
+    if (containerRef.current) observer.observe(containerRef.current, { childList: true, subtree: true });
+
     return () => {
+      observer.disconnect();
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
   }, []);
