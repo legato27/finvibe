@@ -1,14 +1,15 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut, LogIn } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
+  const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
 
@@ -24,9 +25,17 @@ export default function Navbar() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/");
     router.refresh();
   }
+
+  const navItems = [
+    { href: "/", label: "Dashboard", icon: BarChart2, public: true },
+    { href: "/watchlist", label: "Watchlists", icon: BookOpen, public: false },
+    { href: "/portfolio", label: "Portfolio", icon: Briefcase, public: false },
+  ];
+
+  const visibleItems = navItems.filter((item) => item.public || user);
 
   return (
     <header className="border-b border-border bg-card/50 backdrop-blur sticky top-0 z-50">
@@ -42,32 +51,25 @@ export default function Navbar() {
 
         {/* Nav */}
         <nav className="flex gap-1">
-          <Link
-            href="/"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-slate-400 hover:text-foreground hover:bg-white/5 transition-colors"
-          >
-            <BarChart2 className="w-4 h-4" />
-            Dashboard
-          </Link>
-          <Link
-            href="/watchlist"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-slate-400 hover:text-foreground hover:bg-white/5 transition-colors"
-          >
-            <BookOpen className="w-4 h-4" />
-            Watchlists
-          </Link>
-          <Link
-            href="/portfolio"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-slate-400 hover:text-foreground hover:bg-white/5 transition-colors"
-          >
-            <Briefcase className="w-4 h-4" />
-            Portfolio
-          </Link>
+          {visibleItems.map(({ href, label, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
+                pathname === href
+                  ? "bg-primary/20 text-primary"
+                  : "text-slate-400 hover:text-foreground hover:bg-white/5"
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {label}
+            </Link>
+          ))}
         </nav>
 
-        {/* Right side: user */}
+        {/* Right side */}
         <div className="ml-auto flex items-center gap-3">
-          {user && (
+          {user ? (
             <>
               <span className="text-xs text-slate-400 hidden sm:block">
                 {user.user_metadata?.full_name || user.email}
@@ -80,6 +82,14 @@ export default function Navbar() {
                 <LogOut className="w-3.5 h-3.5" />
               </button>
             </>
+          ) : (
+            <Link
+              href="/login"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-primary hover:bg-primary/10 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Sign in
+            </Link>
           )}
         </div>
       </div>

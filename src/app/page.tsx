@@ -1,7 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
-import { macroApi, watchlistApi } from "@/lib/api";
+import { macroApi } from "@/lib/api";
 import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 import { TodayPanel } from "@/components/dashboard/TodayPanel";
 import { MacroTape } from "@/components/dashboard/MacroTape";
@@ -12,13 +12,12 @@ import { SwarmIndicator } from "@/components/dashboard/SwarmIndicator";
 import { BusinessCycleWheel } from "@/components/dashboard/BusinessCycleWheel";
 import { SectorRotationHeatmap } from "@/components/dashboard/SectorRotationHeatmap";
 import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
-// CryptoFearGreed merged into CryptoIndicators card
 import { GexCard } from "@/components/dashboard/GexCard";
 import { BreadthStrip } from "@/components/dashboard/BreadthStrip";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 
 export default function DashboardPage() {
-  const { setVix, setBusinessCycle, setSectorRotation, setSwarm, setWatchlist } = useAppStore();
+  const { setVix, setBusinessCycle, setSectorRotation, setSwarm } = useAppStore();
 
   useQuery({
     queryKey: ["macro_dashboard"],
@@ -32,16 +31,6 @@ export default function DashboardPage() {
     },
     refetchInterval: 60 * 1000,
     staleTime: 50 * 1000,
-  });
-
-  useQuery({
-    queryKey: ["watchlist"],
-    queryFn: async () => {
-      const data = await watchlistApi.list();
-      setWatchlist(data);
-      return data;
-    },
-    staleTime: 30_000,
   });
 
   return (

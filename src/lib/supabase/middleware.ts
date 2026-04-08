@@ -29,16 +29,22 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Redirect unauthenticated users to login (except public routes)
+  // Public routes — accessible without login
   const isPublicRoute =
+    request.nextUrl.pathname === "/" ||
     request.nextUrl.pathname.startsWith("/login") ||
     request.nextUrl.pathname.startsWith("/register") ||
-    request.nextUrl.pathname.startsWith("/api/auth") ||
+    request.nextUrl.pathname.startsWith("/api/") ||
     request.nextUrl.pathname.startsWith("/_next") ||
     request.nextUrl.pathname === "/favicon.ico" ||
     request.nextUrl.pathname.endsWith(".svg");
 
-  if (!user && !isPublicRoute) {
+  // Protected routes — redirect to login if not authenticated
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith("/watchlist") ||
+    request.nextUrl.pathname.startsWith("/portfolio");
+
+  if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
