@@ -37,7 +37,7 @@ export function VixGauge() {
   if (!vix) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading VIX...</div>
+        <div className="text-muted-foreground text-sm animate-pulse">Loading VIX...</div>
       </div>
     );
   }
@@ -78,7 +78,7 @@ export function VixGauge() {
             >
               <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
               <RadialBar
-                background={{ fill: "#1e293b" }}
+                background={{ fill: "var(--perf-null, #1e293b)" }}
                 dataKey="value"
                 cornerRadius={6}
                 angleAxisId={0}
@@ -89,7 +89,7 @@ export function VixGauge() {
             <span className="text-2xl sm:text-3xl font-bold font-mono" style={{ color }}>
               {vix.current.toFixed(1)}
             </span>
-            <span className="text-xs text-slate-500">VIX</span>
+            <span className="text-xs text-muted-foreground">VIX</span>
           </div>
         </div>
 
@@ -108,8 +108,8 @@ export function VixGauge() {
               { label: "Avg", value: vix.avg_52w, tip: "52-week average VIX. Current VIX above this = above-average fear. Below = relative calm. The long-term VIX average is ~19-20." },
               { label: "52W High", value: vix.high_52w, tip: "Highest VIX spike in the past year. Extreme VIX spikes (>40) often mark capitulation bottoms — historically good buying opportunities for long-term investors." },
             ].map(({ label, value: v, tip }) => (
-              <div key={label} className="bg-slate-800/50 rounded p-1.5 sm:p-2 cursor-help" title={tip}>
-                <div className="text-[10px] sm:text-xs text-slate-500 flex items-center justify-center gap-0.5">
+              <div key={label} className="bg-muted/50 rounded p-1.5 sm:p-2 cursor-help" title={tip}>
+                <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-center gap-0.5">
                   {label} <InfoTip tip={tip} size={10} />
                 </div>
                 <div className="font-mono font-semibold text-xs sm:text-sm">{v.toFixed(1)}</div>
@@ -123,7 +123,7 @@ export function VixGauge() {
       {ts && (
         <div className="border-t border-border/50 mt-2 pt-2">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5">
               Term Structure
               <InfoTip size={10} tip="VIX term structure shows implied volatility across different time horizons. CONTANGO (normal): longer-dated VIX > short-dated = calm markets. BACKWARDATION (danger): short-dated VIX > long-dated = near-term fear spiking, investors paying up for immediate protection. Backwardation often precedes or accompanies sharp sell-offs." />
             </span>
@@ -141,10 +141,10 @@ export function VixGauge() {
               const isHigher = prev != null && val != null && val > prev;
               const isLower = prev != null && val != null && val < prev;
               return (
-                <div key={key} className="flex-1 text-center bg-slate-800/40 rounded py-1 px-1">
-                  <div className="text-[9px] text-slate-500">{key}</div>
+                <div key={key} className="flex-1 text-center bg-muted/40 rounded py-1 px-1">
+                  <div className="text-[9px] text-muted-foreground">{key}</div>
                   <div className={`text-xs font-mono font-bold ${
-                    isHigher ? "text-red-400" : isLower ? "text-green-400" : "text-slate-300"
+                    isHigher ? "text-red-400" : isLower ? "text-green-400" : "text-foreground"
                   }`}>
                     {val?.toFixed(1) ?? "—"}
                   </div>
@@ -153,7 +153,7 @@ export function VixGauge() {
             })}
           </div>
           {termStructure.spread_9d_3m != null && (
-            <div className="text-[9px] text-slate-500 mt-1 italic">
+            <div className="text-[9px] text-muted-foreground mt-1 italic">
               9D–3M spread: <span className={termStructure.spread_9d_3m > 0 ? "text-red-400" : "text-green-400"}>
                 {termStructure.spread_9d_3m > 0 ? "+" : ""}{termStructure.spread_9d_3m}
               </span>

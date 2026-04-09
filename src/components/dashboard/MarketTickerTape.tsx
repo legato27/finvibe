@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useTheme } from "@/components/shared/ThemeProvider";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -8,6 +9,7 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketTickerTape() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -33,7 +35,7 @@ export function MarketTickerTape() {
       showSymbolLogo: true,
       isTransparent: true,
       displayMode: "adaptive",
-      colorTheme: "dark",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
       locale: "en",
     });
 
@@ -52,7 +54,7 @@ export function MarketTickerTape() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, []);
+  }, [resolvedTheme]);
 
   return (
     <div

@@ -14,7 +14,7 @@ const REGIME_STYLE: Record<string, { color: string; bg: string; border: string }
 const STANCE_STYLE: Record<string, { color: string; icon: typeof TrendingUp }> = {
   overweight:        { color: "text-green-400", icon: TrendingUp },
   "slight overweight": { color: "text-green-300", icon: TrendingUp },
-  neutral:           { color: "text-slate-400", icon: Minus },
+  neutral:           { color: "text-muted-foreground", icon: Minus },
   "slight underweight": { color: "text-orange-300", icon: TrendingDown },
   underweight:       { color: "text-red-400", icon: TrendingDown },
 };
@@ -22,7 +22,7 @@ const STANCE_STYLE: Record<string, { color: string; icon: typeof TrendingUp }> =
 const IMPACT_COLOR: Record<string, string> = {
   positive: "text-green-400",
   negative: "text-red-400",
-  neutral: "text-slate-400",
+  neutral: "text-muted-foreground",
 };
 
 export function TodayPanel() {
@@ -36,7 +36,7 @@ export function TodayPanel() {
   if (isLoading || !today || today.error) {
     return (
       <div className="card flex items-center justify-center py-8">
-        <div className="text-slate-500 text-sm animate-pulse">Building today&apos;s view...</div>
+        <div className="text-muted-foreground text-sm animate-pulse">Building today&apos;s view...</div>
       </div>
     );
   }
@@ -52,7 +52,7 @@ export function TodayPanel() {
         <div className="flex items-center gap-3">
           <Shield className={`w-6 h-6 ${rs.color}`} />
           <div>
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
+            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
               Today &middot; {today.date}
             </div>
             <div className={`text-xl font-black ${rs.color}`}>
@@ -61,7 +61,7 @@ export function TodayPanel() {
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] text-slate-500 flex items-center gap-0.5 justify-end">
+          <div className="text-[10px] text-muted-foreground flex items-center gap-0.5 justify-end">
             Risk Score <InfoTip size={10} tip="Composite of VIX level, term structure, market breadth, dealer GEX, and swarm signal. Ranges -100 (max fear) to +100 (max greed). Drives the regime label and positioning guidance." />
           </div>
           <div className={`text-3xl font-black font-mono ${rs.color}`}>
@@ -71,15 +71,15 @@ export function TodayPanel() {
       </div>
 
       {/* Score bar */}
-      <div className="relative h-2.5 bg-slate-800 rounded-full overflow-hidden">
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-600 z-10" />
+      <div className="relative h-2.5 bg-muted rounded-full overflow-hidden">
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted-foreground/40 z-10" />
         <div className="absolute top-0 bottom-0 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 opacity-20 w-full" />
         <div
           className="absolute top-0 h-full w-3 rounded-full bg-white shadow-lg shadow-white/30 transition-all duration-700"
           style={{ left: `calc(${normalized}% - 6px)` }}
         />
       </div>
-      <div className="flex justify-between text-[9px] text-slate-600 font-mono -mt-1">
+      <div className="flex justify-between text-[9px] text-muted-foreground/60 font-mono -mt-1">
         <span>Risk-Off</span>
         <span>Neutral</span>
         <span>Risk-On</span>
@@ -96,7 +96,7 @@ export function TodayPanel() {
               className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
                 v > 5 ? "text-green-400 border-green-500/30 bg-green-500/5" :
                 v < -5 ? "text-red-400 border-red-500/30 bg-red-500/5" :
-                "text-slate-400 border-slate-600 bg-slate-800/30"
+                "text-muted-foreground border-border bg-muted/30"
               }`}
             >
               {label} {v > 0 ? "+" : ""}{v}
@@ -109,7 +109,7 @@ export function TodayPanel() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Positioning */}
         <div>
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2 flex items-center gap-1">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 flex items-center gap-1">
             <Zap className="w-3 h-3" /> Positioning
             <InfoTip size={10} tip="Suggested asset allocation tilts based on current regime. Overweight = increase exposure. Underweight = reduce exposure. These are regime signals, not investment advice." />
           </div>
@@ -120,7 +120,7 @@ export function TodayPanel() {
               return (
                 <div key={p.asset} className="flex items-center gap-2 py-0.5">
                   <Icon className={`w-3 h-3 flex-shrink-0 ${st.color}`} />
-                  <span className="text-xs text-slate-300 flex-1">{p.asset}</span>
+                  <span className="text-xs text-foreground flex-1">{p.asset}</span>
                   <span className={`text-[10px] font-mono font-medium ${st.color}`}>
                     {p.stance}
                   </span>
@@ -132,7 +132,7 @@ export function TodayPanel() {
 
         {/* Key signals */}
         <div>
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2 flex items-center gap-1">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium mb-2 flex items-center gap-1">
             <AlertTriangle className="w-3 h-3" /> Key Signals
             <InfoTip size={10} tip="The individual signals driving today's regime assessment, ranked by weight. These are the data points that matter most for risk management right now." />
           </div>
@@ -141,10 +141,10 @@ export function TodayPanel() {
               <div key={i} className="flex items-start gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
                   s.impact === "positive" ? "bg-green-400" :
-                  s.impact === "negative" ? "bg-red-400" : "bg-slate-500"
+                  s.impact === "negative" ? "bg-red-400" : "bg-muted-foreground"
                 }`} />
                 <div className="flex-1">
-                  <span className={`text-xs ${IMPACT_COLOR[s.impact] || "text-slate-400"}`}>
+                  <span className={`text-xs ${IMPACT_COLOR[s.impact] || "text-muted-foreground"}`}>
                     {s.signal}
                   </span>
                   {s.weight === "high" && (

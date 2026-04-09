@@ -25,7 +25,7 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
             data.momentum === "bullish" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
           }`}>{data.momentum === "bullish" ? "Bull" : "Bear"}</span>
         </div>
-        <div className="text-[10px] text-slate-500 font-mono">
+        <div className="text-[10px] text-muted-foreground font-mono">
           7D ${data.ma7?.toLocaleString()} · 30D ${data.ma30?.toLocaleString()}
         </div>
       </div>
@@ -76,7 +76,7 @@ export function CryptoIndicators() {
   if (isLoading) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading crypto...</div>
+        <div className="text-muted-foreground text-sm animate-pulse">Loading crypto...</div>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function CryptoIndicators() {
   if (error || !btc) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm">Crypto data unavailable</div>
+        <div className="text-muted-foreground text-sm">Crypto data unavailable</div>
       </div>
     );
   }
@@ -102,7 +102,7 @@ export function CryptoIndicators() {
           Crypto
           <InfoTip tip="Live crypto prices from Binance. Momentum is based on 7-day vs 30-day moving average crossover. Bullish = price above both MAs and 7D > 30D. Bearish = price below MAs or 7D < 30D." />
         </span>
-        <span className="text-[10px] text-slate-500">Live</span>
+        <span className="text-[10px] text-muted-foreground">Live</span>
       </div>
       <div className="flex-1 divide-y divide-border/30">
         <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-orange-400 flex-shrink-0" />} />
@@ -115,7 +115,7 @@ export function CryptoIndicators() {
         <div className="border-t border-border/30 pt-2 mt-1">
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <div className="text-[10px] text-slate-500 flex items-center gap-0.5 mb-1">
+              <div className="text-[10px] text-muted-foreground flex items-center gap-0.5 mb-1">
                 Fear & Greed Index
                 <InfoTip size={9} tip="Alternative.me Fear & Greed Index for crypto. Combines volatility, volume, social media, BTC dominance, and Google Trends. 0 = Extreme Fear (historically a buy signal). 100 = Extreme Greed (sell signal). A contrarian indicator — be greedy when others are fearful." />
               </div>
@@ -126,7 +126,7 @@ export function CryptoIndicators() {
                   style={{ left: `calc(${fng.value}% - 4px)` }}
                 />
               </div>
-              <div className="flex justify-between text-[8px] text-slate-600 mt-0.5">
+              <div className="flex justify-between text-[8px] text-muted-foreground/60 mt-0.5">
                 <span>Fear</span>
                 <span>Greed</span>
               </div>

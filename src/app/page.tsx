@@ -43,7 +43,7 @@ export default function DashboardPage() {
       {/* ── Header ───────────────────────────────────────── */}
       <div>
         <h1 className="text-base sm:text-lg font-bold text-foreground">Market Dashboard</h1>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-muted-foreground">
           Decision surface &middot; Macro &middot; Breadth &middot; GEX &middot; Cross-asset
         </p>
       </div>

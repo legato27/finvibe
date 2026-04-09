@@ -12,7 +12,7 @@ const WINDOWS = [
 ] as const;
 
 function perfColor(value: number | undefined): string {
-  if (value === undefined || value === null) return "#1e293b";
+  if (value === undefined || value === null) return "var(--perf-null, #1e293b)";
   if (value >= 10) return "#14532d";
   if (value >= 5) return "#166534";
   if (value >= 2) return "#15803d";
@@ -50,12 +50,18 @@ export function SectorRotationHeatmap() {
   if (!sectorRotation || sectorRotation.length === 0) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading Sectors...</div>
+        <div className="text-muted-foreground text-sm animate-pulse">Loading Sectors...</div>
       </div>
     );
   }
 
-  const sorted = [...sectorRotation].sort((a, b) => (a.rs_rank || 11) - (b.rs_rank || 11));
+  // Sort by 60D Forward return (descending) if available, else by RS Rank
+  const sorted = [...sectorRotation].sort((a, b) => {
+    const fa = forecastMap[a.sector] ?? -Infinity;
+    const fb = forecastMap[b.sector] ?? -Infinity;
+    if (fa !== -Infinity || fb !== -Infinity) return fb - fa;
+    return (a.rs_rank || 11) - (b.rs_rank || 11);
+  });
 
   // Build forecast lookup: sector name → expected return
   const forecastMap: Record<string, number> = {};
@@ -78,25 +84,25 @@ export function SectorRotationHeatmap() {
               {regimeData.regime} regime
             </span>
           )}
-          <span className="text-xs text-slate-500">RS Rank</span>
+          <span className="text-xs text-muted-foreground">RS Rank</span>
         </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="text-slate-500">
+            <tr className="text-muted-foreground">
               <th className="text-left pb-2 pr-2 font-normal w-36">Sector</th>
               <th className="text-center pb-2 px-1 font-normal">ETF</th>
+              {regimeData && (
+                <th className="text-center pb-2 px-1 font-normal w-16" title="Expected 60-day forward return based on current regime">
+                  60D Fwd
+                </th>
+              )}
               {WINDOWS.map(({ label }) => (
                 <th key={label} className="text-center pb-2 px-1 font-normal w-14">{label}</th>
               ))}
               <th className="text-center pb-2 pl-1 font-normal">Rank</th>
-              {regimeData && (
-                <th className="text-center pb-2 pl-1 font-normal w-16" title="Expected 60-day forward return based on current regime">
-                  60D Fwd
-                </th>
-              )}
             </tr>
           </thead>
           <tbody>
@@ -104,10 +110,25 @@ export function SectorRotationHeatmap() {
               const forecast = forecastMap[row.sector];
               return (
                 <tr key={row.sector} className="border-t border-border/30">
-                  <td className="py-1 pr-2 text-slate-300 font-medium truncate max-w-[140px]" title={row.sector}>
+                  <td className="py-1 pr-2 text-foreground font-medium truncate max-w-[140px]" title={row.sector}>
                     {row.sector.replace("Consumer ", "Con. ").replace("Communication ", "Comm. ")}
                   </td>
-                  <td className="py-1 px-1 text-center font-mono text-slate-400">{row.etf_ticker}</td>
+                  <td className="py-1 px-1 text-center font-mono text-muted-foreground">{row.etf_ticker}</td>
+                  {regimeData && (
+                    <td className="py-1 px-1 text-center">
+                      {forecast != null ? (
+                        <span
+                          className="font-mono font-bold text-[11px]"
+                          style={{ color: forecastColor(forecast) }}
+                          title={`In past ${regimeData.regime} regimes, ${row.sector} averaged ${forecast}% over 60 days`}
+                        >
+                          {forecast >= 0 ? "+" : ""}{forecast.toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground/50">—</span>
+                      )}
+                    </td>
+                  )}
                   {WINDOWS.map(({ key }) => {
                     const val = row[key];
                     return (
@@ -135,21 +156,6 @@ export function SectorRotationHeatmap() {
                       #{Math.round(row.rs_rank || 11)}
                     </span>
                   </td>
-                  {regimeData && (
-                    <td className="py-1 pl-1 text-center">
-                      {forecast != null ? (
-                        <span
-                          className="font-mono font-bold text-[11px]"
-                          style={{ color: forecastColor(forecast) }}
-                          title={`In past ${regimeData.regime} regimes, ${row.sector} averaged ${forecast}% over 60 days`}
-                        >
-                          {forecast >= 0 ? "+" : ""}{forecast.toFixed(1)}%
-                        </span>
-                      ) : (
-                        <span className="text-slate-600">—</span>
-                      )}
-                    </td>
-                  )}
                 </tr>
               );
             })}
@@ -160,7 +166,7 @@ export function SectorRotationHeatmap() {
       {/* Regime forecast legend */}
       {regimeData && (
         <div className="border-t border-border/30 mt-1 pt-1.5 px-1">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] text-slate-500">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] text-muted-foreground">
             <span>
               <span className="text-primary font-medium">60D Fwd</span> = historical avg return in{" "}
               <span className="text-primary">{regimeData.regime}</span> regimes (not a prediction)

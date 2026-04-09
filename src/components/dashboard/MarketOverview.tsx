@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useTheme } from "@/components/shared/ThemeProvider";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -8,6 +9,7 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketOverview() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -18,7 +20,7 @@ export function MarketOverview() {
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      colorTheme: "dark",
+      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
       dateRange: "1D",
       showChart: true,
       locale: "en",
@@ -88,7 +90,7 @@ export function MarketOverview() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, []);
+  }, [resolvedTheme]);
 
   return (
     <div className="card overflow-hidden h-full">
