@@ -10,18 +10,15 @@ export function MarketOverview() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.innerHTML = "";
-
-    const isDark = document.documentElement.classList.contains("dark");
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = "";
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js";
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      colorTheme: isDark ? "dark" : "light",
+      colorTheme: "dark",
       dateRange: "1D",
       showChart: true,
       locale: "en",
@@ -78,16 +75,19 @@ export function MarketOverview() {
     wrapper.className = "tradingview-widget-container__widget";
     wrapper.style.height = "calc(100% - 32px)";
     wrapper.style.width = "100%";
-    el.appendChild(wrapper);
+    containerRef.current.appendChild(wrapper);
 
+    // Copyright attribution with affiliate link
     const copyright = document.createElement("div");
     copyright.className = "tradingview-widget-copyright";
     copyright.innerHTML = `<a href="https://www.tradingview.com/markets/${AFF_PARAMS}" target="_blank" rel="noopener noreferrer"><span class="blue-text">Track all markets on TradingView</span></a>`;
-    el.appendChild(copyright);
+    containerRef.current.appendChild(copyright);
 
-    el.appendChild(script);
+    containerRef.current.appendChild(script);
 
-    return () => { el.innerHTML = ""; };
+    return () => {
+      if (containerRef.current) containerRef.current.innerHTML = "";
+    };
   }, []);
 
   return (

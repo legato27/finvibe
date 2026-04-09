@@ -36,9 +36,9 @@ export function CryptoFearGreed() {
   const history = fng.history_7d || [];
 
   return (
-    <div className="bg-muted/40 rounded-lg p-3 border border-border/30">
+    <div className="bg-slate-800/40 rounded-lg p-3 border border-border/30">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+        <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
           Crypto Fear & Greed
           <InfoTip size={9} tip="Alternative.me Fear & Greed Index for crypto. Combines volatility, volume, social media, BTC dominance, and Google Trends. 0 = Extreme Fear (buy signal historically). 100 = Extreme Greed (sell signal). Contrarian indicator — buy when others are fearful." />
         </span>

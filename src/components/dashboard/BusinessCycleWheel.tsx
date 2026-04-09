@@ -81,7 +81,7 @@ export function BusinessCycleWheel() {
   if (!cycle) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">Detecting Cycle...</div>
+        <div className="text-slate-500 text-sm animate-pulse">Detecting Cycle...</div>
       </div>
     );
   }
@@ -101,7 +101,7 @@ export function BusinessCycleWheel() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowLegend(!showLegend)}
-            className="text-xs text-muted-foreground hover:text-foreground px-2 py-0.5 rounded border border-border hover:border-primary/50 transition-colors"
+            className="text-xs text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded border border-slate-700 hover:border-slate-500 transition-colors"
           >
             {showLegend ? "Hide Legend" : "? Legend"}
           </button>
@@ -120,15 +120,15 @@ export function BusinessCycleWheel() {
 
       {/* Legend panel */}
       {showLegend && (
-        <div className="mb-3 rounded-lg border border-border/60 bg-muted/60 p-3 text-xs space-y-3">
-          <div className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">
+        <div className="mb-3 rounded-lg border border-slate-700/60 bg-slate-900/60 p-3 text-xs space-y-3">
+          <div className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
             Cycle Phase Guide — HMM (4-State Gaussian)
           </div>
           {STATES.map((s) => {
             const cfg = STATE_CONFIG[s];
             const isActive = s === currentState;
             return (
-              <div key={s} className={`flex gap-2.5 p-2 rounded ${isActive ? "bg-muted/70" : ""}`}>
+              <div key={s} className={`flex gap-2.5 p-2 rounded ${isActive ? "bg-slate-800/70" : ""}`}>
                 <div className="mt-0.5 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
@@ -139,20 +139,20 @@ export function BusinessCycleWheel() {
                     >
                       {cfg.signal}
                     </span>
-                    {isActive && <span className="text-[10px] text-muted-foreground">← current</span>}
+                    {isActive && <span className="text-[10px] text-slate-400">← current</span>}
                   </div>
-                  <p className="text-muted-foreground leading-relaxed">{cfg.detail}</p>
+                  <p className="text-slate-400 leading-relaxed">{cfg.detail}</p>
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    <span className="text-[10px] text-muted-foreground">Favour: </span>
+                    <span className="text-[10px] text-slate-500">Favour: </span>
                     {cfg.assets.map((a) => (
-                      <span key={a} className="px-1.5 py-0.5 rounded text-[10px] bg-muted text-foreground">{a}</span>
+                      <span key={a} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300">{a}</span>
                     ))}
                   </div>
                 </div>
               </div>
             );
           })}
-          <p className="text-[10px] text-muted-foreground/60 pt-1 border-t border-border">
+          <p className="text-[10px] text-slate-600 pt-1 border-t border-slate-800">
             Model: Gaussian HMM trained on FRED data (T10Y2Y, UNRATE, CPI, INDPRO). States mapped by yield-curve mean.
           </p>
         </div>
@@ -161,7 +161,7 @@ export function BusinessCycleWheel() {
       <div className="flex gap-4 items-start">
         {/* SVG Wheel */}
         <svg width={176} height={176} className="flex-shrink-0">
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--perf-null, #1e293b)" strokeWidth={20} />
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e293b" strokeWidth={20} />
 
           {STATES.map((state, i) => {
             const startAngle = -90 + i * 90;
@@ -195,7 +195,7 @@ export function BusinessCycleWheel() {
                   dominantBaseline="middle"
                   fontSize={7.5}
                   fontWeight={isActive ? "bold" : "normal"}
-                  fill={isActive ? cfg.color : "var(--svg-muted, #475569)"}
+                  fill={isActive ? cfg.color : "#475569"}
                 >
                   {cfg.abbr}
                 </text>
@@ -204,11 +204,11 @@ export function BusinessCycleWheel() {
           })}
 
           {/* Centre */}
-          <circle cx={cx} cy={cy} r={34} fill="var(--svg-bg, #0a0a12)" />
+          <circle cx={cx} cy={cy} r={34} fill="#0a0a12" />
           <text x={cx} y={cy - 9} textAnchor="middle" fontSize={18} fill={currentConfig.color}>
             {currentConfig.icon}
           </text>
-          <text x={cx} y={cy + 9} textAnchor="middle" fontSize={8} fontWeight="bold" fill="var(--svg-muted, #94a3b8)">
+          <text x={cx} y={cy + 9} textAnchor="middle" fontSize={8} fontWeight="bold" fill="#94a3b8">
             {currentConfig.abbr}
           </text>
         </svg>
@@ -218,7 +218,7 @@ export function BusinessCycleWheel() {
 
           {/* Probabilities */}
           <div>
-            <div className="text-xs text-muted-foreground mb-1.5">State Probabilities</div>
+            <div className="text-xs text-slate-500 mb-1.5">State Probabilities</div>
             {STATES.map((state) => {
               const prob = ((cycle.probabilities?.[state] ?? 0) as number);
               const cfg = STATE_CONFIG[state];
@@ -231,7 +231,7 @@ export function BusinessCycleWheel() {
                   >
                     {cfg.phase}
                   </div>
-                  <div className="flex-1 bg-muted rounded-full h-1.5">
+                  <div className="flex-1 bg-slate-800 rounded-full h-1.5">
                     <div
                       className="h-1.5 rounded-full transition-all duration-500"
                       style={{ width: `${prob * 100}%`, backgroundColor: cfg.color }}
@@ -267,8 +267,8 @@ export function BusinessCycleWheel() {
               {Object.entries(cycle.indicator_values as Record<string, number>)
                 .slice(0, 4)
                 .map(([key, val]) => (
-                  <div key={key} className="bg-muted/50 rounded p-1.5">
-                    <div className="text-[10px] text-muted-foreground leading-tight truncate">
+                  <div key={key} className="bg-slate-800/50 rounded p-1.5">
+                    <div className="text-[10px] text-slate-500 leading-tight truncate">
                       {getIndicatorLabel(key)}
                     </div>
                     <div className="font-mono text-xs font-semibold">

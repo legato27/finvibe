@@ -25,9 +25,6 @@
     --danger-bg: 0 84% 95%;
     --warning: 38 92% 45%;
     --warning-bg: 48 96% 93%;
-    --perf-null: #e2e8f0;
-    --svg-bg: #f1f5f9;
-    --svg-muted: #64748b;
   }
 
   /* ── Dark mode ────────────────────────────────────────── */
@@ -52,9 +49,6 @@
     --danger-bg: 0 63% 8%;
     --warning: 38 92% 50%;
     --warning-bg: 48 96% 8%;
-    --perf-null: #1e293b;
-    --svg-bg: #0a0a12;
-    --svg-muted: #94a3b8;
   }
 
   body {

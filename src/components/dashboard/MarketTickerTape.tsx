@@ -10,12 +10,8 @@ export function MarketTickerTape() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.innerHTML = "";
-
-    // Read current theme from DOM
-    const isDark = document.documentElement.classList.contains("dark");
+    if (!containerRef.current) return;
+    containerRef.current.innerHTML = "";
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
@@ -37,22 +33,25 @@ export function MarketTickerTape() {
       showSymbolLogo: true,
       isTransparent: true,
       displayMode: "adaptive",
-      colorTheme: isDark ? "dark" : "light",
+      colorTheme: "dark",
       locale: "en",
     });
 
     const wrapper = document.createElement("div");
     wrapper.className = "tradingview-widget-container__widget";
-    el.appendChild(wrapper);
+    containerRef.current.appendChild(wrapper);
 
+    // Copyright attribution with affiliate link
     const copyright = document.createElement("div");
     copyright.className = "tradingview-widget-copyright";
     copyright.innerHTML = `<a href="https://www.tradingview.com/${AFF_PARAMS}" target="_blank" rel="noopener noreferrer"><span class="blue-text">Track all markets on TradingView</span></a>`;
-    el.appendChild(copyright);
+    containerRef.current.appendChild(copyright);
 
-    el.appendChild(script);
+    containerRef.current.appendChild(script);
 
-    return () => { el.innerHTML = ""; };
+    return () => {
+      if (containerRef.current) containerRef.current.innerHTML = "";
+    };
   }, []);
 
   return (

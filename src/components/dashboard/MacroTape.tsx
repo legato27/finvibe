@@ -68,11 +68,11 @@ export function MacroTape() {
   return (
     <div className="card">
       <div className="flex items-center justify-between px-3 pt-2 pb-1">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
+        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
           Macro Tape
           <InfoTip tip="Cross-asset macro indicators that provide context for equity positioning. These 6 instruments together tell you about dollar strength, interest rates, inflation expectations, credit stress, and global growth. Divergences between them often signal regime shifts before equities react." />
         </span>
-        <span className="text-[9px] text-muted-foreground/60">3M sparklines</span>
+        <span className="text-[9px] text-slate-600">3M sparklines</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border/20">
@@ -84,13 +84,13 @@ export function MacroTape() {
           return (
             <div key={inst.key} className="bg-card p-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
                   {inst.label}
                   <InfoTip size={9} tip={INSTRUMENT_TIPS[inst.key] || `${inst.label} — cross-asset macro indicator.`} />
                 </span>
               </div>
 
-              <div className="text-sm font-bold font-mono text-foreground">
+              <div className="text-sm font-bold font-mono text-slate-200">
                 {inst.key === "US10Y" ? `${inst.value}%` :
                  inst.key === "DXY" ? inst.value.toFixed(2) :
                  `$${inst.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
