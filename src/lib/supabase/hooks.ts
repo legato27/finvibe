@@ -169,19 +169,113 @@ export function useLLMAnalysis(ticker: string) {
   });
 }
 
-// ── Portfolio ───────────────────────────────────────────────
+// ── Portfolios (containers) ────────────────────────────────
 
-export function usePortfolio() {
+export function usePortfolios() {
   return useQuery({
-    queryKey: ["portfolio"],
+    queryKey: ["portfolios"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("portfolio_holdings")
+        .from("portfolios")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true });
       if (error) throw error;
       return data;
     },
+    staleTime: 30_000,
+  });
+}
+
+export function useCreatePortfolio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ name, description }: { name: string; description?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("portfolios")
+        .insert({ user_id: user.id, name, description })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolios"] }),
+  });
+}
+
+export function useDeletePortfolio() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (portfolioId: number) => {
+      const { error } = await supabase.from("portfolios").delete().eq("id", portfolioId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portfolios"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+    },
+  });
+}
+
+// ── Portfolio Holdings ─────────────────────────────────────
+
+export interface HoldingWithPrice {
+  id: number;
+  ticker: string;
+  shares: number;
+  cost_basis: number;
+  acquired_date: string | null;
+  notes: string | null;
+  portfolio_id: number;
+  // Joined from stock_catalog
+  name?: string;
+  current_price?: number;
+  last_price_updated_at?: string;
+  sector?: string;
+}
+
+export function usePortfolioHoldings(portfolioId: number | null) {
+  return useQuery({
+    queryKey: ["portfolio-holdings", portfolioId],
+    queryFn: async (): Promise<HoldingWithPrice[]> => {
+      if (!portfolioId) return [];
+
+      // 1. Fetch holdings
+      const { data: holdings, error } = await supabase
+        .from("portfolio_holdings")
+        .select("*")
+        .eq("portfolio_id", portfolioId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!holdings?.length) return [];
+
+      // 2. Fetch prices from stock_catalog
+      const tickers = [...new Set(holdings.map((h: any) => h.ticker))];
+      const { data: stocks } = await supabase
+        .from("stock_catalog")
+        .select("ticker, name, last_price, last_price_updated_at, sector")
+        .in("ticker", tickers);
+
+      const stockMap: Record<string, any> = {};
+      for (const s of stocks || []) {
+        stockMap[s.ticker] = s;
+      }
+
+      // 3. Merge
+      return holdings.map((h: any) => {
+        const stock = stockMap[h.ticker];
+        return {
+          ...h,
+          name: stock?.name || undefined,
+          current_price: stock?.last_price || undefined,
+          last_price_updated_at: stock?.last_price_updated_at || undefined,
+          sector: stock?.sector || undefined,
+        };
+      });
+    },
+    enabled: !!portfolioId,
     staleTime: 30_000,
   });
 }
@@ -193,20 +287,44 @@ export function useAddHolding() {
       ticker: string;
       shares: number;
       cost_basis: number;
+      portfolio_id: number;
       acquired_date?: string;
       notes?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+
+      // Ensure ticker exists in stock_catalog
+      const upperTicker = holding.ticker.toUpperCase();
+      const { data: existing } = await supabase
+        .from("stock_catalog")
+        .select("id")
+        .eq("ticker", upperTicker)
+        .single();
+
+      if (!existing) {
+        await supabase
+          .from("stock_catalog")
+          .insert({ ticker: upperTicker, enrichment_status: "pending" });
+      }
+
       const { data, error } = await supabase
         .from("portfolio_holdings")
-        .insert({ ...holding, ticker: holding.ticker.toUpperCase(), user_id: user.id })
+        .insert({
+          ticker: upperTicker,
+          shares: holding.shares,
+          cost_basis: holding.cost_basis,
+          portfolio_id: holding.portfolio_id,
+          acquired_date: holding.acquired_date || null,
+          notes: holding.notes || null,
+          user_id: user.id,
+        })
         .select()
         .single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-holdings"] }),
   });
 }
 
@@ -220,7 +338,7 @@ export function useUpdateHolding() {
         .eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-holdings"] }),
   });
 }
 
@@ -231,7 +349,7 @@ export function useDeleteHolding() {
       const { error } = await supabase.from("portfolio_holdings").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio"] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-holdings"] }),
   });
 }
 

@@ -52,7 +52,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
   if (type === "mean_reversion") {
     const z = pred.z_score;
     const signal = pred.signal || (Math.abs(z || 0) > 2 ? "MEAN REVERT" : "EQUILIBRIUM");
-    const color = (z || 0) > 2 ? "text-red-400" : (z || 0) < -2 ? "text-green-400" : "text-slate-400";
+    const color = (z || 0) > 2 ? "text-red-400" : (z || 0) < -2 ? "text-green-400" : "text-muted-foreground";
     return { value: z != null ? z.toFixed(2) : "—", label: signal.replace(/_/g, " "), color };
   }
 
@@ -87,7 +87,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
     return { value: `${(ret * 100).toFixed(1)}%`, label: "3M return", color };
   }
 
-  return { value: "—", label: "", color: "text-slate-500" };
+  return { value: "—", label: "", color: "text-muted-foreground" };
 }
 
 export function ModelCards({ ticker }: { ticker: string }) {
@@ -101,14 +101,14 @@ export function ModelCards({ ticker }: { ticker: string }) {
   if (isLoading) {
     return (
       <div className="card p-8 flex items-center justify-center">
-        <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!results || results.length === 0) {
     return (
-      <div className="card p-8 text-center text-slate-500 text-sm">
+      <div className="card p-8 text-center text-muted-foreground text-sm">
         No quant model results available yet. Models run automatically before FinVibe&apos;s Thoughts generation.
       </div>
     );
@@ -136,12 +136,12 @@ export function ModelCards({ ticker }: { ticker: string }) {
             className={`rounded-lg border p-3 transition-colors ${
               isEnsemble
                 ? "border-primary/30 bg-primary/5 col-span-2 md:col-span-1"
-                : "border-border/30 bg-white/[0.02] hover:bg-white/[0.04]"
+                : "border-border/30 bg-accent/30 hover:bg-accent/50"
             }`}
           >
             <div className="flex items-center gap-2 mb-2">
-              <span className={isEnsemble ? "text-primary" : "text-slate-500"}>{meta.icon}</span>
-              <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-slate-300"}`}>
+              <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{meta.icon}</span>
+              <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-foreground/80"}`}>
                 {meta.label}
               </span>
             </div>
@@ -153,7 +153,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
                 {signal.label}
               </div>
             )}
-            <div className="text-[10px] text-slate-600 mt-1.5 leading-tight">
+            <div className="text-[10px] text-muted-foreground/60 mt-1.5 leading-tight">
               {meta.desc}
             </div>
           </div>

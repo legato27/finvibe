@@ -19,14 +19,14 @@ export function MarketDirectionCard({ horizon, direction, priceAction }: MarketD
           ? "border-green-500/30 bg-green-500/5"
           : isBearish
           ? "border-red-500/30 bg-red-500/5"
-          : "border-slate-600/30 bg-slate-600/5"
+          : "border-border bg-muted/30"
       }`}
     >
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs text-slate-400 uppercase tracking-wider">{horizon}</span>
+        <span className="text-xs text-muted-foreground uppercase tracking-wider">{horizon}</span>
         <div
           className={`flex items-center gap-1 text-xs font-semibold ${
-            isBullish ? "text-green-400" : isBearish ? "text-red-400" : "text-slate-400"
+            isBullish ? "text-green-400" : isBearish ? "text-red-400" : "text-muted-foreground"
           }`}
         >
           {isBullish ? (
@@ -39,7 +39,7 @@ export function MarketDirectionCard({ horizon, direction, priceAction }: MarketD
           {direction}
         </div>
       </div>
-      <p className="text-xs text-slate-300 leading-relaxed">{priceAction}</p>
+      <p className="text-xs text-foreground/80 leading-relaxed">{priceAction}</p>
     </div>
   );
 }

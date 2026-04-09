@@ -23,9 +23,24 @@ export const metadata: Metadata = {
   },
 };
 
+// Inline script to prevent FOUC — runs before React hydrates
+const themeScript = `
+(function() {
+  try {
+    var t = localStorage.getItem('vibefin-theme');
+    var dark = t === 'dark' || (t !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (dark) document.documentElement.classList.add('dark');
+    else document.documentElement.classList.remove('dark');
+  } catch(e) {}
+})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
         <Providers>{children}</Providers>
       </body>

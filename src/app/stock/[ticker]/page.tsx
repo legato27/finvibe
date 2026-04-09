@@ -51,17 +51,17 @@ export default function StockDetailPage() {
   if (detailLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-500" />
+        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (!detail) {
     return (
-      <div className="card p-12 text-center text-slate-500 max-w-[800px] mx-auto">
+      <div className="card p-12 text-center text-muted-foreground max-w-[800px] mx-auto">
         <Brain className="w-12 h-12 mx-auto mb-3 opacity-30" />
         <p className="text-sm">Stock {ticker} not found in watchlist.</p>
-        <p className="text-xs text-slate-600 mt-1">
+        <p className="text-xs text-muted-foreground/60 mt-1">
           Add it to a watchlist first to see detailed analysis.
         </p>
       </div>
@@ -94,7 +94,7 @@ export default function StockDetailPage() {
           ═══════════════════════════════════════════════════ */}
       <div className="card p-5">
         <div className="flex items-start gap-4">
-          <Link href="/watchlist" className="text-slate-500 hover:text-primary mt-1 transition-colors">
+          <Link href="/watchlist" className="text-muted-foreground hover:text-primary mt-1 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
 
@@ -102,7 +102,7 @@ export default function StockDetailPage() {
             {/* Row 1: Ticker + name + badges */}
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold font-mono text-primary">{ticker}</h1>
-              <span className="text-lg text-slate-300 truncate">{detail.name}</span>
+              <span className="text-lg text-foreground/80 truncate">{detail.name}</span>
               {detail.moat_rating && detail.moat_rating !== "None" && (
                 <span className={`text-[10px] px-2 py-0.5 rounded ${
                   detail.moat_rating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
@@ -118,12 +118,12 @@ export default function StockDetailPage() {
                 </span>
               )}
               {detail.asset_type && detail.asset_type !== "stock" && (
-                <span className="text-[10px] px-2 py-0.5 bg-slate-700/50 text-slate-400 rounded uppercase tracking-wider">
+                <span className="text-[10px] px-2 py-0.5 bg-muted text-muted-foreground rounded uppercase tracking-wider">
                   {detail.asset_type}
                 </span>
               )}
               {(detail.sector || stockInfo?.sector) && (
-                <span className="text-[10px] px-2 py-0.5 bg-slate-800 rounded text-slate-500">
+                <span className="text-[10px] px-2 py-0.5 bg-muted rounded text-muted-foreground">
                   {detail.sector || stockInfo?.sector}
                 </span>
               )}
@@ -140,10 +140,10 @@ export default function StockDetailPage() {
               {/* Quarterly trend */}
               {detail.quarterly_trend && (
                 <span className={`flex items-center gap-1 text-sm font-mono ${
-                  detail.quarterly_trend === "up" ? "text-green-400" : detail.quarterly_trend === "down" ? "text-red-400" : "text-slate-500"
+                  detail.quarterly_trend === "up" ? "text-green-400" : detail.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
                 }`}>
                   {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                  <span className="text-xs text-slate-500">Q</span>
+                  <span className="text-xs text-muted-foreground">Q</span>
                 </span>
               )}
 
@@ -208,10 +208,10 @@ export default function StockDetailPage() {
                 .filter(({ value }) => value !== null)
                 .map(({ label, value, sub, color }, i) => (
                   <div key={`${label}-${sub || i}`} className="text-center min-w-[60px]">
-                    <div className="text-[10px] text-slate-500">
+                    <div className="text-[10px] text-muted-foreground">
                       {label}{sub ? <span className="text-blue-400/60 ml-0.5">({sub})</span> : null}
                     </div>
-                    <div className={`font-mono text-sm font-semibold ${color || "text-slate-200"}`}>{value}</div>
+                    <div className={`font-mono text-sm font-semibold ${color || "text-foreground"}`}>{value}</div>
                   </div>
                 ))}
             </div>
@@ -224,7 +224,7 @@ export default function StockDetailPage() {
           ═══════════════════════════════════════════════════ */}
       {description && (
         <div className="card px-5 py-3">
-          <p className={`text-sm text-slate-400 leading-relaxed ${
+          <p className={`text-sm text-muted-foreground leading-relaxed ${
             !descExpanded && isLongDesc ? "line-clamp-2" : ""
           }`}>
             {description}
@@ -244,7 +244,7 @@ export default function StockDetailPage() {
       {/* ═══════════════════════════════════════════════════
           TABS
           ═══════════════════════════════════════════════════ */}
-      <div className="flex gap-1 bg-slate-900/50 p-1 rounded-lg border border-border/30">
+      <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30">
         {tabs.map((tab) => (
           <button
             key={tab.id}
@@ -252,7 +252,7 @@ export default function StockDetailPage() {
             className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-all flex-1 justify-center ${
               activeTab === tab.id
                 ? "bg-primary/20 text-primary shadow-sm"
-                : "text-slate-500 hover:text-slate-300 hover:bg-white/[0.03]"
+                : "text-muted-foreground hover:text-foreground/80 hover:bg-accent/50"
             }`}
           >
             {tab.icon}

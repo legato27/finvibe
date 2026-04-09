@@ -20,14 +20,14 @@ function Section({ title, content, defaultOpen = false }: { title: string; conte
     <div className="border-b border-border/20 last:border-0">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between py-3 text-left hover:bg-white/[0.02] transition-colors px-1"
+        className="w-full flex items-center justify-between py-3 text-left hover:bg-accent/50 transition-colors px-1"
       >
-        <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">{title}</span>
-        {open ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
+        <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">{title}</span>
+        {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
       </button>
       {open && (
         <div className="pb-3 px-1">
-          <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-line">{content}</p>
+          <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">{content}</p>
         </div>
       )}
     </div>
@@ -60,7 +60,7 @@ export function FinVibeThoughts({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Brain className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-slate-300">FinVibe&apos;s Thoughts</h2>
+            <h2 className="text-sm font-semibold text-foreground/80">FinVibe&apos;s Thoughts</h2>
           </div>
           <button
             onClick={handleGenerate}
@@ -71,7 +71,7 @@ export function FinVibeThoughts({
             {isGenerating ? "Generating..." : "Generate Analysis"}
           </button>
         </div>
-        <div className="py-8 text-center text-slate-500 text-sm">
+        <div className="py-8 text-center text-muted-foreground text-sm">
           <Brain className="w-10 h-10 mx-auto mb-2 opacity-30" />
           No analysis available yet. Click &quot;Generate Analysis&quot; to create one.
         </div>
@@ -88,9 +88,9 @@ export function FinVibeThoughts({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-semibold text-slate-300">FinVibe&apos;s Thoughts</h2>
+          <h2 className="text-sm font-semibold text-foreground/80">FinVibe&apos;s Thoughts</h2>
           {generatedAt && (
-            <span className="text-[10px] text-slate-600">
+            <span className="text-[10px] text-muted-foreground/60">
               Updated {new Date(generatedAt).toLocaleDateString()}
             </span>
           )}
@@ -98,7 +98,7 @@ export function FinVibeThoughts({
         <button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-white/5 text-slate-400 rounded-lg hover:bg-white/10 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent text-muted-foreground rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-3 h-3 ${isGenerating ? "animate-spin" : ""}`} />
           Refresh
@@ -136,7 +136,7 @@ export function FinVibeThoughts({
               >
                 {verdict}
               </span>
-              <span className="text-xs text-slate-500 ml-2">
+              <span className="text-xs text-muted-foreground ml-2">
                 Conviction: {conviction}
               </span>
             </div>
@@ -144,7 +144,7 @@ export function FinVibeThoughts({
           <div className="flex items-center gap-4">
             {llmIntrinsicValue != null && (
               <div className="text-right">
-                <div className="text-[10px] text-slate-500">Intrinsic (AI)</div>
+                <div className="text-[10px] text-muted-foreground">Intrinsic (AI)</div>
                 <span className="font-mono text-sm text-blue-400">
                   ${llmIntrinsicValue.toFixed(2)}
                 </span>
@@ -152,7 +152,7 @@ export function FinVibeThoughts({
             )}
             {llmMarginOfSafety != null && (
               <div className="text-right">
-                <div className="text-[10px] text-slate-500">MoS (AI)</div>
+                <div className="text-[10px] text-muted-foreground">MoS (AI)</div>
                 <span
                   className={`font-mono text-sm ${
                     llmMarginOfSafety > 0 ? "text-green-400" : "text-red-400"
@@ -203,7 +203,7 @@ export function FinVibeThoughts({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">{thoughts.bull_case.narrative}</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{thoughts.bull_case.narrative}</p>
           </div>
         )}
         {thoughts.bear_case && (
@@ -216,15 +216,15 @@ export function FinVibeThoughts({
                 </span>
               )}
             </div>
-            <p className="text-xs text-slate-300 leading-relaxed">{thoughts.bear_case.narrative}</p>
+            <p className="text-xs text-foreground/80 leading-relaxed">{thoughts.bear_case.narrative}</p>
           </div>
         )}
       </div>
 
       {/* Competitive Advantages */}
       {thoughts.competitive_advantages && typeof thoughts.competitive_advantages === "object" && (
-        <div className="mb-4 bg-white/[0.02] border border-border/30 rounded-lg p-4">
-          <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">
+        <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">
+          <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-3">
             Competitive Advantages
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
@@ -233,7 +233,7 @@ export function FinVibeThoughts({
               if (val == null || typeof val !== "number") return null;
               return (
                 <div key={key} className="text-center">
-                  <div className="text-[10px] text-slate-500 capitalize mb-1">
+                  <div className="text-[10px] text-muted-foreground capitalize mb-1">
                     {key.replace(/_/g, " ")}
                   </div>
                   <div className="flex items-center justify-center gap-0.5">
@@ -241,18 +241,18 @@ export function FinVibeThoughts({
                       <div
                         key={i}
                         className={`w-2 h-2 rounded-sm ${
-                          i < val ? "bg-primary" : "bg-slate-800"
+                          i < val ? "bg-primary" : "bg-muted"
                         }`}
                       />
                     ))}
                   </div>
-                  <div className="text-xs font-mono text-slate-300 mt-0.5">{val}/10</div>
+                  <div className="text-xs font-mono text-foreground/80 mt-0.5">{val}/10</div>
                 </div>
               );
             })}
           </div>
           {thoughts.competitive_advantages.summary && (
-            <p className="text-xs text-slate-400 leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {thoughts.competitive_advantages.summary}
             </p>
           )}
