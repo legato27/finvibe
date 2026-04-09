@@ -388,3 +388,89 @@ export function useAddNote() {
     onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ["notes", vars.ticker.toUpperCase()] }),
   });
 }
+
+// ── Broker Connections ─────────────────────────────────────────
+
+export interface BrokerConnection {
+  id: number;
+  user_id: string;
+  portfolio_id: number;
+  broker: "ibkr" | "moomoo";
+  host: string;
+  port: number;
+  account_id: string | null;
+  trd_env: string;
+  enabled: boolean;
+  last_sync_at: string | null;
+  last_sync_status: string | null;
+  last_sync_error: string | null;
+  sync_count: number;
+  created_at: string;
+}
+
+export function useBrokerConnections() {
+  return useQuery({
+    queryKey: ["broker-connections"],
+    queryFn: async (): Promise<BrokerConnection[]> => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data, error } = await supabase
+        .from("broker_connections")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at");
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateBrokerConnection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (conn: {
+      portfolio_id: number;
+      broker: string;
+      host?: string;
+      port: number;
+      account_id?: string;
+      trd_env?: string;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("broker_connections")
+        .insert({
+          user_id: user.id,
+          portfolio_id: conn.portfolio_id,
+          broker: conn.broker,
+          host: conn.host || "127.0.0.1",
+          port: conn.port,
+          account_id: conn.account_id || null,
+          trd_env: conn.trd_env || "REAL",
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["broker-connections"] }),
+  });
+}
+
+export function useDeleteBrokerConnection() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from("broker_connections").delete().eq("id", id);
+      if (error) throw error;
+      // Also clean up synced holdings
+      await supabase.from("portfolio_holdings").delete().eq("broker_connection_id", id);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["broker-connections"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+    },
+  });
+}
