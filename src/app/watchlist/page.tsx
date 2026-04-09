@@ -3,10 +3,13 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
-import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain } from "lucide-react";
+import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw } from "lucide-react";
+import { stocksApi } from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function WatchlistPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: watchlists, isLoading } = useWatchlists();
   const createWatchlist = useCreateWatchlist();
   const deleteWatchlist = useDeleteWatchlist();
@@ -17,6 +20,7 @@ export default function WatchlistPage() {
   const [newListName, setNewListName] = useState("");
   const [showNewList, setShowNewList] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const activeWatchlist = watchlists?.find((w: any) => w.id === activeId) || watchlists?.[0];
 
@@ -37,6 +41,17 @@ export default function WatchlistPage() {
     }
   }
 
+  async function handleRefreshPrices() {
+    if (refreshing || !activeTickers.length) return;
+    setRefreshing(true);
+    try {
+      await stocksApi.refreshPrices(activeTickers);
+      queryClient.invalidateQueries({ queryKey: ["watchlists"] });
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -50,12 +65,25 @@ export default function WatchlistPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Watchlists</h1>
-        <button
-          onClick={() => setShowNewList(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5" /> New Watchlist
-        </button>
+        <div className="flex items-center gap-2">
+          {activeTickers.length > 0 && (
+            <button
+              onClick={handleRefreshPrices}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground rounded-lg hover:text-foreground transition-colors disabled:opacity-50"
+              title="Refresh prices now"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Updating..." : "Refresh"}
+            </button>
+          )}
+          <button
+            onClick={() => setShowNewList(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Watchlist
+          </button>
+        </div>
       </div>
 
       {/* New watchlist form */}
@@ -125,7 +153,15 @@ export default function WatchlistPage() {
           {activeWatchlist ? (
             <>
               <div className="card-header">
-                <span className="card-title">{activeWatchlist.name}</span>
+                <div className="flex items-center gap-2">
+                  <span className="card-title">{activeWatchlist.name}</span>
+                  {activeTickers.length > 0 && (
+                    <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      Live
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   {showSearch ? (
                     <StockSearch

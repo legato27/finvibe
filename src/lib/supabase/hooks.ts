@@ -38,6 +38,34 @@ export function useProfile() {
 // ── Watchlists ──────────────────────────────────────────────
 
 export function useWatchlists() {
+  const qc = useQueryClient();
+
+  // Background price refresh for all watchlist tickers
+  useQuery({
+    queryKey: ["watchlist-price-refresh"],
+    queryFn: async () => {
+      // Get all tickers across all watchlists
+      const { data } = await supabase
+        .from("watchlist_items")
+        .select("stock_catalog(ticker)");
+      if (!data?.length) return null;
+
+      const tickers = [...new Set(
+        data
+          .map((item: any) => item.stock_catalog?.ticker)
+          .filter(Boolean)
+      )];
+      if (!tickers.length) return null;
+
+      await stocksApi.refreshPrices(tickers);
+      qc.invalidateQueries({ queryKey: ["watchlists"] });
+      return { refreshed: tickers.length, at: Date.now() };
+    },
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
+  });
+
   return useQuery({
     queryKey: ["watchlists"],
     queryFn: async () => {
