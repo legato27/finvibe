@@ -33,6 +33,9 @@ export const watchlistApi = {
 export const stocksApi = {
   search: (q: string) => api.get(`/api/stocks/search?q=${encodeURIComponent(q)}`).then((r) => r.data),
   info: (ticker: string) => api.get(`/api/stocks/${ticker}/info`).then((r) => r.data),
+  detail: (ticker: string) => api.get(`/api/stocks/${ticker}/detail`).then((r) => r.data),
+  thoughts: (ticker: string) => api.get(`/api/stocks/${ticker}/thoughts`).then((r) => r.data),
+  generateThoughts: (ticker: string) => api.post(`/api/stocks/${ticker}/generate-thoughts`).then((r) => r.data),
   priceHistory: (ticker: string, period = "1y", interval = "1d") =>
     api.get(`/api/stocks/${ticker}/price-history?period=${period}&interval=${interval}`).then((r) => r.data),
 };

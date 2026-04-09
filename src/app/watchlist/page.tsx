@@ -1,10 +1,12 @@
 "use client";
-import { useState } from "react";
-import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock } from "@/lib/supabase/hooks";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
-import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown } from "lucide-react";
+import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain } from "lucide-react";
 
 export default function WatchlistPage() {
+  const router = useRouter();
   const { data: watchlists, isLoading } = useWatchlists();
   const createWatchlist = useCreateWatchlist();
   const deleteWatchlist = useDeleteWatchlist();
@@ -17,6 +19,16 @@ export default function WatchlistPage() {
   const [showSearch, setShowSearch] = useState(false);
 
   const activeWatchlist = watchlists?.find((w: any) => w.id === activeId) || watchlists?.[0];
+
+  // Gather all tickers from active watchlist for batch LLM analysis fetch
+  const activeTickers = useMemo(() => {
+    if (!activeWatchlist?.watchlist_items) return [];
+    return activeWatchlist.watchlist_items
+      .map((item: any) => item.stock_catalog?.ticker)
+      .filter(Boolean) as string[];
+  }, [activeWatchlist]);
+
+  const { data: llmMap } = useLLMAnalysisBatch(activeTickers);
 
   function handleAddStock(ticker: string, _name: string) {
     if (activeWatchlist) {
@@ -142,17 +154,46 @@ export default function WatchlistPage() {
                   {activeWatchlist.watchlist_items?.map((item: any) => {
                     const stock = item.stock_catalog;
                     if (!stock) return null;
+
+                    const llm = llmMap?.[stock.ticker];
+                    const isEtf = stock.is_etf || stock.asset_type === "etf";
+
+                    // Sector display logic
+                    let sectorDisplay: string | null = null;
+                    let sectorIsAi = false;
+                    if (!isEtf) {
+                      if (stock.sector && stock.sector.trim() && stock.sector !== "-") {
+                        // If multiple sectors (comma-separated), show first + count
+                        const parts = stock.sector.split(",").map((s: string) => s.trim()).filter(Boolean);
+                        sectorDisplay = parts[0];
+                        if (parts.length > 1) {
+                          sectorDisplay += ` +${parts.length - 1}`;
+                        }
+                      } else if (llm?.llm_sector) {
+                        sectorDisplay = llm.llm_sector;
+                        sectorIsAi = true;
+                      }
+                    }
+
+                    // Moat display logic
+                    const moatRating = stock.moat_rating || (llm?.llm_moat !== "None" ? llm?.llm_moat : null);
+                    const moatIsAi = !stock.moat_rating && !!llm?.llm_moat;
+
                     return (
-                      <div key={item.id} className="flex items-center justify-between px-3 py-3 hover:bg-white/[0.02] transition-colors">
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between px-3 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer group"
+                        onClick={() => router.push(`/stock/${stock.ticker}`)}
+                      >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
-                              {stock.moat_rating && stock.moat_rating !== "None" && (
+                              {moatRating && moatRating !== "None" && (
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${
-                                  stock.moat_rating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                                  moatRating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
                                 }`}>
-                                  {stock.moat_rating}
+                                  {moatRating}{moatIsAi ? " (AI)" : ""}
                                 </span>
                               )}
                               {stock.enrichment_status === "pending" && (
@@ -161,14 +202,21 @@ export default function WatchlistPage() {
                               {stock.enrichment_status === "processing" && (
                                 <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">enriching</span>
                               )}
+                              {llm?.thoughts_json && (
+                                <Brain className="w-3 h-3 text-primary/50" title="FinVibe's Thoughts available" />
+                              )}
                             </div>
                             <div className="text-xs text-slate-400 truncate max-w-[250px]">
                               {stock.name || "—"}
                             </div>
-                            {stock.sector && (
+                            {sectorDisplay && (
                               <div className="flex items-center gap-1 mt-0.5">
                                 <Building2 className="w-2.5 h-2.5 text-slate-600" />
-                                <span className="text-[10px] text-slate-600">{stock.sector}{stock.industry ? ` · ${stock.industry}` : ""}</span>
+                                <span className="text-[10px] text-slate-600">
+                                  {sectorDisplay}
+                                  {sectorIsAi ? " (AI)" : ""}
+                                  {stock.industry && !sectorIsAi ? ` · ${stock.industry}` : ""}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -180,7 +228,7 @@ export default function WatchlistPage() {
                           )}
                           {stock.intrinsic_value != null && stock.last_price != null && (
                             <div className="text-right">
-                              <div className="text-[10px] text-slate-600">Fair value</div>
+                              <div className="text-[10px] text-slate-600">Fair Value</div>
                               <span className="font-mono text-xs text-slate-400">${stock.intrinsic_value.toFixed(2)}</span>
                             </div>
                           )}
@@ -195,6 +243,26 @@ export default function WatchlistPage() {
                               </span>
                             </div>
                           )}
+                          {/* AI Intrinsic Value */}
+                          {llm?.llm_intrinsic_value != null && (
+                            <div className="text-right">
+                              <div className="text-[10px] text-blue-400/70">Intrinsic (AI)</div>
+                              <span className="font-mono text-xs text-blue-400">
+                                ${Number(llm.llm_intrinsic_value).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          {/* AI MoS */}
+                          {llm?.llm_margin_of_safety != null && (
+                            <div className="text-right">
+                              <div className="text-[10px] text-blue-400/70">MoS (AI)</div>
+                              <span className={`font-mono text-xs ${
+                                Number(llm.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400"
+                              }`}>
+                                {(Number(llm.llm_margin_of_safety) * 100).toFixed(0)}%
+                              </span>
+                            </div>
+                          )}
                           {stock.quarterly_trend && (
                             <div className="text-right">
                               <div className="text-[10px] text-slate-600">Trend</div>
@@ -206,8 +274,11 @@ export default function WatchlistPage() {
                             </div>
                           )}
                           <button
-                            onClick={() => removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: stock.id })}
-                            className="text-slate-700 hover:text-red-400 transition-colors ml-2"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: stock.id });
+                            }}
+                            className="text-slate-700 hover:text-red-400 transition-colors ml-2 opacity-0 group-hover:opacity-100"
                           >
                             <X className="w-4 h-4" />
                           </button>

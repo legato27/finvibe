@@ -129,6 +129,46 @@ export function useRemoveStock() {
   });
 }
 
+// ── LLM Analysis ──────────────────────────────────────────
+
+export function useLLMAnalysisBatch(tickers: string[]) {
+  return useQuery({
+    queryKey: ["llm-analysis-batch", tickers.sort().join(",")],
+    queryFn: async () => {
+      if (!tickers.length) return {};
+      const { data, error } = await supabase
+        .from("llm_analysis")
+        .select("*")
+        .in("ticker", tickers);
+      if (error) throw error;
+      const map: Record<string, any> = {};
+      for (const row of data || []) {
+        map[row.ticker] = row;
+      }
+      return map;
+    },
+    enabled: tickers.length > 0,
+    staleTime: 60_000,
+  });
+}
+
+export function useLLMAnalysis(ticker: string) {
+  return useQuery({
+    queryKey: ["llm-analysis", ticker],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("llm_analysis")
+        .select("*")
+        .eq("ticker", ticker.toUpperCase())
+        .single();
+      if (error && error.code !== "PGRST116") throw error; // PGRST116 = not found
+      return data;
+    },
+    enabled: !!ticker,
+    staleTime: 60_000,
+  });
+}
+
 // ── Portfolio ───────────────────────────────────────────────
 
 export function usePortfolio() {
