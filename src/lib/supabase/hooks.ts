@@ -1,6 +1,7 @@
 "use client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "./client";
+import { stocksApi } from "@/lib/api";
 
 const supabase = createClient();
 
@@ -237,6 +238,36 @@ export interface HoldingWithPrice {
 }
 
 export function usePortfolioHoldings(portfolioId: number | null) {
+  const qc = useQueryClient();
+
+  // Background price refresh — fires once when portfolioId changes
+  useQuery({
+    queryKey: ["portfolio-price-refresh", portfolioId],
+    queryFn: async () => {
+      if (!portfolioId) return null;
+
+      // Get tickers from holdings
+      const { data: holdings } = await supabase
+        .from("portfolio_holdings")
+        .select("ticker")
+        .eq("portfolio_id", portfolioId);
+      if (!holdings?.length) return null;
+
+      const tickers = [...new Set(holdings.map((h: any) => h.ticker))];
+
+      // Fetch live prices from backend (updates Supabase too)
+      await stocksApi.refreshPrices(tickers);
+
+      // Invalidate holdings so they re-read fresh prices from Supabase
+      qc.invalidateQueries({ queryKey: ["portfolio-holdings", portfolioId] });
+      return { refreshed: tickers.length, at: Date.now() };
+    },
+    enabled: !!portfolioId,
+    staleTime: 60_000, // re-trigger every 60s
+    refetchInterval: 60_000, // auto-poll every 60s
+    refetchIntervalInBackground: false, // pause when tab hidden
+  });
+
   return useQuery({
     queryKey: ["portfolio-holdings", portfolioId],
     queryFn: async (): Promise<HoldingWithPrice[]> => {

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import {
   usePortfolios,
@@ -14,7 +14,7 @@ import {
 } from "@/lib/supabase/hooks";
 import {
   Plus, Trash2, X, Briefcase, TrendingUp, TrendingDown,
-  Loader2, Clock, FolderOpen, Search,
+  Loader2, Clock, FolderOpen, Search, RefreshCw,
 } from "lucide-react";
 
 /* ── Inline ticker search with dropdown ──────────────────── */
@@ -108,6 +108,7 @@ function TickerInput({
 
 export default function PortfolioPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
   const createPortfolio = useCreatePortfolio();
   const deletePortfolio = useDeletePortfolio();
@@ -116,12 +117,25 @@ export default function PortfolioPage() {
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
   const [newPortfolioName, setNewPortfolioName] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [form, setForm] = useState({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
 
   const activePortfolio = portfolios?.find((p: any) => p.id === activeId) || portfolios?.[0];
   const { data: holdings, isLoading: holdingsLoading } = usePortfolioHoldings(activePortfolio?.id ?? null);
   const addHolding = useAddHolding();
   const deleteHolding = useDeleteHolding();
+
+  async function handleRefreshPrices() {
+    if (!holdings?.length || refreshing) return;
+    setRefreshing(true);
+    try {
+      const tickers = [...new Set(holdings.map((h) => h.ticker))];
+      await stocksApi.refreshPrices(tickers);
+      queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+    } finally {
+      setRefreshing(false);
+    }
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -165,6 +179,17 @@ export default function PortfolioPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Portfolio</h1>
         <div className="flex items-center gap-2">
+          {activePortfolio && holdings?.length ? (
+            <button
+              onClick={handleRefreshPrices}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground rounded-lg hover:text-foreground transition-colors disabled:opacity-50"
+              title="Refresh prices now"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+              {refreshing ? "Updating..." : "Refresh"}
+            </button>
+          ) : null}
           <button
             onClick={() => setShowNewPortfolio(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent text-muted-foreground rounded-lg hover:text-foreground transition-colors"
@@ -340,8 +365,14 @@ export default function PortfolioPage() {
 
           {/* Holdings table */}
           <div className="card">
-            <div className="card-header">
+            <div className="card-header flex items-center justify-between">
               <span className="card-title">{activePortfolio?.name || "Holdings"}</span>
+              {holdings?.length ? (
+                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  Auto-refresh 60s
+                </span>
+              ) : null}
             </div>
             {holdingsLoading ? (
               <div className="py-12 flex items-center justify-center">

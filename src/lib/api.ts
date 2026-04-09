@@ -38,6 +38,8 @@ export const stocksApi = {
   generateThoughts: (ticker: string) => api.post(`/api/stocks/${ticker}/generate-thoughts`).then((r) => r.data),
   priceHistory: (ticker: string, period = "1y", interval = "1d") =>
     api.get(`/api/stocks/${ticker}/price-history?period=${period}&interval=${interval}`).then((r) => r.data),
+  refreshPrices: (tickers: string[]) =>
+    api.post("/api/stocks/prices/batch", { tickers }).then((r) => r.data),
 };
 
 // ── Quant Models ──────────────────────────────────────────────
