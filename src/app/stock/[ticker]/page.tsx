@@ -7,14 +7,15 @@ import { useLLMAnalysis } from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
+import { ModelCards } from "@/components/stock/ModelCards";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Brain, Loader2,
-  ChevronDown, ChevronUp, LineChart, Newspaper,
+  ChevronDown, ChevronUp, LineChart, Newspaper, Cpu,
 } from "lucide-react";
 import Link from "next/link";
 
-type Tab = "chart" | "analysis" | "news";
+type Tab = "chart" | "analysis" | "quant" | "news";
 
 export default function StockDetailPage() {
   const params = useParams();
@@ -82,6 +83,7 @@ export default function StockDetailPage() {
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "chart", label: "Chart", icon: <LineChart className="w-3.5 h-3.5" /> },
     { id: "analysis", label: "FinVibe's Thoughts", icon: <Brain className="w-3.5 h-3.5" /> },
+    { id: "quant", label: "Quant Models", icon: <Cpu className="w-3.5 h-3.5" /> },
     { id: "news", label: "Sentiment & News", icon: <Newspaper className="w-3.5 h-3.5" /> },
   ];
 
@@ -279,6 +281,10 @@ export default function StockDetailPage() {
             llm.margin_of_safety ?? llm.llm_margin_of_safety ?? thoughtsData?.llm_margin_of_safety
           }
         />
+      )}
+
+      {activeTab === "quant" && (
+        <ModelCards ticker={ticker} />
       )}
 
       {activeTab === "news" && (
