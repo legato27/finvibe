@@ -3,28 +3,28 @@
 @tailwind utilities;
 
 @layer base {
-  /* ── Light mode (default) ─────────────────────────────── */
+  /* ── Light mode — warm woody palette ──────────────────── */
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
-    --card: 210 20% 97%;
-    --card-foreground: 222 47% 11%;
-    --border: 214 32% 88%;
-    --input: 214 32% 88%;
-    --ring: 212 100% 48%;
-    --primary: 212 100% 48%;
-    --primary-foreground: 0 0% 100%;
-    --muted: 210 16% 93%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 16% 93%;
-    --accent-foreground: 222 47% 11%;
+    --background: 35 30% 96%;
+    --foreground: 25 30% 14%;
+    --card: 33 25% 93%;
+    --card-foreground: 25 30% 14%;
+    --border: 30 18% 82%;
+    --input: 30 18% 82%;
+    --ring: 28 70% 42%;
+    --primary: 28 70% 42%;
+    --primary-foreground: 35 30% 97%;
+    --muted: 32 18% 88%;
+    --muted-foreground: 25 14% 42%;
+    --accent: 32 18% 88%;
+    --accent-foreground: 25 30% 14%;
     /* Semantic colors */
-    --success: 142 71% 35%;
-    --success-bg: 142 76% 94%;
-    --danger: 0 72% 45%;
-    --danger-bg: 0 84% 95%;
-    --warning: 38 92% 45%;
-    --warning-bg: 48 96% 93%;
+    --success: 142 55% 32%;
+    --success-bg: 140 40% 92%;
+    --danger: 4 60% 42%;
+    --danger-bg: 4 50% 94%;
+    --warning: 38 75% 42%;
+    --warning-bg: 42 60% 92%;
   }
 
   /* ── Dark mode ────────────────────────────────────────── */
@@ -66,9 +66,9 @@
   .dark ::-webkit-scrollbar-thumb:hover { background: hsl(212, 100%, 55%); }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: hsl(0, 0%, 96%); }
-  ::-webkit-scrollbar-thumb { background: hsl(214, 32%, 80%); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(212, 100%, 48%); }
+  ::-webkit-scrollbar-track { background: hsl(35, 30%, 94%); }
+  ::-webkit-scrollbar-thumb { background: hsl(30, 18%, 72%); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(28, 70%, 42%); }
 }
 
 @layer components {
