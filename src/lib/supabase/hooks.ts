@@ -396,10 +396,8 @@ export interface BrokerConnection {
   user_id: string;
   portfolio_id: number;
   broker: "ibkr" | "moomoo";
-  host: string;
-  port: number;
-  account_id: string | null;
-  trd_env: string;
+  flex_token: string | null;
+  flex_query_id: string | null;
   enabled: boolean;
   last_sync_at: string | null;
   last_sync_status: string | null;
@@ -431,11 +429,9 @@ export function useCreateBrokerConnection() {
   return useMutation({
     mutationFn: async (conn: {
       portfolio_id: number;
-      broker: string;
-      host?: string;
-      port: number;
-      account_id?: string;
-      trd_env?: string;
+      broker: "ibkr" | "moomoo";
+      flex_token?: string;
+      flex_query_id?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -445,10 +441,8 @@ export function useCreateBrokerConnection() {
           user_id: user.id,
           portfolio_id: conn.portfolio_id,
           broker: conn.broker,
-          host: conn.host || "127.0.0.1",
-          port: conn.port,
-          account_id: conn.account_id || null,
-          trd_env: conn.trd_env || "REAL",
+          flex_token: conn.flex_token || null,
+          flex_query_id: conn.flex_query_id || null,
         })
         .select()
         .single();
@@ -465,7 +459,6 @@ export function useDeleteBrokerConnection() {
     mutationFn: async (id: number) => {
       const { error } = await supabase.from("broker_connections").delete().eq("id", id);
       if (error) throw error;
-      // Also clean up synced holdings
       await supabase.from("portfolio_holdings").delete().eq("broker_connection_id", id);
     },
     onSuccess: () => {

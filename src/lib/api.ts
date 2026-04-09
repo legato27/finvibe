@@ -182,28 +182,11 @@ export const btcMMApi = {
     api.get(`/api/btc/backtest/results?timeframe=${timeframe}`).then((r) => r.data),
 };
 
-// ── Broker Sync ──────────────────────────────────────────────
+// ── Broker Sync (Vercel serverless — not proxied to DGX) ─────
 
 export const brokerApi = {
-  listConnections: (userId: string) =>
-    api.get(`/api/broker/connections?user_id=${userId}`).then((r) => r.data),
-  createConnection: (body: {
-    user_id: string;
-    portfolio_id: number;
-    broker: string;
-    host?: string;
-    port: number;
-    account_id?: string;
-    trd_env?: string;
-  }) => api.post("/api/broker/connections", body).then((r) => r.data),
-  deleteConnection: (connectionId: number, userId: string) =>
-    api.delete(`/api/broker/connections/${connectionId}?user_id=${userId}`).then((r) => r.data),
-  testConnection: (body: { broker: string; host?: string; port: number; account_id?: string; trd_env?: string }) =>
-    api.post("/api/broker/test", body).then((r) => r.data),
-  sync: (connectionId: number, userId: string) =>
-    api.post("/api/broker/sync", { connection_id: connectionId, user_id: userId }).then((r) => r.data),
-  syncAll: (userId: string) =>
-    api.post(`/api/broker/sync-all?user_id=${userId}`).then((r) => r.data),
+  sync: (connectionId: number, csvData?: string) =>
+    api.post("/api/broker/sync", { connection_id: connectionId, csv_data: csvData }).then((r) => r.data),
 };
 
 export default api;
