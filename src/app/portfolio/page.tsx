@@ -1,8 +1,8 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { stocksApi, brokerApi } from "@/lib/api";
+import { useQuery } from "@tanstack/react-query";
+import { stocksApi } from "@/lib/api";
 import {
   usePortfolios,
   useCreatePortfolio,
@@ -10,16 +10,11 @@ import {
   usePortfolioHoldings,
   useAddHolding,
   useDeleteHolding,
-  useBrokerConnections,
-  useCreateBrokerConnection,
-  useDeleteBrokerConnection,
   type HoldingWithPrice,
-  type BrokerConnection,
 } from "@/lib/supabase/hooks";
 import {
   Plus, Trash2, X, Briefcase, TrendingUp, TrendingDown,
   Loader2, Clock, FolderOpen, Search,
-  RefreshCw, Link2, Unlink, AlertCircle, CheckCircle2,
 } from "lucide-react";
 
 /* ── Inline ticker search with dropdown ──────────────────── */
@@ -111,243 +106,6 @@ function TickerInput({
   );
 }
 
-/* ── Broker Connection Panel ─────────────────────────────── */
-
-const BROKER_META: Record<string, { label: string; icon: string }> = {
-  ibkr: { label: "Interactive Brokers", icon: "IB" },
-  moomoo: { label: "Moomoo", icon: "MM" },
-};
-
-function BrokerPanel({ portfolioId }: { portfolioId: number }) {
-  const { data: connections, isLoading } = useBrokerConnections();
-  const createConnection = useCreateBrokerConnection();
-  const deleteConnection = useDeleteBrokerConnection();
-  const queryClient = useQueryClient();
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const [showAdd, setShowAdd] = useState(false);
-  const [addBroker, setAddBroker] = useState<"ibkr" | "moomoo">("ibkr");
-  const [flexToken, setFlexToken] = useState("");
-  const [flexQueryId, setFlexQueryId] = useState("");
-  const [syncing, setSyncing] = useState<Record<number, boolean>>({});
-  const [syncResults, setSyncResults] = useState<Record<number, any>>({});
-  const [uploadConnId, setUploadConnId] = useState<number | null>(null);
-
-  const portfolioConnections = connections?.filter((c) => c.portfolio_id === portfolioId) || [];
-
-  async function handleSync(conn: BrokerConnection, csvData?: string) {
-    setSyncing((s) => ({ ...s, [conn.id]: true }));
-    setSyncResults((s) => ({ ...s, [conn.id]: null }));
-    try {
-      const result = await brokerApi.sync(conn.id, csvData);
-      setSyncResults((s) => ({ ...s, [conn.id]: result }));
-      queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
-      queryClient.invalidateQueries({ queryKey: ["broker-connections"] });
-    } catch (e: any) {
-      setSyncResults((s) => ({ ...s, [conn.id]: { status: "error", error: e?.response?.data?.error || e.message } }));
-    } finally {
-      setSyncing((s) => ({ ...s, [conn.id]: false }));
-    }
-  }
-
-  function handleCsvUpload(connId: number) {
-    setUploadConnId(connId);
-    fileRef.current?.click();
-  }
-
-  async function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || uploadConnId == null) return;
-    const text = await file.text();
-    const conn = portfolioConnections.find((c) => c.id === uploadConnId);
-    if (conn) await handleSync(conn, text);
-    e.target.value = "";
-    setUploadConnId(null);
-  }
-
-  function handleAddSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    createConnection.mutate({
-      portfolio_id: portfolioId,
-      broker: addBroker,
-      flex_token: addBroker === "ibkr" ? flexToken : undefined,
-      flex_query_id: addBroker === "ibkr" ? flexQueryId : undefined,
-    });
-    setShowAdd(false);
-    setFlexToken("");
-    setFlexQueryId("");
-  }
-
-  return (
-    <div className="card p-3">
-      <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={onFileSelected} />
-
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
-          <Link2 className="w-3.5 h-3.5" /> Broker Sync
-        </span>
-        <button
-          onClick={() => setShowAdd(!showAdd)}
-          className="flex items-center gap-1 px-2 py-1 text-[10px] bg-accent text-muted-foreground rounded hover:text-foreground transition-colors"
-        >
-          <Plus className="w-3 h-3" /> Connect
-        </button>
-      </div>
-
-      {/* Add connection form */}
-      {showAdd && (
-        <form onSubmit={handleAddSubmit} className="bg-background/50 border border-border rounded-lg p-3 mb-2 space-y-2">
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setAddBroker("ibkr")}
-              className={`flex-1 py-2 text-xs rounded border transition-colors ${
-                addBroker === "ibkr"
-                  ? "bg-primary/20 text-primary border-primary/40"
-                  : "bg-background text-muted-foreground border-border hover:text-foreground"
-              }`}
-            >
-              Interactive Brokers
-            </button>
-            <button
-              type="button"
-              onClick={() => setAddBroker("moomoo")}
-              className={`flex-1 py-2 text-xs rounded border transition-colors ${
-                addBroker === "moomoo"
-                  ? "bg-primary/20 text-primary border-primary/40"
-                  : "bg-background text-muted-foreground border-border hover:text-foreground"
-              }`}
-            >
-              Moomoo
-            </button>
-          </div>
-
-          {addBroker === "ibkr" ? (
-            <>
-              <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Set up a Flex Query in IBKR Account Management: Reports &gt; Flex Queries &gt; create a query for &quot;Open Positions&quot;. Copy the token and query ID.
-              </p>
-              <input
-                type="text"
-                value={flexToken}
-                onChange={(e) => setFlexToken(e.target.value)}
-                placeholder="Flex Web Service Token"
-                className="w-full px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground font-mono"
-                required
-              />
-              <input
-                type="text"
-                value={flexQueryId}
-                onChange={(e) => setFlexQueryId(e.target.value)}
-                placeholder="Flex Query ID"
-                className="w-full px-2 py-1.5 bg-background border border-border rounded text-sm text-foreground font-mono"
-                required
-              />
-            </>
-          ) : (
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
-              Moomoo syncs via CSV export. After connecting, click &quot;Upload CSV&quot; to import your positions from the Moomoo app (Portfolio &gt; Export).
-            </p>
-          )}
-
-          <div className="flex items-center gap-2">
-            <button type="submit" className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded font-medium">
-              Connect {addBroker === "ibkr" ? "IBKR" : "Moomoo"}
-            </button>
-            <button type="button" onClick={() => setShowAdd(false)} className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground">
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
-      {/* Connection list */}
-      {isLoading ? (
-        <div className="text-xs text-muted-foreground animate-pulse py-2">Loading...</div>
-      ) : portfolioConnections.length === 0 ? (
-        <div className="text-xs text-muted-foreground py-2 text-center">
-          No broker connections yet.
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {portfolioConnections.map((conn) => {
-            const meta = BROKER_META[conn.broker];
-            const isSyncing = syncing[conn.id];
-            const result = syncResults[conn.id];
-
-            return (
-              <div key={conn.id} className="flex items-center justify-between bg-background/50 border border-border/50 rounded-lg px-3 py-2">
-                <div className="min-w-0">
-                  <div className="text-xs font-medium text-foreground flex items-center gap-1.5">
-                    <span className="text-[9px] font-bold bg-primary/15 text-primary px-1.5 py-0.5 rounded">{meta?.icon}</span>
-                    {meta?.label}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground flex items-center gap-2 mt-0.5">
-                    {conn.last_sync_at && (
-                      <span className="flex items-center gap-0.5">
-                        {conn.last_sync_status === "success" ? (
-                          <CheckCircle2 className="w-2.5 h-2.5 text-green-500" />
-                        ) : conn.last_sync_status === "error" ? (
-                          <AlertCircle className="w-2.5 h-2.5 text-red-500" />
-                        ) : null}
-                        {new Date(conn.last_sync_at).toLocaleDateString()}
-                        {conn.sync_count > 0 && ` (${conn.sync_count}x)`}
-                      </span>
-                    )}
-                    {!conn.last_sync_at && <span>Never synced</span>}
-                  </div>
-                  {conn.last_sync_error && (
-                    <div className="text-[9px] text-red-400 truncate max-w-[200px]" title={conn.last_sync_error}>
-                      {conn.last_sync_error}
-                    </div>
-                  )}
-                  {result && (
-                    <div className={`text-[9px] mt-0.5 ${result.status === "success" ? "text-green-400" : "text-red-400"}`}>
-                      {result.status === "success"
-                        ? `${result.synced} positions (${result.added} new, ${result.updated} updated, ${result.removed} removed)`
-                        : `Error: ${result.error}`}
-                    </div>
-                  )}
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
-                  {conn.broker === "moomoo" ? (
-                    <button
-                      onClick={() => handleCsvUpload(conn.id)}
-                      disabled={isSyncing}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] bg-primary/15 text-primary rounded hover:bg-primary/25 transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
-                      {isSyncing ? "Importing..." : "Upload CSV"}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleSync(conn)}
-                      disabled={isSyncing}
-                      className="flex items-center gap-1 px-2 py-1 text-[10px] bg-primary/15 text-primary rounded hover:bg-primary/25 transition-colors disabled:opacity-50"
-                    >
-                      <RefreshCw className={`w-3 h-3 ${isSyncing ? "animate-spin" : ""}`} />
-                      {isSyncing ? "Syncing..." : "Sync"}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      if (confirm(`Disconnect ${meta?.label}? Synced holdings will be removed.`))
-                        deleteConnection.mutate(conn.id);
-                    }}
-                    className="text-muted-foreground/40 hover:text-red-500 transition-colors"
-                  >
-                    <Unlink className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function PortfolioPage() {
   const router = useRouter();
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
@@ -358,7 +116,6 @@ export default function PortfolioPage() {
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
   const [newPortfolioName, setNewPortfolioName] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [showConnectPrompt, setShowConnectPrompt] = useState(false);
   const [form, setForm] = useState({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
 
   const activePortfolio = portfolios?.find((p: any) => p.id === activeId) || portfolios?.[0];
@@ -439,9 +196,7 @@ export default function PortfolioPage() {
           <button
             onClick={() => {
               if (newPortfolioName.trim()) {
-                createPortfolio.mutate({ name: newPortfolioName.trim() }, {
-                  onSuccess: () => setShowConnectPrompt(true),
-                });
+                createPortfolio.mutate({ name: newPortfolioName.trim() });
                 setNewPortfolioName("");
                 setShowNewPortfolio(false);
               }
@@ -453,37 +208,6 @@ export default function PortfolioPage() {
           <button onClick={() => setShowNewPortfolio(false)} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
-        </div>
-      )}
-
-      {/* Connect broker prompt after portfolio creation */}
-      {showConnectPrompt && activePortfolio && (
-        <div className="card p-4 border-primary/30 bg-primary/5">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
-                <Link2 className="w-4 h-4 text-primary" />
-                Connect a broker to &quot;{activePortfolio.name}&quot;?
-              </h3>
-              <p className="text-xs text-muted-foreground mt-1">
-                Import your holdings automatically from Interactive Brokers or Moomoo.
-              </p>
-            </div>
-            <button onClick={() => setShowConnectPrompt(false)} className="text-muted-foreground hover:text-foreground">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-3">
-            <button
-              onClick={() => setShowConnectPrompt(false)}
-              className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
-              Skip for now
-            </button>
-          </div>
-          <p className="text-[10px] text-muted-foreground mt-2">
-            You can always connect a broker later from the sidebar.
-          </p>
         </div>
       )}
 
@@ -521,11 +245,6 @@ export default function PortfolioPage() {
             <div className="px-3 py-4 text-center text-muted-foreground text-xs">
               No portfolios yet
             </div>
-          )}
-
-          {/* Broker connections */}
-          {activePortfolio && (
-            <BrokerPanel portfolioId={activePortfolio.id} />
           )}
         </div>
 

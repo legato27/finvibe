@@ -182,12 +182,5 @@ export const btcMMApi = {
     api.get(`/api/btc/backtest/results?timeframe=${timeframe}`).then((r) => r.data),
 };
 
-// ── Broker Sync (Vercel serverless — not proxied to DGX) ─────
-
-export const brokerApi = {
-  sync: (connectionId: number, csvData?: string) =>
-    api.post("/api/broker/sync", { connection_id: connectionId, csv_data: csvData }).then((r) => r.data),
-};
-
 export default api;
 
