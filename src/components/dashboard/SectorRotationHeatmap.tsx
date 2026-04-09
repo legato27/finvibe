@@ -55,14 +55,6 @@ export function SectorRotationHeatmap() {
     );
   }
 
-  // Sort by 60D Forward return (descending) if available, else by RS Rank
-  const sorted = [...sectorRotation].sort((a, b) => {
-    const fa = forecastMap[a.sector] ?? -Infinity;
-    const fb = forecastMap[b.sector] ?? -Infinity;
-    if (fa !== -Infinity || fb !== -Infinity) return fb - fa;
-    return (a.rs_rank || 11) - (b.rs_rank || 11);
-  });
-
   // Build forecast lookup: sector name → expected return
   const forecastMap: Record<string, number> = {};
   if (regimeData?.forecasts) {
@@ -70,6 +62,14 @@ export function SectorRotationHeatmap() {
       forecastMap[f.sector] = f.expected_return;
     }
   }
+
+  // Sort by 60D Forward return (descending) if available, else by RS Rank
+  const sorted = [...sectorRotation].sort((a, b) => {
+    const fa = forecastMap[a.sector] ?? -Infinity;
+    const fb = forecastMap[b.sector] ?? -Infinity;
+    if (fa !== -Infinity || fb !== -Infinity) return fb - fa;
+    return (a.rs_rank || 11) - (b.rs_rank || 11);
+  });
 
   return (
     <div className="card h-full">
