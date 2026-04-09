@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { useTheme } from "@/components/shared/ThemeProvider";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -9,18 +8,20 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketOverview() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
+    const el = containerRef.current;
+    if (!el) return;
+    el.innerHTML = "";
+
+    const isDark = document.documentElement.classList.contains("dark");
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js";
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
+      colorTheme: isDark ? "dark" : "light",
       dateRange: "1D",
       showChart: true,
       locale: "en",
@@ -77,20 +78,17 @@ export function MarketOverview() {
     wrapper.className = "tradingview-widget-container__widget";
     wrapper.style.height = "calc(100% - 32px)";
     wrapper.style.width = "100%";
-    containerRef.current.appendChild(wrapper);
+    el.appendChild(wrapper);
 
-    // Copyright attribution with affiliate link
     const copyright = document.createElement("div");
     copyright.className = "tradingview-widget-copyright";
     copyright.innerHTML = `<a href="https://www.tradingview.com/markets/${AFF_PARAMS}" target="_blank" rel="noopener noreferrer"><span class="blue-text">Track all markets on TradingView</span></a>`;
-    containerRef.current.appendChild(copyright);
+    el.appendChild(copyright);
 
-    containerRef.current.appendChild(script);
+    el.appendChild(script);
 
-    return () => {
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [resolvedTheme]);
+    return () => { el.innerHTML = ""; };
+  }, []);
 
   return (
     <div className="card overflow-hidden h-full">

@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { useTheme } from "@/components/shared/ThemeProvider";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -9,11 +8,14 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketTickerTape() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    if (!containerRef.current) return;
-    containerRef.current.innerHTML = "";
+    const el = containerRef.current;
+    if (!el) return;
+    el.innerHTML = "";
+
+    // Read current theme from DOM
+    const isDark = document.documentElement.classList.contains("dark");
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
@@ -35,26 +37,23 @@ export function MarketTickerTape() {
       showSymbolLogo: true,
       isTransparent: true,
       displayMode: "adaptive",
-      colorTheme: resolvedTheme === "dark" ? "dark" : "light",
+      colorTheme: isDark ? "dark" : "light",
       locale: "en",
     });
 
     const wrapper = document.createElement("div");
     wrapper.className = "tradingview-widget-container__widget";
-    containerRef.current.appendChild(wrapper);
+    el.appendChild(wrapper);
 
-    // Copyright attribution with affiliate link
     const copyright = document.createElement("div");
     copyright.className = "tradingview-widget-copyright";
     copyright.innerHTML = `<a href="https://www.tradingview.com/${AFF_PARAMS}" target="_blank" rel="noopener noreferrer"><span class="blue-text">Track all markets on TradingView</span></a>`;
-    containerRef.current.appendChild(copyright);
+    el.appendChild(copyright);
 
-    containerRef.current.appendChild(script);
+    el.appendChild(script);
 
-    return () => {
-      if (containerRef.current) containerRef.current.innerHTML = "";
-    };
-  }, [resolvedTheme]);
+    return () => { el.innerHTML = ""; };
+  }, []);
 
   return (
     <div
