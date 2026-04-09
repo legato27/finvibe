@@ -1,6 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
+import { stocksApi } from "@/lib/api";
 import {
   usePortfolios,
   useCreatePortfolio,
@@ -12,9 +14,97 @@ import {
 } from "@/lib/supabase/hooks";
 import {
   Plus, Trash2, X, Briefcase, TrendingUp, TrendingDown,
-  Loader2, Clock, FolderOpen,
+  Loader2, Clock, FolderOpen, Search, DollarSign,
 } from "lucide-react";
-import Link from "next/link";
+
+/* ── Inline ticker search with dropdown ──────────────────── */
+function TickerInput({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (ticker: string, name: string) => void;
+}) {
+  const [query, setQuery] = useState(value);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const { data: results, isLoading } = useQuery({
+    queryKey: ["stock_search", query],
+    queryFn: () => stocksApi.search(query),
+    enabled: query.length >= 1 && open,
+    staleTime: 30_000,
+  });
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const stocks = results || [];
+
+  return (
+    <div ref={containerRef} className="relative">
+      <div className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg focus-within:ring-1 focus-within:ring-primary">
+        <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            const v = e.target.value.toUpperCase();
+            setQuery(v);
+            onChange(v, "");
+            setOpen(true);
+          }}
+          onFocus={() => query.length >= 1 && setOpen(true)}
+          placeholder="Search ticker..."
+          className="flex-1 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-muted-foreground/60 w-full min-w-0"
+          required
+        />
+        {isLoading && query && open && (
+          <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
+        )}
+      </div>
+
+      {open && query.length >= 1 && stocks.length > 0 && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
+          {stocks.map((stock: any) => (
+            <button
+              key={stock.ticker}
+              type="button"
+              onClick={() => {
+                setQuery(stock.ticker);
+                onChange(stock.ticker, stock.name);
+                setOpen(false);
+              }}
+              className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent/50 transition-colors text-left border-b border-border/20 last:border-0"
+            >
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
+                  {stock.exchange && (
+                    <span className="text-[9px] text-muted-foreground/60 bg-muted px-1 rounded">{stock.exchange}</span>
+                  )}
+                </div>
+                <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
+              </div>
+              {stock.price != null && (
+                <span className="font-mono text-xs text-foreground/70 flex-shrink-0 ml-2">
+                  ${stock.price.toFixed(2)}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PortfolioPage() {
   const router = useRouter();
@@ -26,7 +116,7 @@ export default function PortfolioPage() {
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
   const [newPortfolioName, setNewPortfolioName] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState({ ticker: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
+  const [form, setForm] = useState({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
 
   const activePortfolio = portfolios?.find((p: any) => p.id === activeId) || portfolios?.[0];
   const { data: holdings, isLoading: holdingsLoading } = usePortfolioHoldings(activePortfolio?.id ?? null);
@@ -35,7 +125,7 @@ export default function PortfolioPage() {
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!activePortfolio) return;
+    if (!activePortfolio || !form.ticker) return;
     addHolding.mutate({
       ticker: form.ticker,
       shares: parseFloat(form.shares),
@@ -44,7 +134,7 @@ export default function PortfolioPage() {
       acquired_date: form.acquired_date || undefined,
       notes: form.notes || undefined,
     });
-    setForm({ ticker: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
+    setForm({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
     setShowForm(false);
   }
 
@@ -86,7 +176,7 @@ export default function PortfolioPage() {
               onClick={() => setShowForm(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Holding
+              <Plus className="w-3.5 h-3.5" /> Add Investment
             </button>
           )}
         </div>
@@ -193,23 +283,20 @@ export default function PortfolioPage() {
             </div>
           </div>
 
-          {/* Add holding form */}
+          {/* Add investment form */}
           {showForm && (
             <div className="card p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-foreground">Add Holding to {activePortfolio?.name}</span>
+                <span className="text-sm font-semibold text-foreground">Add Investment to {activePortfolio?.name}</span>
                 <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                <input
-                  type="text"
+                {/* Ticker with search */}
+                <TickerInput
                   value={form.ticker}
-                  onChange={(e) => setForm({ ...form, ticker: e.target.value.toUpperCase() })}
-                  placeholder="Ticker (AAPL)"
-                  className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  required
+                  onChange={(ticker, name) => setForm({ ...form, ticker, name })}
                 />
                 <input
                   type="number"
@@ -220,15 +307,19 @@ export default function PortfolioPage() {
                   className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                 />
-                <input
-                  type="number"
-                  step="any"
-                  value={form.cost_basis}
-                  onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
-                  placeholder="Cost/share"
-                  className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  required
-                />
+                {/* Cost with $ prefix */}
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <input
+                    type="number"
+                    step="any"
+                    value={form.cost_basis}
+                    onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
+                    placeholder="Cost/share"
+                    className="w-full pl-7 pr-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    required
+                  />
+                </div>
                 <input
                   type="date"
                   value={form.acquired_date}
@@ -239,6 +330,11 @@ export default function PortfolioPage() {
                   Add
                 </button>
               </form>
+              {form.name && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Selected: <span className="font-mono text-primary">{form.ticker}</span> — {form.name}
+                </div>
+              )}
             </div>
           )}
 
@@ -254,7 +350,7 @@ export default function PortfolioPage() {
             ) : !holdings?.length ? (
               <div className="py-12 text-center text-muted-foreground text-sm">
                 <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                No holdings yet. Click &quot;Add Holding&quot; to track your positions.
+                No investments yet. Click &quot;Add Investment&quot; to track your positions.
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -332,7 +428,7 @@ export default function PortfolioPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm("Delete this holding?")) deleteHolding.mutate(h.id);
+                                if (confirm("Delete this investment?")) deleteHolding.mutate(h.id);
                               }}
                               className="text-muted-foreground/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
