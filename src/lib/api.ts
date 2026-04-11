@@ -50,6 +50,7 @@ export const modelsApi = {
   runAll: (ticker: string) => api.get(`/api/models/${ticker}/run/all`).then((r) => r.data),
   results: (ticker: string) => api.get(`/api/models/${ticker}/results`).then((r) => r.data),
   taskStatus: (taskId: string) => api.get(`/api/models/tasks/${taskId}/status`).then((r) => r.data),
+  lastRun: (ticker: string) => api.get(`/api/models/${ticker}/last-run`).then((r) => r.data),
 };
 
 // ── Macro ─────────────────────────────────────────────────────

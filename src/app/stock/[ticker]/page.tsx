@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi, sentimentApi } from "@/lib/api";
 import { useLLMAnalysis } from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
@@ -48,6 +48,21 @@ export default function StockDetailPage() {
 
   const { data: supabaseLlm } = useLLMAnalysis(ticker);
 
+  // Refresh live price on mount — updates DB so detail query stays fresh
+  const qc = useQueryClient();
+  useQuery({
+    queryKey: ["stock-price-refresh", ticker],
+    queryFn: async () => {
+      await stocksApi.refreshPrices([ticker]);
+      qc.invalidateQueries({ queryKey: ["stock-detail", ticker] });
+      return { at: Date.now() };
+    },
+    enabled: !!ticker,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    retry: 2,
+  });
+
   if (detailLoading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -78,7 +93,7 @@ export default function StockDetailPage() {
     detail.description || stockInfo?.description || llm.description || llm.llm_description || null;
   const isLongDesc = (description?.length || 0) > 200;
 
-  const currentPrice = detail.last_price || stockInfo?.current_price;
+  const currentPrice = stockInfo?.current_price || detail.last_price;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "chart", label: "Chart", icon: <LineChart className="w-3.5 h-3.5" /> },

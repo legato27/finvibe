@@ -21,6 +21,7 @@ export default function WatchlistPage() {
   const [showNewList, setShowNewList] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
 
   const activeWatchlist = watchlists?.find((w: any) => w.id === activeId) || watchlists?.[0];
 
@@ -44,12 +45,32 @@ export default function WatchlistPage() {
   async function handleRefreshPrices() {
     if (refreshing || !activeTickers.length) return;
     setRefreshing(true);
+    setRefreshError(false);
     try {
       await stocksApi.refreshPrices(activeTickers);
       queryClient.invalidateQueries({ queryKey: ["watchlists"] });
+    } catch {
+      setRefreshError(true);
     } finally {
       setRefreshing(false);
     }
+  }
+
+  function timeAgo(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60_000);
+    if (mins < 1) return "just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
+  }
+
+  function isStale(iso: string | null | undefined): boolean {
+    if (!iso) return true;
+    return Date.now() - new Date(iso).getTime() > 3600_000; // > 1 hour
   }
 
   if (isLoading) {
@@ -70,11 +91,13 @@ export default function WatchlistPage() {
             <button
               onClick={handleRefreshPrices}
               disabled={refreshing}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground rounded-lg hover:text-foreground transition-colors disabled:opacity-50"
-              title="Refresh prices now"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${
+                refreshError ? "text-red-400 hover:text-red-300" : "text-muted-foreground hover:text-foreground"
+              }`}
+              title={refreshError ? "Refresh failed — click to retry" : "Refresh prices now"}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Updating..." : "Refresh"}
+              {refreshing ? "Updating..." : refreshError ? "Retry" : "Refresh"}
             </button>
           )}
           <button
@@ -260,7 +283,14 @@ export default function WatchlistPage() {
 
                         <div className="flex items-center gap-4 flex-shrink-0">
                           {stock.last_price != null && stock.last_price > 0 && (
-                            <span className="font-mono text-sm text-foreground">${stock.last_price.toFixed(2)}</span>
+                            <div className="text-right">
+                              <span className="font-mono text-sm text-foreground">${stock.last_price.toFixed(2)}</span>
+                              {stock.last_price_updated_at && (
+                                <div className={`text-[10px] ${isStale(stock.last_price_updated_at) ? "text-amber-400/70" : "text-muted-foreground/40"}`}>
+                                  {timeAgo(stock.last_price_updated_at)}
+                                </div>
+                              )}
+                            </div>
                           )}
                           {stock.intrinsic_value != null && stock.last_price != null && (
                             <div className="text-right">

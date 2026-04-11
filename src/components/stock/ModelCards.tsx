@@ -1,9 +1,10 @@
 "use client";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { modelsApi } from "@/lib/api";
 import {
   TrendingUp, TrendingDown, Minus, Loader2, ShieldCheck, ShieldAlert,
-  Activity, BarChart3, Brain, Zap, Target, Waves,
+  Activity, BarChart3, Brain, Zap, Target, Waves, Play, Clock,
 } from "lucide-react";
 
 const MODEL_META: Record<string, { label: string; desc: string; icon: React.ReactNode }> = {
@@ -90,13 +91,74 @@ function extractSignal(model: any): { value: string; label: string; color: strin
   return { value: "—", label: "", color: "text-muted-foreground" };
 }
 
+function timeAgo(iso: string | null): string {
+  if (!iso) return "";
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return `${days}d ago`;
+}
+
 export function ModelCards({ ticker }: { ticker: string }) {
+  const qc = useQueryClient();
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
+
   const { data: results, isLoading } = useQuery({
     queryKey: ["model-results", ticker],
     queryFn: () => modelsApi.results(ticker),
     staleTime: 60_000,
     retry: false,
   });
+
+  const { data: lastRunInfo } = useQuery({
+    queryKey: ["model-last-run", ticker],
+    queryFn: () => modelsApi.lastRun(ticker),
+    staleTime: 30_000,
+  });
+
+  // Poll task status while running
+  const { data: taskStatus } = useQuery({
+    queryKey: ["model-task", taskId],
+    queryFn: () => modelsApi.taskStatus(taskId!),
+    enabled: !!taskId,
+    refetchInterval: 3_000,
+  });
+
+  // When task completes, refresh results
+  useEffect(() => {
+    if (taskStatus?.status === "SUCCESS" || taskStatus?.status === "FAILURE") {
+      setTaskId(null);
+      qc.invalidateQueries({ queryKey: ["model-results", ticker] });
+      qc.invalidateQueries({ queryKey: ["model-last-run", ticker] });
+      if (taskStatus.status === "FAILURE") {
+        setRunError("Model run failed");
+      }
+    }
+  }, [taskStatus?.status, ticker, qc]);
+
+  const isRunning = !!taskId;
+  const canRun = lastRunInfo?.can_run && !isRunning;
+
+  const handleRunAll = useCallback(async () => {
+    setRunError(null);
+    try {
+      const res = await modelsApi.runAll(ticker);
+      setTaskId(res.task_id);
+    } catch (e: any) {
+      const detail = e?.response?.data?.detail;
+      if (typeof detail === "object" && detail?.message) {
+        setRunError(detail.message);
+      } else {
+        setRunError(typeof detail === "string" ? detail : "Failed to start models");
+      }
+      qc.invalidateQueries({ queryKey: ["model-last-run", ticker] });
+    }
+  }, [ticker, qc]);
 
   if (isLoading) {
     return (
@@ -106,59 +168,104 @@ export function ModelCards({ ticker }: { ticker: string }) {
     );
   }
 
-  if (!results || results.length === 0) {
-    return (
-      <div className="card p-8 text-center text-muted-foreground text-sm">
-        No quant model results available yet. Models run automatically before FinVibe&apos;s Thoughts generation.
-      </div>
-    );
-  }
-
   // Sort: ensemble first, then alphabetical
-  const sorted = [...results].sort((a: any, b: any) => {
-    if (a.model_type === "ensemble") return -1;
-    if (b.model_type === "ensemble") return 1;
-    return a.model_type.localeCompare(b.model_type);
-  });
+  const sorted = results?.length
+    ? [...results].sort((a: any, b: any) => {
+        if (a.model_type === "ensemble") return -1;
+        if (b.model_type === "ensemble") return 1;
+        return a.model_type.localeCompare(b.model_type);
+      })
+    : [];
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {sorted.map((model: any) => {
-        const meta = MODEL_META[model.model_type] || {
-          label: model.model_type, desc: "", icon: <BarChart3 className="w-4 h-4" />,
-        };
-        const signal = extractSignal(model);
-        const isEnsemble = model.model_type === "ensemble";
+    <div className="space-y-3">
+      {/* Run bar */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          {lastRunInfo?.last_run && (
+            <>
+              <Clock className="w-3 h-3" />
+              <span>Last run {timeAgo(lastRunInfo.last_run)}</span>
+            </>
+          )}
+          {isRunning && (
+            <span className="flex items-center gap-1.5 text-primary">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Running models...
+            </span>
+          )}
+          {runError && (
+            <span className="text-amber-400">{runError}</span>
+          )}
+        </div>
+        <button
+          onClick={handleRunAll}
+          disabled={!canRun}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
+            canRun
+              ? "bg-primary/20 text-primary hover:bg-primary/30"
+              : "bg-muted text-muted-foreground/50 cursor-not-allowed"
+          }`}
+          title={
+            isRunning ? "Models are running..." :
+            !lastRunInfo?.can_run ? `Next run available ${lastRunInfo?.next_available ? timeAgo(lastRunInfo.next_available) : "tomorrow"}` :
+            "Run all quant models"
+          }
+        >
+          {isRunning ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Play className="w-3.5 h-3.5" />
+          )}
+          {isRunning ? "Running..." : "Run Models"}
+        </button>
+      </div>
 
-        return (
-          <div
-            key={model.model_type}
-            className={`rounded-lg border p-3 transition-colors ${
-              isEnsemble
-                ? "border-primary/30 bg-primary/5 col-span-2 md:col-span-1"
-                : "border-border/30 bg-accent/30 hover:bg-accent/50"
-            }`}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{meta.icon}</span>
-              <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-foreground/80"}`}>
-                {meta.label}
-              </span>
-            </div>
-            <div className={`text-xl font-mono font-bold ${signal.color}`}>
-              {signal.value}
-            </div>
-            {signal.label && (
-              <div className={`text-[10px] font-medium uppercase tracking-wider mt-0.5 ${signal.color} opacity-80`}>
-                {signal.label}
+      {/* Model cards */}
+      {sorted.length === 0 ? (
+        <div className="card p-8 text-center text-muted-foreground text-sm">
+          No quant model results yet. Click &quot;Run Models&quot; to generate predictions.
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {sorted.map((model: any) => {
+            const meta = MODEL_META[model.model_type] || {
+              label: model.model_type, desc: "", icon: <BarChart3 className="w-4 h-4" />,
+            };
+            const signal = extractSignal(model);
+            const isEnsemble = model.model_type === "ensemble";
+
+            return (
+              <div
+                key={model.model_type}
+                className={`rounded-lg border p-3 transition-colors ${
+                  isEnsemble
+                    ? "border-primary/30 bg-primary/5 col-span-2 md:col-span-1"
+                    : "border-border/30 bg-accent/30 hover:bg-accent/50"
+                }`}
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{meta.icon}</span>
+                  <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-foreground/80"}`}>
+                    {meta.label}
+                  </span>
+                </div>
+                <div className={`text-xl font-mono font-bold ${signal.color}`}>
+                  {signal.value}
+                </div>
+                {signal.label && (
+                  <div className={`text-[10px] font-medium uppercase tracking-wider mt-0.5 ${signal.color} opacity-80`}>
+                    {signal.label}
+                  </div>
+                )}
+                <div className="text-[10px] text-muted-foreground/60 mt-1.5 leading-tight">
+                  {meta.desc}
+                </div>
               </div>
-            )}
-            <div className="text-[10px] text-muted-foreground/60 mt-1.5 leading-tight">
-              {meta.desc}
-            </div>
-          </div>
-        );
-      })}
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
