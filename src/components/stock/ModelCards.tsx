@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { modelsApi } from "@/lib/api";
+import { modelsApi, stocksApi } from "@/lib/api";
 import {
   TrendingUp, TrendingDown, Minus, Loader2, ShieldCheck, ShieldAlert,
   Activity, BarChart3, Brain, Zap, Target, Waves, Play, Clock,
@@ -107,6 +107,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
   const qc = useQueryClient();
   const [taskId, setTaskId] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
+  const [generatingThoughts, setGeneratingThoughts] = useState(false);
 
   const { data: results, isLoading } = useQuery({
     queryKey: ["model-results", ticker],
@@ -129,7 +130,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
     refetchInterval: 3_000,
   });
 
-  // When task completes, refresh results
+  // When models complete, refresh results and start tracking thoughts generation
   useEffect(() => {
     if (taskStatus?.status === "SUCCESS" || taskStatus?.status === "FAILURE") {
       setTaskId(null);
@@ -137,12 +138,51 @@ export function ModelCards({ ticker }: { ticker: string }) {
       qc.invalidateQueries({ queryKey: ["model-last-run", ticker] });
       if (taskStatus.status === "FAILURE") {
         setRunError("Model run failed");
+      } else {
+        // Models done → thoughts auto-triggered on backend
+        // Record current thoughts timestamp so we can detect when new ones arrive
+        setGeneratingThoughts(true);
       }
     }
   }, [taskStatus?.status, ticker, qc]);
 
+  // While generating thoughts, poll LLM analysis for new data
+  useQuery({
+    queryKey: ["thoughts-poll", ticker],
+    queryFn: async () => {
+      const res = await stocksApi.thoughts(ticker);
+      return res;
+    },
+    enabled: generatingThoughts,
+    refetchInterval: 10_000,
+    staleTime: 0,
+  });
+
+  // Detect when fresh thoughts arrive → stop polling
+  const { data: currentThoughts } = useQuery({
+    queryKey: ["stock-thoughts", ticker],
+    queryFn: () => stocksApi.thoughts(ticker),
+    enabled: !!ticker,
+    staleTime: 60_000,
+  });
+
+  useEffect(() => {
+    if (!generatingThoughts) return;
+    const generatedAt = currentThoughts?.generated_at;
+    if (generatedAt) {
+      const age = Date.now() - new Date(generatedAt).getTime();
+      // If thoughts were generated in the last 2 minutes, they're fresh
+      if (age < 120_000) {
+        setGeneratingThoughts(false);
+        qc.invalidateQueries({ queryKey: ["llm-analysis", ticker] });
+        qc.invalidateQueries({ queryKey: ["llm-analysis-batch"] });
+        qc.invalidateQueries({ queryKey: ["stock-detail", ticker] });
+      }
+    }
+  }, [currentThoughts?.generated_at, generatingThoughts, ticker, qc]);
+
   const isRunning = !!taskId;
-  const canRun = lastRunInfo?.can_run && !isRunning;
+  const canRun = lastRunInfo?.can_run && !isRunning && !generatingThoughts;
 
   const handleRunAll = useCallback(async () => {
     setRunError(null);
@@ -192,6 +232,12 @@ export function ModelCards({ ticker }: { ticker: string }) {
             <span className="flex items-center gap-1.5 text-primary">
               <Loader2 className="w-3 h-3 animate-spin" />
               Running models...
+            </span>
+          )}
+          {generatingThoughts && !isRunning && (
+            <span className="flex items-center gap-1.5 text-primary">
+              <Brain className="w-3 h-3 animate-pulse" />
+              Generating FinVibe&apos;s Thoughts...
             </span>
           )}
           {runError && (
