@@ -27,7 +27,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
 
   // Ensemble
   if (type === "ensemble") {
-    const ret = pred.predicted_return;
+    const ret = pred.predicted_3m_return ?? pred.ensemble_return ?? pred.predicted_return;
     const signal = pred.signal || "";
     const color = ret > 0.03 ? "text-green-400" : ret < -0.03 ? "text-red-400" : "text-yellow-400";
     return { value: ret != null ? `${(ret * 100).toFixed(1)}%` : "—", label: signal.replace(/_/g, " "), color };
@@ -43,8 +43,8 @@ function extractSignal(model: any): { value: string; label: string; color: strin
 
   // Piotroski
   if (type === "piotroski_fscore") {
-    const score = pred.score ?? pred.f_score;
-    const quality = pred.quality || (score >= 7 ? "STRONG" : score >= 4 ? "NEUTRAL" : "WEAK");
+    const score = pred.f_score ?? pred.score;
+    const quality = pred.signal || pred.quality || (score >= 7 ? "STRONG" : score >= 4 ? "NEUTRAL" : "WEAK");
     const color = quality === "STRONG" ? "text-green-400" : quality === "NEUTRAL" ? "text-yellow-400" : "text-red-400";
     return { value: score != null ? `${score}/9` : "—", label: quality, color };
   }
@@ -59,7 +59,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
 
   // GARCH
   if (type === "garch") {
-    const vol = pred.current_annual_vol ?? pred.annualized_vol;
+    const vol = pred.current_vol_annualized ?? pred.current_annual_vol ?? pred.annualized_vol;
     const persistence = pred.persistence;
     const color = (vol || 0) > 0.4 ? "text-red-400" : (vol || 0) > 0.25 ? "text-yellow-400" : "text-green-400";
     return {
@@ -71,8 +71,8 @@ function extractSignal(model: any): { value: string; label: string; color: strin
 
   // Monte Carlo
   if (type === "monte_carlo") {
-    const median = pred.median_return ?? pred.median_price_return;
-    const probProfit = pred.prob_profit;
+    const dist = pred.distribution || {};
+    const probProfit = dist.prob_profit ?? pred.prob_profit;
     const color = (probProfit || 0) > 0.55 ? "text-green-400" : (probProfit || 0) < 0.45 ? "text-red-400" : "text-yellow-400";
     return {
       value: probProfit != null ? `${(probProfit * 100).toFixed(0)}%` : "—",
@@ -82,7 +82,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
   }
 
   // Return-based models (xgboost, lightgbm, price_predictor, factor_model, lstm_forecast)
-  const ret = pred.predicted_return ?? pred.predicted_3m_return ?? pred.forecast_return;
+  const ret = pred.predicted_3m_return ?? pred.predicted_return ?? pred.forecast_return;
   if (ret != null) {
     const color = ret > 0.03 ? "text-green-400" : ret < -0.03 ? "text-red-400" : "text-yellow-400";
     return { value: `${(ret * 100).toFixed(1)}%`, label: "3M return", color };
