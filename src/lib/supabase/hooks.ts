@@ -449,3 +449,215 @@ export function useAddNote() {
   });
 }
 
+// ── Options Trades ─────────────────────────────────────────
+
+export interface OptionsTrade {
+  id: number;
+  user_id: string;
+  ticker: string;
+  strategy: "cash_secured_put" | "covered_call" | "put_credit_spread" | "call_credit_spread";
+  strike_price: number;
+  premium: number;
+  contracts: number;
+  expiry_date: string;
+  entry_date: string;
+  underlying_price_at_entry: number | null;
+  status: "open" | "closed" | "expired" | "assigned";
+  close_date: string | null;
+  close_price: number | null;
+  underlying_price_at_close: number | null;
+  realized_pnl: number | null;
+  return_on_capital: number | null;
+  annualized_return: number | null;
+  llm_recommendation: any | null;
+  llm_confidence: number | null;
+  llm_reasoning: string | null;
+  llm_model_version: string | null;
+  outcome_notes: string | null;
+  was_profitable: boolean | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useOptionsTrades(ticker?: string) {
+  return useQuery({
+    queryKey: ["options-trades", ticker || "all"],
+    queryFn: async (): Promise<OptionsTrade[]> => {
+      let query = supabase
+        .from("options_trades")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (ticker) query = query.eq("ticker", ticker.toUpperCase());
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useAddOptionsTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (trade: {
+      ticker: string;
+      strategy: OptionsTrade["strategy"];
+      strike_price: number;
+      premium: number;
+      contracts: number;
+      expiry_date: string;
+      entry_date?: string;
+      underlying_price_at_entry?: number;
+      llm_recommendation?: any;
+      llm_confidence?: number;
+      llm_reasoning?: string;
+      llm_model_version?: string;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("options_trades")
+        .insert({
+          ...trade,
+          ticker: trade.ticker.toUpperCase(),
+          user_id: user.id,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ["options-trades", vars.ticker.toUpperCase()] });
+      qc.invalidateQueries({ queryKey: ["options-trades", "all"] });
+    },
+  });
+}
+
+function calculateOptionsPnl(trade: {
+  strategy: string;
+  premium: number;
+  contracts: number;
+  strike_price: number;
+  entry_date: string;
+  close_price?: number | null;
+  underlying_price_at_close?: number | null;
+  status: string;
+}) {
+  const multiplier = trade.contracts * 100;
+  const premiumReceived = trade.premium * multiplier;
+  let premiumPaid = 0;
+
+  if (trade.status === "closed" && trade.close_price != null) {
+    premiumPaid = trade.close_price * multiplier;
+  } else if (trade.status === "assigned" && trade.underlying_price_at_close != null) {
+    // For CSP: assigned means we buy at strike, stock is worth underlying_price_at_close
+    if (trade.strategy === "cash_secured_put") {
+      const assignmentLoss = (trade.strike_price - trade.underlying_price_at_close) * multiplier;
+      return {
+        realized_pnl: premiumReceived - Math.max(0, assignmentLoss),
+        capital_at_risk: trade.strike_price * multiplier,
+      };
+    }
+    // For covered call: called away at strike
+    if (trade.strategy === "covered_call") {
+      return {
+        realized_pnl: premiumReceived,
+        capital_at_risk: trade.underlying_price_at_close * multiplier,
+      };
+    }
+  }
+
+  const realized_pnl = premiumReceived - premiumPaid;
+  const capital_at_risk = trade.strategy === "cash_secured_put"
+    ? trade.strike_price * multiplier
+    : (trade.underlying_price_at_close || trade.strike_price) * multiplier;
+
+  return { realized_pnl, capital_at_risk };
+}
+
+export function useCloseOptionsTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      id,
+      close_price,
+      underlying_price_at_close,
+      status,
+      outcome_notes,
+    }: {
+      id: number;
+      close_price?: number;
+      underlying_price_at_close?: number;
+      status: "closed" | "expired" | "assigned";
+      outcome_notes?: string;
+    }) => {
+      // Fetch existing trade
+      const { data: trade, error: fetchErr } = await supabase
+        .from("options_trades")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (fetchErr) throw fetchErr;
+
+      const { realized_pnl, capital_at_risk } = calculateOptionsPnl({
+        ...trade,
+        close_price: close_price ?? null,
+        underlying_price_at_close: underlying_price_at_close ?? trade.underlying_price_at_entry,
+        status,
+      });
+
+      const entryDate = new Date(trade.entry_date);
+      const closeDate = new Date();
+      const daysHeld = Math.max(1, Math.round((closeDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24)));
+      const return_on_capital = capital_at_risk > 0 ? realized_pnl / capital_at_risk : 0;
+      const annualized_return = return_on_capital * (365 / daysHeld);
+
+      const { data, error } = await supabase
+        .from("options_trades")
+        .update({
+          status,
+          close_date: closeDate.toISOString().split("T")[0],
+          close_price: close_price ?? null,
+          underlying_price_at_close: underlying_price_at_close ?? null,
+          realized_pnl,
+          return_on_capital,
+          annualized_return,
+          was_profitable: realized_pnl > 0,
+          outcome_notes: outcome_notes ?? null,
+        })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ["options-trades", data.ticker] });
+      qc.invalidateQueries({ queryKey: ["options-trades", "all"] });
+    },
+  });
+}
+
+export function useDeleteOptionsTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data: trade } = await supabase
+        .from("options_trades")
+        .select("ticker")
+        .eq("id", id)
+        .single();
+      const { error } = await supabase.from("options_trades").delete().eq("id", id);
+      if (error) throw error;
+      return trade;
+    },
+    onSuccess: (trade: any) => {
+      if (trade?.ticker) {
+        qc.invalidateQueries({ queryKey: ["options-trades", trade.ticker] });
+      }
+      qc.invalidateQueries({ queryKey: ["options-trades", "all"] });
+    },
+  });
+}
+
