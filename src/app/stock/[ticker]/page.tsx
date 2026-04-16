@@ -8,6 +8,7 @@ import { PriceChart } from "@/components/stock/PriceChart";
 import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { ModelCards } from "@/components/stock/ModelCards";
+import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Brain, Loader2,
@@ -281,7 +282,10 @@ export default function StockDetailPage() {
           ═══════════════════════════════════════════════════ */}
 
       {activeTab === "chart" && (
-        <PriceChart ticker={ticker} />
+        <>
+          <PriceChart ticker={ticker} />
+          <TechnicalAnalysis ticker={ticker} />
+        </>
       )}
 
       {activeTab === "analysis" && (
