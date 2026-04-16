@@ -6,7 +6,7 @@
 
 create table public.options_trades (
   id bigint generated always as identity primary key,
-  user_id uuid not null references public.profiles(id) on delete cascade,
+  user_id uuid not null references auth.users(id) on delete cascade,
   ticker text not null,
 
   -- Strategy
@@ -49,6 +49,15 @@ create index ix_options_trades_user on public.options_trades(user_id);
 create index ix_options_trades_ticker on public.options_trades(ticker);
 create index ix_options_trades_status on public.options_trades(status);
 create index ix_options_trades_expiry on public.options_trades(expiry_date);
+
+-- Ensure the updated_at function exists
+create or replace function public.update_updated_at()
+returns trigger as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$ language plpgsql;
 
 -- Auto-update updated_at
 create trigger set_updated_at before update on public.options_trades
