@@ -1,18 +1,13 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import {
-  DollarSign, TrendingDown, TrendingUp, Shield, Target, Clock,
-  Plus, X, Check, AlertTriangle, Loader2, ChevronDown, ChevronUp,
-  Trash2, RefreshCw, BookOpen, Percent, Calendar, ArrowRight,
+  DollarSign, Shield, Target,
+  Plus, AlertTriangle, Loader2, ChevronDown, ChevronUp,
+  RefreshCw, BookOpen, Calendar, ArrowRight,
 } from "lucide-react";
 import {
-  useOptionsTrades,
   useAddOptionsTrade,
-  useCloseOptionsTrade,
-  useDeleteOptionsTrade,
-  OptionsTrade,
 } from "@/lib/supabase/hooks";
-import { stocksApi } from "@/lib/api";
 import { useLLMAnalysis } from "@/lib/supabase/hooks";
 
 // ── Types ───────────────────────────────────────────────────
@@ -386,268 +381,6 @@ function StrategyCard({
   );
 }
 
-// ── Close Trade Modal ───────────────────────────────────────
-
-function CloseTradeModal({
-  trade,
-  onClose,
-  onConfirm,
-  isClosing,
-}: {
-  trade: OptionsTrade;
-  onClose: () => void;
-  onConfirm: (data: { close_price?: number; underlying_price_at_close?: number; status: "closed" | "expired" | "assigned"; outcome_notes?: string }) => void;
-  isClosing: boolean;
-}) {
-  const [closeType, setCloseType] = useState<"closed" | "expired" | "assigned">("closed");
-  const [closePrice, setClosePrice] = useState("");
-  const [underlyingPrice, setUnderlyingPrice] = useState("");
-  const [notes, setNotes] = useState("");
-
-  return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="card p-5 max-w-md w-full space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold">Close Trade — {trade.ticker} ${trade.strike_price} {trade.strategy === "cash_secured_put" ? "P" : "C"}</h3>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Close Type */}
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">How was it closed?</label>
-          <div className="flex gap-2">
-            {(["closed", "expired", "assigned"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setCloseType(t)}
-                className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                  closeType === t
-                    ? "bg-primary/20 text-primary border-primary/30"
-                    : "bg-accent/30 text-muted-foreground border-border/30 hover:bg-accent/50"
-                }`}
-              >
-                {t === "closed" ? "Bought Back" : t === "expired" ? "Expired Worthless" : "Assigned"}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Close Price (for buy-back) */}
-        {closeType === "closed" && (
-          <div>
-            <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Buy-back Premium (per share)</label>
-            <input
-              type="number"
-              step="0.01"
-              value={closePrice}
-              onChange={(e) => setClosePrice(e.target.value)}
-              placeholder="0.00"
-              className="w-full px-3 py-2 rounded-lg bg-accent/30 border border-border/30 text-sm font-mono focus:outline-none focus:border-primary/50"
-            />
-          </div>
-        )}
-
-        {/* Underlying Price at Close */}
-        {closeType === "assigned" && (
-          <div>
-            <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Stock Price at Assignment</label>
-            <input
-              type="number"
-              step="0.01"
-              value={underlyingPrice}
-              onChange={(e) => setUnderlyingPrice(e.target.value)}
-              placeholder={trade.underlying_price_at_entry?.toFixed(2) || "0.00"}
-              className="w-full px-3 py-2 rounded-lg bg-accent/30 border border-border/30 text-sm font-mono focus:outline-none focus:border-primary/50"
-            />
-          </div>
-        )}
-
-        {/* Notes */}
-        <div>
-          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Outcome Notes (for fine-tuning)</label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="What happened? Was the thesis correct?"
-            rows={2}
-            className="w-full px-3 py-2 rounded-lg bg-accent/30 border border-border/30 text-xs focus:outline-none focus:border-primary/50 resize-none"
-          />
-        </div>
-
-        {/* Preview */}
-        <div className="bg-accent/20 rounded-lg p-3 text-xs">
-          <span className="text-muted-foreground">Premium received: </span>
-          <span className="font-mono text-green-400">${(trade.premium * trade.contracts * 100).toFixed(2)}</span>
-          {closeType === "closed" && closePrice && (
-            <>
-              <br />
-              <span className="text-muted-foreground">Buy-back cost: </span>
-              <span className="font-mono text-red-400">${(parseFloat(closePrice) * trade.contracts * 100).toFixed(2)}</span>
-              <br />
-              <span className="text-muted-foreground">Net P&L: </span>
-              <span className={`font-mono ${(trade.premium - parseFloat(closePrice)) >= 0 ? "text-green-400" : "text-red-400"}`}>
-                ${((trade.premium - parseFloat(closePrice)) * trade.contracts * 100).toFixed(2)}
-              </span>
-            </>
-          )}
-          {closeType === "expired" && (
-            <>
-              <br />
-              <span className="text-muted-foreground">Net P&L: </span>
-              <span className="font-mono text-green-400">${(trade.premium * trade.contracts * 100).toFixed(2)} (max profit)</span>
-            </>
-          )}
-        </div>
-
-        <button
-          onClick={() => onConfirm({
-            close_price: closeType === "closed" ? parseFloat(closePrice) || 0 : closeType === "expired" ? 0 : undefined,
-            underlying_price_at_close: closeType === "assigned" ? parseFloat(underlyingPrice) || undefined : undefined,
-            status: closeType,
-            outcome_notes: notes || undefined,
-          })}
-          disabled={isClosing || (closeType === "closed" && !closePrice)}
-          className="w-full px-4 py-2.5 rounded-lg text-xs font-semibold bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 disabled:opacity-50 flex items-center justify-center gap-2"
-        >
-          {isClosing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          {isClosing ? "Closing..." : "Confirm Close"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Trade Journal Row ───────────────────────────────────────
-
-function TradeRow({
-  trade,
-  onClose,
-  onDelete,
-}: {
-  trade: OptionsTrade;
-  onClose: (trade: OptionsTrade) => void;
-  onDelete: (id: number) => void;
-}) {
-  const isOpen = trade.status === "open";
-  const isCSP = trade.strategy === "cash_secured_put";
-  const daysToExpiry = isOpen
-    ? Math.max(0, Math.round((new Date(trade.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
-    : 0;
-  const isExpiring = isOpen && daysToExpiry <= 7;
-  const isExpired = isOpen && daysToExpiry <= 0;
-
-  return (
-    <div className={`border rounded-lg p-3 ${
-      isOpen ? "border-border/30" : trade.was_profitable ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"
-    }`}>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className={`text-[10px] px-2 py-0.5 rounded uppercase font-bold ${
-            isCSP ? "bg-blue-500/15 text-blue-400" : "bg-purple-500/15 text-purple-400"
-          }`}>
-            {isCSP ? "CSP" : "CC"}
-          </span>
-          <span className="font-mono text-sm font-bold">{trade.ticker}</span>
-          <span className="font-mono text-xs text-muted-foreground">${trade.strike_price.toFixed(2)} {isCSP ? "P" : "C"}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {isOpen && (
-            <span className={`text-[10px] px-2 py-0.5 rounded ${
-              isExpired ? "bg-red-500/15 text-red-400 animate-pulse" :
-              isExpiring ? "bg-amber-500/15 text-amber-400" :
-              "bg-green-500/15 text-green-400"
-            }`}>
-              {isExpired ? "EXPIRED" : isExpiring ? `${daysToExpiry}d left` : `${daysToExpiry}d`}
-            </span>
-          )}
-          <span className={`text-[10px] px-2 py-0.5 rounded uppercase ${
-            isOpen ? "bg-blue-500/15 text-blue-400" :
-            trade.status === "expired" ? "bg-green-500/15 text-green-400" :
-            trade.status === "assigned" ? "bg-amber-500/15 text-amber-400" :
-            "bg-muted text-muted-foreground"
-          }`}>
-            {trade.status}
-          </span>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-2 text-center">
-        <div>
-          <div className="text-[9px] text-muted-foreground">Premium</div>
-          <div className="font-mono text-xs text-green-400">${trade.premium.toFixed(2)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-muted-foreground">{trade.contracts}x Contract{trade.contracts > 1 ? "s" : ""}</div>
-          <div className="font-mono text-xs">${(trade.premium * trade.contracts * 100).toFixed(0)}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-muted-foreground">Expiry</div>
-          <div className="font-mono text-xs">{new Date(trade.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
-        </div>
-        <div>
-          <div className="text-[9px] text-muted-foreground">P&L</div>
-          {trade.realized_pnl != null ? (
-            <div className={`font-mono text-xs font-bold ${trade.realized_pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-              {trade.realized_pnl >= 0 ? "+" : ""}${trade.realized_pnl.toFixed(0)}
-              {trade.return_on_capital != null && (
-                <span className="text-[9px] ml-0.5">({(trade.return_on_capital * 100).toFixed(1)}%)</span>
-              )}
-            </div>
-          ) : (
-            <div className="font-mono text-xs text-muted-foreground">—</div>
-          )}
-        </div>
-      </div>
-
-      {/* LLM Confidence */}
-      {trade.llm_confidence != null && (
-        <div className="mt-2 flex items-center gap-2">
-          <div className="text-[9px] text-muted-foreground">AI Confidence:</div>
-          <div className="flex-1 bg-accent/30 rounded-full h-1.5">
-            <div
-              className={`h-1.5 rounded-full ${
-                trade.llm_confidence >= 0.7 ? "bg-green-400" : trade.llm_confidence >= 0.5 ? "bg-yellow-400" : "bg-red-400"
-              }`}
-              style={{ width: `${trade.llm_confidence * 100}%` }}
-            />
-          </div>
-          <span className="text-[9px] font-mono">{(trade.llm_confidence * 100).toFixed(0)}%</span>
-        </div>
-      )}
-
-      {/* Annualized Return */}
-      {trade.annualized_return != null && (
-        <div className="mt-1 text-[9px] text-muted-foreground">
-          Annualized: <span className={`font-mono ${trade.annualized_return >= 0 ? "text-green-400" : "text-red-400"}`}>
-            {(trade.annualized_return * 100).toFixed(1)}%
-          </span>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border/20">
-        {isOpen && (
-          <button
-            onClick={() => onClose(trade)}
-            className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-[10px] font-semibold bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
-          >
-            <Check className="w-3 h-3" />
-            Close Trade
-          </button>
-        )}
-        <button
-          onClick={() => onDelete(trade.id)}
-          className="px-3 py-1.5 text-[10px] text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-        >
-          <Trash2 className="w-3 h-3" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Main Component ──────────────────────────────────────────
 
 interface OptionsStrategyProps {
@@ -662,23 +395,14 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
   const [isGenerating, setIsGenerating] = useState(false);
   const [addingRec, setAddingRec] = useState<string | null>(null);
   const [showEducation, setShowEducation] = useState(false);
-  const [closingTrade, setClosingTrade] = useState<OptionsTrade | null>(null);
-  const [view, setView] = useState<"recommendations" | "journal">("recommendations");
 
-  const { data: trades = [], isLoading: tradesLoading } = useOptionsTrades(ticker);
   const addTrade = useAddOptionsTrade();
-  const closeTrade = useCloseOptionsTrade();
-  const deleteTrade = useDeleteOptionsTrade();
   const { data: llmData } = useLLMAnalysis(ticker);
-
-  const openTrades = trades.filter((t) => t.status === "open");
-  const closedTrades = trades.filter((t) => t.status !== "open");
 
   // Auto-generate inference on mount
   const generateInference = useCallback(() => {
     if (!currentPrice || currentPrice <= 0) return;
     setIsGenerating(true);
-    // Simulate async LLM call — in production this would hit the backend
     setTimeout(() => {
       const result = generateOptionsInference(
         ticker,
@@ -719,25 +443,6 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
     }
   }
 
-  async function handleCloseTrade(data: { close_price?: number; underlying_price_at_close?: number; status: "closed" | "expired" | "assigned"; outcome_notes?: string }) {
-    if (!closingTrade) return;
-    try {
-      await closeTrade.mutateAsync({ id: closingTrade.id, ...data });
-      setClosingTrade(null);
-    } catch (err) {
-      console.error("Failed to close trade:", err);
-    }
-  }
-
-  // Stats
-  const totalPnl = closedTrades.reduce((sum, t) => sum + (t.realized_pnl || 0), 0);
-  const winRate = closedTrades.length > 0
-    ? (closedTrades.filter((t) => t.was_profitable).length / closedTrades.length * 100).toFixed(0)
-    : null;
-  const avgReturn = closedTrades.length > 0
-    ? (closedTrades.reduce((sum, t) => sum + (t.return_on_capital || 0), 0) / closedTrades.length * 100).toFixed(1)
-    : null;
-
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -773,7 +478,7 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
 
         {/* Market Context Banner */}
         {inference && (
-          <div className="flex items-center gap-4 bg-accent/30 rounded-lg px-4 py-2.5 mb-4">
+          <div className="flex items-center gap-4 bg-accent/30 rounded-lg px-4 py-2.5">
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-muted-foreground">Outlook:</span>
               <span className={`text-xs font-semibold capitalize ${
@@ -795,55 +500,6 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
             </div>
           </div>
         )}
-
-        {/* Trade Stats */}
-        {(openTrades.length > 0 || closedTrades.length > 0) && (
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            <div className="text-center bg-accent/20 rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Open</div>
-              <div className="font-mono text-sm font-bold text-blue-400">{openTrades.length}</div>
-            </div>
-            <div className="text-center bg-accent/20 rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Total P&L</div>
-              <div className={`font-mono text-sm font-bold ${totalPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
-                {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(0)}
-              </div>
-            </div>
-            <div className="text-center bg-accent/20 rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Win Rate</div>
-              <div className="font-mono text-sm font-bold">{winRate ? `${winRate}%` : "—"}</div>
-            </div>
-            <div className="text-center bg-accent/20 rounded-lg p-2">
-              <div className="text-[9px] text-muted-foreground">Avg Return</div>
-              <div className="font-mono text-sm font-bold">{avgReturn ? `${avgReturn}%` : "—"}</div>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Toggle */}
-        <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30">
-          <button
-            onClick={() => setView("recommendations")}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
-              view === "recommendations" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground/80"
-            }`}
-          >
-            <Target className="w-3.5 h-3.5" />
-            Recommendations
-          </button>
-          <button
-            onClick={() => setView("journal")}
-            className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md text-xs font-medium transition-all ${
-              view === "journal" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground/80"
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            Trade Journal
-            {openTrades.length > 0 && (
-              <span className="text-[9px] bg-blue-500/20 text-blue-400 px-1.5 py-0.5 rounded-full">{openTrades.length}</span>
-            )}
-          </button>
-        </div>
       </div>
 
       {/* Educational Section */}
@@ -871,133 +527,62 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
         </div>
       )}
 
-      {/* Recommendations View */}
-      {view === "recommendations" && (
-        <>
-          {isGenerating && (
-            <div className="card p-8 text-center">
-              <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
-              <p className="text-xs text-muted-foreground">Analyzing {ticker} for options strategies...</p>
-            </div>
-          )}
-
-          {!isGenerating && inference && (
-            <div className="space-y-3">
-              {/* CSP Section */}
-              <div className="flex items-center gap-2 px-1">
-                <Shield className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Cash Secured Puts</span>
-              </div>
-              {inference.recommendations
-                .filter((r) => r.strategy === "cash_secured_put")
-                .map((rec, i) => (
-                  <StrategyCard
-                    key={`csp-${i}`}
-                    rec={rec}
-                    ticker={ticker}
-                    currentPrice={currentPrice}
-                    inference={inference}
-                    onAddTrade={handleAddTrade}
-                    isAdding={addingRec === `${rec.strategy}-${rec.days_to_expiry}`}
-                  />
-                ))}
-
-              {/* CC Section */}
-              <div className="flex items-center gap-2 px-1 mt-4">
-                <DollarSign className="w-3.5 h-3.5 text-purple-400" />
-                <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Income Strategy — Covered Calls</span>
-              </div>
-              {inference.recommendations
-                .filter((r) => r.strategy === "covered_call")
-                .map((rec, i) => (
-                  <StrategyCard
-                    key={`cc-${i}`}
-                    rec={rec}
-                    ticker={ticker}
-                    currentPrice={currentPrice}
-                    inference={inference}
-                    onAddTrade={handleAddTrade}
-                    isAdding={addingRec === `${rec.strategy}-${rec.days_to_expiry}`}
-                  />
-                ))}
-            </div>
-          )}
-
-          {!isGenerating && !inference && (
-            <div className="card p-8 text-center text-muted-foreground">
-              <DollarSign className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">Unable to generate recommendations.</p>
-              <p className="text-xs mt-1">Ensure stock price data is available.</p>
-            </div>
-          )}
-        </>
-      )}
-
-      {/* Trade Journal View */}
-      {view === "journal" && (
-        <div className="space-y-3">
-          {tradesLoading && (
-            <div className="card p-6 text-center">
-              <Loader2 className="w-5 h-5 animate-spin mx-auto text-muted-foreground" />
-            </div>
-          )}
-
-          {!tradesLoading && openTrades.length === 0 && closedTrades.length === 0 && (
-            <div className="card p-8 text-center text-muted-foreground">
-              <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p className="text-sm">No trades recorded for {ticker}.</p>
-              <p className="text-xs mt-1">Add a trade from the Recommendations tab to start tracking.</p>
-            </div>
-          )}
-
-          {/* Open Trades */}
-          {openTrades.length > 0 && (
-            <>
-              <div className="flex items-center gap-2 px-1">
-                <Clock className="w-3.5 h-3.5 text-blue-400" />
-                <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Open Positions</span>
-              </div>
-              {openTrades.map((trade) => (
-                <TradeRow
-                  key={trade.id}
-                  trade={trade}
-                  onClose={setClosingTrade}
-                  onDelete={(id) => deleteTrade.mutate(id)}
-                />
-              ))}
-            </>
-          )}
-
-          {/* Closed Trades */}
-          {closedTrades.length > 0 && (
-            <>
-              <div className="flex items-center gap-2 px-1 mt-4">
-                <Check className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-                  Closed Trades ({closedTrades.length})
-                </span>
-              </div>
-              {closedTrades.map((trade) => (
-                <TradeRow
-                  key={trade.id}
-                  trade={trade}
-                  onClose={setClosingTrade}
-                  onDelete={(id) => deleteTrade.mutate(id)}
-                />
-              ))}
-            </>
-          )}
+      {/* Recommendations */}
+      {isGenerating && (
+        <div className="card p-8 text-center">
+          <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-primary" />
+          <p className="text-xs text-muted-foreground">Analyzing {ticker} for options strategies...</p>
         </div>
       )}
 
-      {/* Close Trade Modal */}
-      {closingTrade && (
-        <CloseTradeModal
-          trade={closingTrade}
-          onClose={() => setClosingTrade(null)}
-          onConfirm={handleCloseTrade}
-          isClosing={closeTrade.isPending}
-        />
+      {!isGenerating && inference && (
+        <div className="space-y-3">
+          {/* CSP Section */}
+          <div className="flex items-center gap-2 px-1">
+            <Shield className="w-3.5 h-3.5 text-blue-400" />
+            <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Cash Secured Puts</span>
+          </div>
+          {inference.recommendations
+            .filter((r) => r.strategy === "cash_secured_put")
+            .map((rec, i) => (
+              <StrategyCard
+                key={`csp-${i}`}
+                rec={rec}
+                ticker={ticker}
+                currentPrice={currentPrice}
+                inference={inference}
+                onAddTrade={handleAddTrade}
+                isAdding={addingRec === `${rec.strategy}-${rec.days_to_expiry}`}
+              />
+            ))}
+
+          {/* CC Section */}
+          <div className="flex items-center gap-2 px-1 mt-4">
+            <DollarSign className="w-3.5 h-3.5 text-purple-400" />
+            <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">Income Strategy — Covered Calls</span>
+          </div>
+          {inference.recommendations
+            .filter((r) => r.strategy === "covered_call")
+            .map((rec, i) => (
+              <StrategyCard
+                key={`cc-${i}`}
+                rec={rec}
+                ticker={ticker}
+                currentPrice={currentPrice}
+                inference={inference}
+                onAddTrade={handleAddTrade}
+                isAdding={addingRec === `${rec.strategy}-${rec.days_to_expiry}`}
+              />
+            ))}
+        </div>
+      )}
+
+      {!isGenerating && !inference && (
+        <div className="card p-8 text-center text-muted-foreground">
+          <DollarSign className="w-10 h-10 mx-auto mb-2 opacity-30" />
+          <p className="text-sm">Unable to generate recommendations.</p>
+          <p className="text-xs mt-1">Ensure stock price data is available.</p>
+        </div>
       )}
     </div>
   );
