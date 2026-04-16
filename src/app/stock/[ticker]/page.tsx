@@ -10,15 +10,14 @@ import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { ModelCards } from "@/components/stock/ModelCards";
 import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
 import { OptionsStrategy } from "@/components/stock/OptionsStrategy";
-import { TradeJournal } from "@/components/stock/TradeJournal";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Brain, Loader2,
-  ChevronDown, ChevronUp, LineChart, Newspaper, Cpu, DollarSign, BookOpen,
+  ChevronDown, ChevronUp, LineChart, Newspaper, Cpu, DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 
-type Tab = "chart" | "analysis" | "options" | "trades" | "quant" | "news";
+type Tab = "chart" | "analysis" | "options" | "quant" | "news";
 
 export default function StockDetailPage() {
   const params = useParams();
@@ -102,7 +101,6 @@ export default function StockDetailPage() {
     { id: "chart", label: "Chart", icon: <LineChart className="w-3.5 h-3.5" /> },
     { id: "analysis", label: "FinVibe's Thoughts", icon: <Brain className="w-3.5 h-3.5" /> },
     { id: "options", label: "Options", icon: <DollarSign className="w-3.5 h-3.5" /> },
-    { id: "trades", label: "Trades", icon: <BookOpen className="w-3.5 h-3.5" /> },
     { id: "quant", label: "Quant Models", icon: <Cpu className="w-3.5 h-3.5" /> },
     { id: "news", label: "Sentiment & News", icon: <Newspaper className="w-3.5 h-3.5" /> },
   ];
@@ -313,10 +311,6 @@ export default function StockDetailPage() {
           thoughts={thoughts}
           stockInfo={stockInfo}
         />
-      )}
-
-      {activeTab === "trades" && (
-        <TradeJournal ticker={ticker} />
       )}
 
       {activeTab === "quant" && (

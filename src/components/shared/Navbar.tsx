@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, TrendingUp } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, TrendingUp, DollarSign } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import type { User } from "@supabase/supabase-js";
 
@@ -49,6 +49,7 @@ export default function Navbar() {
     { href: "/", label: "Dashboard", icon: BarChart2, public: true },
     { href: "/watchlist", label: "Watchlists", icon: BookOpen, public: false },
     { href: "/portfolio", label: "Portfolio", icon: Briefcase, public: false },
+    { href: "/trades", label: "Trades", icon: DollarSign, public: false },
     { href: "/polyedge", label: "PolyEdge", icon: TrendingUp, public: true },
   ];
 
