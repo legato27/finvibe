@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import {
-  DollarSign, Shield, Target,
+  DollarSign, Shield, Target, Check,
   Plus, AlertTriangle, Loader2, ChevronDown, ChevronUp,
   RefreshCw, BookOpen, Calendar, ArrowRight,
 } from "lucide-react";
@@ -395,6 +395,7 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
   const [isGenerating, setIsGenerating] = useState(false);
   const [addingRec, setAddingRec] = useState<string | null>(null);
   const [showEducation, setShowEducation] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const addTrade = useAddOptionsTrade();
   const { data: llmData } = useLLMAnalysis(ticker);
@@ -422,6 +423,7 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
   async function handleAddTrade(rec: OptionsRecommendation) {
     const key = `${rec.strategy}-${rec.days_to_expiry}`;
     setAddingRec(key);
+    setFeedback(null);
     try {
       await addTrade.mutateAsync({
         ticker,
@@ -436,8 +438,24 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
         llm_reasoning: rec.reasoning,
         llm_model_version: "vibefin-options-v1",
       });
-    } catch (err) {
+      setFeedback({
+        type: "success",
+        message: `Trade added to journal. View it under Trades in the top nav.`,
+      });
+      setTimeout(() => setFeedback(null), 5000);
+    } catch (err: any) {
       console.error("Failed to add trade:", err);
+      const errMsg = err?.message || err?.error_description || "Unknown error";
+      const isMissingTable = errMsg.includes("options_trades") || errMsg.includes("relation") || err?.code === "PGRST205" || err?.code === "42P01";
+      const isAuth = errMsg.includes("auth") || errMsg.includes("JWT") || err?.code === "PGRST301";
+      setFeedback({
+        type: "error",
+        message: isMissingTable
+          ? "options_trades table not found in Supabase. Please run migration 006_options_trades.sql in your FinVibe Supabase SQL editor."
+          : isAuth
+          ? "Not signed in — please sign in to add trades."
+          : `Failed to add trade: ${errMsg}`,
+      });
     } finally {
       setAddingRec(null);
     }
@@ -501,6 +519,30 @@ export function OptionsStrategy({ ticker, currentPrice, thoughts, stockInfo }: O
           </div>
         )}
       </div>
+
+      {/* Feedback Banner */}
+      {feedback && (
+        <div
+          className={`card p-3 flex items-center gap-2 text-xs border ${
+            feedback.type === "success"
+              ? "border-green-500/30 bg-green-500/10 text-green-400"
+              : "border-red-500/30 bg-red-500/10 text-red-400"
+          }`}
+        >
+          {feedback.type === "success" ? (
+            <Check className="w-4 h-4 flex-shrink-0" />
+          ) : (
+            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+          )}
+          <span className="flex-1">{feedback.message}</span>
+          <button
+            onClick={() => setFeedback(null)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Educational Section */}
       {showEducation && inference && (
