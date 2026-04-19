@@ -24,9 +24,15 @@ interface Position {
   current_price: number | null;
   size_usd: number;
   shares: number;
+  opened_at: string;
   strategy: string;
   resolution_at: string | null;
   slug: string | null;
+  confidence: number | null;
+  ev_estimate_pct: number | null;
+  edge_source: string | null;
+  reasoning: string | null;
+  entry_reasoning: string | null;
 }
 
 interface Decision {
@@ -36,18 +42,31 @@ interface Decision {
   strategy: string;
   size_usd: number;
   confidence: number;
+  ev_estimate_pct: number;
   reasoning: string;
+  edge_source: string | null;
   status: string;
+  risk_gate_rejection: string | null;
 }
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+interface EngineState {
+  status: string;
+  last_scan_at: string | null;
+  last_scan_markets: number;
+  last_scan_decisions: number;
+  trades_in_cycle: number | null;
+  exposure_in_cycle: number | null;
+  remaining_exposure: number | null;
+}
+
+function formatSGT(dateStr: string | null) {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleString("en-SG", {
+    timeZone: "Asia/Singapore",
+    month: "short", day: "numeric",
+    hour: "2-digit", minute: "2-digit",
+    hour12: false,
+  });
 }
 
 function expiresIn(dateStr: string | null) {
@@ -84,27 +103,40 @@ const stratColors: Record<string, string> = {
   xplatform_arb: "bg-purple-500/20 text-purple-400",
 };
 
-type SortKey = "market" | "side" | "entry" | "current" | "size" | "pnl" | "category" | "expires" | "strategy";
+const statusColors: Record<string, string> = {
+  scanning: "bg-blue-500",
+  deciding: "bg-amber-500",
+  executing: "bg-emerald-500",
+  idle: "bg-emerald-500",
+  cycle_full: "bg-orange-500",
+};
+
+type SortKey = "market" | "side" | "entry" | "current" | "size" | "pnl" | "category" | "expires" | "strategy" | "confidence" | "opened";
 
 export default function PolyEdgePage() {
   const [portfolio, setPortfolio] = useState<Portfolio | null>(null);
   const [positions, setPositions] = useState<Position[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
+  const [engine, setEngine] = useState<EngineState | null>(null);
   const [error, setError] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("expires");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [expandedPos, setExpandedPos] = useState<string | null>(null);
+  const [expandedDec, setExpandedDec] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [p, pos, dec] = await Promise.all([
+        const [p, pos, dec, eng] = await Promise.all([
           fetch(`${POLYEDGE_API}/api/portfolio`).then((r) => r.json()),
           fetch(`${POLYEDGE_API}/api/positions`).then((r) => r.json()),
           fetch(`${POLYEDGE_API}/api/decisions?limit=20`).then((r) => r.json()),
+          fetch(`${POLYEDGE_API}/api/engine-status`).then((r) => r.json()).catch(() => null),
         ]);
         setPortfolio(p);
         setPositions(pos);
         setDecisions(dec);
+        setEngine(eng);
         setError(false);
       } catch {
         setError(true);
@@ -122,6 +154,7 @@ export default function PolyEdgePage() {
 
   const trades = decisions.filter((d) => d.action !== "SKIP");
   const totalEquity = portfolio ? portfolio.bankroll_usd + portfolio.open_positions_value : 0;
+  const pnlPct = portfolio ? (portfolio.total_pnl / 10000 * 100) : 0;
 
   // Enrich positions
   const enriched = positions.map((p) => {
@@ -149,6 +182,8 @@ export default function PolyEdgePage() {
       case "category": return a.category.localeCompare(b.category) * dir;
       case "expires": return (a.expiry.hours - b.expiry.hours) * dir;
       case "strategy": return a.strategy.localeCompare(b.strategy) * dir;
+      case "confidence": return ((a.confidence ?? 0) - (b.confidence ?? 0)) * dir;
+      case "opened": return (new Date(a.opened_at).getTime() - new Date(b.opened_at).getTime()) * dir;
       default: return 0;
     }
   });
@@ -167,18 +202,31 @@ export default function PolyEdgePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Header + Engine Status */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-foreground flex items-center gap-2">
             PolyEdge
             <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-500">LIVE</span>
           </h1>
-          <p className="text-xs text-muted-foreground">Autonomous Polymarket trader powered by Claude</p>
+          <p className="text-xs text-muted-foreground">Autonomous Polymarket trader powered by Claude Sonnet 4</p>
         </div>
-        <a href="https://polyedge.vibelife.sg" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
-          Full Dashboard &rarr;
-        </a>
+        <div className="flex items-center gap-3">
+          {engine && (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className={`h-2 w-2 rounded-full ${statusColors[engine.status] || "bg-gray-500"} ${engine.status === "scanning" || engine.status === "deciding" ? "animate-pulse" : ""}`} />
+              <span className="capitalize">{engine.status === "cycle_full" ? "Cycle full" : engine.status}</span>
+              {engine.exposure_in_cycle != null && (
+                <span className={engine.remaining_exposure != null && engine.remaining_exposure <= 200 ? "text-amber-400" : ""}>
+                  ${engine.exposure_in_cycle}/$2k
+                </span>
+              )}
+            </div>
+          )}
+          <a href="https://polyedge.vibelife.sg" target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">
+            Full Dashboard &rarr;
+          </a>
+        </div>
       </div>
 
       {error && (
@@ -189,10 +237,10 @@ export default function PolyEdgePage() {
       {portfolio && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           {[
-            { label: "Bankroll", value: `$${portfolio.bankroll_usd.toFixed(0)}`, sub: `$${portfolio.open_positions_value.toFixed(0)} deployed` },
-            { label: "Total Equity", value: `$${totalEquity.toFixed(0)}`, sub: "cash + positions" },
-            { label: "P&L", value: `${portfolio.total_pnl >= 0 ? "+" : ""}$${portfolio.total_pnl.toFixed(2)}`, sub: `${((portfolio.total_pnl / 5000) * 100).toFixed(1)}%`, cls: portfolio.total_pnl >= 0 ? "text-green-500" : "text-red-500" },
-            { label: "Win Rate", value: portfolio.win_rate != null ? `${(portfolio.win_rate * 100).toFixed(0)}%` : "N/A", sub: portfolio.wins != null ? `${portfolio.wins}W / ${portfolio.losses}L` : undefined },
+            { label: "Bankroll", value: `$${portfolio.bankroll_usd.toLocaleString("en-US", { minimumFractionDigits: 2 })}`, sub: `$${portfolio.open_positions_value.toFixed(0)} deployed` },
+            { label: "Total Equity", value: `$${totalEquity.toFixed(2)}`, sub: "cash + positions" },
+            { label: "P&L", value: `${portfolio.total_pnl >= 0 ? "+" : ""}$${portfolio.total_pnl.toFixed(2)}`, sub: `${pnlPct >= 0 ? "+" : ""}${pnlPct.toFixed(1)}% of initial`, cls: portfolio.total_pnl >= 0 ? "text-green-500" : "text-red-500" },
+            { label: "Win Rate", value: portfolio.win_rate != null ? `${(portfolio.win_rate * 100).toFixed(1)}%` : "N/A", sub: portfolio.wins != null ? `${portfolio.wins}W / ${portfolio.losses}L` : undefined },
             { label: "Trades", value: `${portfolio.total_trades}`, sub: `${portfolio.open_positions_count} open` },
             { label: "Sharpe", value: portfolio.current_sharpe != null ? `${portfolio.current_sharpe.toFixed(2)}` : "N/A", sub: "30d rolling" },
           ].map((s) => (
@@ -224,45 +272,101 @@ export default function PolyEdgePage() {
                   <SortTh label="Category" k="category" />
                   <SortTh label="Expires" k="expires" />
                   <SortTh label="Strategy" k="strategy" />
+                  <SortTh label="Conf" k="confidence" />
+                  <SortTh label="Opened" k="opened" />
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((p) => {
                   const pnlClass = p.unrealized > 0.01 ? "text-green-500" : p.unrealized < -0.01 ? "text-red-500" : "";
                   const expiryClass = p.expiry.hours < 2 ? "text-red-500" : p.expiry.hours < 24 ? "text-amber-400" : "text-muted-foreground";
+                  const isExpanded = expandedPos === p.id;
                   return (
-                    <tr key={p.id} className="border-b border-border last:border-0 hover:bg-accent/50">
-                      <td className="px-3 py-2 max-w-[200px] truncate">
-                        {p.slug ? (
-                          <a href={`https://polymarket.com/market/${p.slug}`} target="_blank" rel="noopener noreferrer"
-                            className="text-foreground hover:text-primary hover:underline">
-                            {p.market_title}
-                          </a>
-                        ) : <span className="text-foreground">{p.market_title}</span>}
-                      </td>
-                      <td className={`px-3 py-2 font-medium ${p.side === "YES" ? "text-green-500" : "text-orange-400"}`}>{p.side}</td>
-                      <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{Number(p.entry_price).toFixed(4)}</td>
-                      <td className="px-3 py-2 font-mono text-xs">
-                        {p.currentNum !== null ? (
-                          <span className={p.currentNum > Number(p.entry_price) ? "text-green-500" : p.currentNum < Number(p.entry_price) ? "text-red-500" : "text-muted-foreground"}>
-                            {p.currentNum.toFixed(4)}
+                    <>
+                      <tr key={p.id}
+                        className="border-b border-border last:border-0 hover:bg-accent/50 cursor-pointer"
+                        onClick={() => setExpandedPos(isExpanded ? null : p.id)}
+                      >
+                        <td className="px-3 py-2 max-w-[200px] truncate">
+                          <span className="flex items-center gap-1.5">
+                            <span className={`text-[9px] transition-transform ${isExpanded ? "rotate-90" : ""}`}>&#9654;</span>
+                            {p.slug ? (
+                              <a href={`https://polymarket.com/market/${p.slug}`} target="_blank" rel="noopener noreferrer"
+                                className="text-foreground hover:text-primary hover:underline"
+                                onClick={(e) => e.stopPropagation()}>
+                                {p.market_title}
+                              </a>
+                            ) : <span className="text-foreground">{p.market_title}</span>}
                           </span>
-                        ) : <span className="text-muted-foreground">—</span>}
-                      </td>
-                      <td className="px-3 py-2">${Number(p.size_usd).toFixed(0)}</td>
-                      <td className={`px-3 py-2 font-medium ${pnlClass}`}>
-                        {p.currentNum !== null ? `${p.unrealized >= 0 ? "+" : ""}${p.unrealized.toFixed(2)}` : "—"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span className="rounded-full bg-muted/50 px-1.5 py-0.5 text-[10px]">{p.category}</span>
-                      </td>
-                      <td className={`px-3 py-2 text-xs whitespace-nowrap ${expiryClass}`}>{p.expiry.text}</td>
-                      <td className="px-3 py-2">
-                        <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${stratColors[p.strategy] || "bg-gray-500/20 text-gray-400"}`}>
-                          {p.strategy}
-                        </span>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className={`px-3 py-2 font-medium ${p.side === "YES" ? "text-green-500" : "text-orange-400"}`}>{p.side}</td>
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{Number(p.entry_price).toFixed(4)}</td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {p.currentNum !== null ? (
+                            <span className={p.currentNum > Number(p.entry_price) ? "text-green-500" : p.currentNum < Number(p.entry_price) ? "text-red-500" : "text-muted-foreground"}>
+                              {p.currentNum.toFixed(4)}
+                            </span>
+                          ) : <span className="text-muted-foreground">—</span>}
+                        </td>
+                        <td className="px-3 py-2">${Number(p.size_usd).toFixed(0)}</td>
+                        <td className={`px-3 py-2 font-medium ${pnlClass}`}>
+                          {p.currentNum !== null ? `${p.unrealized >= 0 ? "+" : ""}${p.unrealized.toFixed(2)}` : "—"}
+                        </td>
+                        <td className="px-3 py-2">
+                          <span className="rounded-full bg-muted/50 px-1.5 py-0.5 text-[10px]">{p.category}</span>
+                        </td>
+                        <td className={`px-3 py-2 text-xs whitespace-nowrap ${expiryClass}`}>{p.expiry.text}</td>
+                        <td className="px-3 py-2">
+                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${stratColors[p.strategy] || "bg-gray-500/20 text-gray-400"}`}>
+                            {p.strategy}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 font-mono text-xs">
+                          {p.confidence != null ? (
+                            <span className={p.confidence >= 0.8 ? "text-green-500" : p.confidence >= 0.6 ? "text-amber-400" : "text-muted-foreground"}>
+                              {(p.confidence * 100).toFixed(0)}%
+                            </span>
+                          ) : "—"}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{formatSGT(p.opened_at)}</td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${p.id}-detail`} className="bg-muted/30">
+                          <td colSpan={11} className="px-4 py-3">
+                            <div className="space-y-2 text-sm">
+                              {p.reasoning && (
+                                <div>
+                                  <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">LLM Reasoning</span>
+                                  <p className="mt-1 text-foreground leading-relaxed">{p.reasoning}</p>
+                                </div>
+                              )}
+                              {!p.reasoning && p.entry_reasoning && (
+                                <div>
+                                  <span className="text-[10px] font-semibold text-blue-400 uppercase tracking-wide">Entry Reasoning</span>
+                                  <p className="mt-1 text-foreground leading-relaxed">{p.entry_reasoning}</p>
+                                </div>
+                              )}
+                              {!p.reasoning && !p.entry_reasoning && (
+                                <p className="text-muted-foreground italic text-xs">No reasoning recorded.</p>
+                              )}
+                              {p.edge_source && (
+                                <div>
+                                  <span className="text-[10px] font-semibold text-amber-400 uppercase tracking-wide">Edge Source</span>
+                                  <p className="mt-1 text-foreground">{p.edge_source}</p>
+                                </div>
+                              )}
+                              <div className="flex flex-wrap gap-x-5 gap-y-1 pt-1 text-[10px] text-muted-foreground border-t border-border">
+                                <span>Opened: {formatSGT(p.opened_at)}</span>
+                                {p.confidence != null && <span>Confidence: {(p.confidence * 100).toFixed(0)}%</span>}
+                                {p.ev_estimate_pct != null && <span>EV: {(p.ev_estimate_pct * 100).toFixed(1)}%</span>}
+                                <span>Shares: {Number(p.shares).toFixed(2)}</span>
+                                <span>Size: ${Number(p.size_usd).toFixed(2)}</span>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   );
                 })}
                 <tr className="border-t-2 border-border font-semibold bg-muted/30">
@@ -271,7 +375,7 @@ export default function PolyEdgePage() {
                   <td className={`px-3 py-2 ${totalUnrealized >= 0 ? "text-green-500" : "text-red-500"}`}>
                     {totalUnrealized !== 0 ? `${totalUnrealized >= 0 ? "+" : ""}${totalUnrealized.toFixed(2)}` : "—"}
                   </td>
-                  <td className="px-3 py-2" colSpan={3}></td>
+                  <td className="px-3 py-2" colSpan={5}></td>
                 </tr>
               </tbody>
             </table>
@@ -286,21 +390,39 @@ export default function PolyEdgePage() {
           <div className="card p-4 text-center text-sm text-muted-foreground">No trades yet</div>
         ) : (
           <div className="space-y-2">
-            {trades.slice(0, 10).map((d) => (
-              <div key={d.id} className="card p-3">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className={`font-semibold text-sm ${d.action.includes("YES") ? "text-green-500" : "text-orange-400"}`}>
-                    {d.action}
-                  </span>
-                  {d.size_usd > 0 && <span className="text-xs text-muted-foreground">${d.size_usd.toFixed(0)}</span>}
-                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${stratColors[d.strategy] || "bg-gray-500/20 text-gray-400"}`}>
-                    {d.strategy}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground ml-auto">{timeAgo(d.decided_at)}</span>
+            {trades.slice(0, 10).map((d) => {
+              const isExp = expandedDec === d.id;
+              return (
+                <div key={d.id} className="card p-3 cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => setExpandedDec(isExp ? null : d.id)}>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`font-semibold text-sm ${d.action.includes("YES") ? "text-green-500" : "text-orange-400"}`}>
+                      {d.action}
+                    </span>
+                    {d.size_usd > 0 && <span className="text-xs text-muted-foreground">${d.size_usd.toFixed(0)}</span>}
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${stratColors[d.strategy] || "bg-gray-500/20 text-gray-400"}`}>
+                      {d.strategy}
+                    </span>
+                    {d.confidence > 0 && (
+                      <span className="text-[10px] text-muted-foreground">{(d.confidence * 100).toFixed(0)}% conf</span>
+                    )}
+                    <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+                      d.status === "filled" ? "bg-green-500/20 text-green-400" :
+                      d.status === "rejected" ? "bg-red-500/20 text-red-400" :
+                      "bg-gray-500/20 text-gray-400"
+                    }`}>{d.status}</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">{formatSGT(d.decided_at)}</span>
+                  </div>
+                  <p className={`text-xs text-muted-foreground mt-1 ${isExp ? "" : "line-clamp-2"}`}>{d.reasoning}</p>
+                  {isExp && (
+                    <div className="mt-2 pt-2 border-t border-border text-xs text-muted-foreground space-y-1">
+                      {d.edge_source && <p><span className="text-amber-400 font-medium">Edge:</span> {d.edge_source}</p>}
+                      {d.ev_estimate_pct > 0 && <p>EV: {(d.ev_estimate_pct * 100).toFixed(1)}%</p>}
+                      {d.risk_gate_rejection && <p className="text-red-400">Rejected: {d.risk_gate_rejection}</p>}
+                    </div>
+                  )}
                 </div>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{d.reasoning}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

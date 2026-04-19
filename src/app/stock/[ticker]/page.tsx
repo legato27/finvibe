@@ -11,6 +11,7 @@ import { ModelCards } from "@/components/stock/ModelCards";
 import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
 import { OptionsStrategy } from "@/components/stock/OptionsStrategy";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
+import { OsintFeed } from "@/components/shared/OsintFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Brain, Loader2,
   ChevronDown, ChevronUp, LineChart, Newspaper, Cpu, DollarSign,
@@ -318,9 +319,12 @@ export default function StockDetailPage() {
       )}
 
       {activeTab === "news" && (
-        <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-4">
-          <SentimentPanel ticker={ticker} />
-          <RealtimeNewsFeed tickers={[ticker]} />
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-4">
+            <SentimentPanel ticker={ticker} />
+            <RealtimeNewsFeed tickers={[ticker]} />
+          </div>
+          <OsintFeed ticker={ticker} />
         </div>
       )}
     </div>

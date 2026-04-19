@@ -1,11 +1,185 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch } from "@/lib/supabase/hooks";
+import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
-import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw } from "lucide-react";
+import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus } from "lucide-react";
 import { stocksApi } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
+
+/* ── Add-to-Portfolio Modal ─────────────────────────────────── */
+function AddToPortfolioModal({
+  ticker,
+  stockName,
+  currentPrice,
+  onClose,
+}: {
+  ticker: string;
+  stockName: string | null;
+  currentPrice: number | null;
+  onClose: () => void;
+}) {
+  const { data: portfolios } = usePortfolios();
+  const createPortfolio = useCreatePortfolio();
+  const addHolding = useAddHolding();
+
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<number | null>(null);
+  const [creatingNew, setCreatingNew] = useState(false);
+  const [newPortfolioName, setNewPortfolioName] = useState("");
+  const [shares, setShares] = useState("");
+  const [costBasis, setCostBasis] = useState(currentPrice?.toFixed(2) ?? "");
+  const [acquiredDate, setAcquiredDate] = useState(new Date().toISOString().slice(0, 10));
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+
+  // Auto-select first portfolio
+  const effectivePortfolioId = selectedPortfolioId ?? portfolios?.[0]?.id ?? null;
+
+  async function handleSubmit() {
+    setError(null);
+    const sharesNum = parseFloat(shares);
+    const costNum = parseFloat(costBasis);
+    if (!sharesNum || sharesNum <= 0) { setError("Enter a valid number of shares"); return; }
+    if (!costNum || costNum < 0) { setError("Enter a valid cost basis"); return; }
+
+    setSubmitting(true);
+    try {
+      let portfolioId = effectivePortfolioId;
+
+      if (creatingNew) {
+        if (!newPortfolioName.trim()) { setError("Enter a portfolio name"); setSubmitting(false); return; }
+        const newP = await createPortfolio.mutateAsync({ name: newPortfolioName.trim() });
+        portfolioId = newP.id;
+      }
+
+      if (!portfolioId) { setError("No portfolio selected"); setSubmitting(false); return; }
+
+      await addHolding.mutateAsync({
+        ticker,
+        shares: sharesNum,
+        cost_basis: costNum,
+        portfolio_id: portfolioId,
+        acquired_date: acquiredDate || undefined,
+      });
+      setSuccess(true);
+      setTimeout(onClose, 1200);
+    } catch (e: any) {
+      setError(e?.message || "Failed to add holding");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="card w-full max-w-md mx-4 p-0 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="card-header border-b border-border/40">
+          <div>
+            <span className="card-title">Add to Portfolio</span>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              <span className="font-mono text-primary">{ticker}</span>
+              {stockName && <span> &mdash; {stockName}</span>}
+            </div>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        </div>
+
+        <div className="p-4 space-y-4">
+          {/* Portfolio selection */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Portfolio</label>
+            {!creatingNew ? (
+              <div className="space-y-2">
+                <select
+                  value={effectivePortfolioId ?? ""}
+                  onChange={(e) => setSelectedPortfolioId(Number(e.target.value))}
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                >
+                  {portfolios?.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>
+                  ))}
+                </select>
+                <button
+                  onClick={() => setCreatingNew(true)}
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                >
+                  <FolderPlus className="w-3.5 h-3.5" /> Create new portfolio
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <input
+                  type="text"
+                  value={newPortfolioName}
+                  onChange={(e) => setNewPortfolioName(e.target.value)}
+                  placeholder="New portfolio name..."
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  autoFocus
+                />
+                <button
+                  onClick={() => setCreatingNew(false)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Use existing portfolio instead
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Investment details */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Shares</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={shares}
+                onChange={(e) => setShares(e.target.value)}
+                placeholder="0"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cost / Share</label>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={costBasis}
+                onChange={(e) => setCostBasis(e.target.value)}
+                placeholder="0.00"
+                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Acquired Date</label>
+            <input
+              type="date"
+              value={acquiredDate}
+              onChange={(e) => setAcquiredDate(e.target.value)}
+              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+
+          {error && <div className="text-xs text-red-400">{error}</div>}
+          {success && <div className="text-xs text-green-400">Added to portfolio!</div>}
+
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || success}
+            className="w-full py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+          >
+            {submitting ? "Adding..." : success ? "Added!" : "Add to Portfolio"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function WatchlistPage() {
   const router = useRouter();
@@ -22,6 +196,7 @@ export default function WatchlistPage() {
   const [showSearch, setShowSearch] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
+  const [portfolioModal, setPortfolioModal] = useState<{ ticker: string; name: string | null; price: number | null } | null>(null);
 
   const activeWatchlist = watchlists?.find((w: any) => w.id === activeId) || watchlists?.[0];
 
@@ -342,9 +517,19 @@ export default function WatchlistPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              setPortfolioModal({ ticker: stock.ticker, name: stock.name || null, price: stock.last_price ?? null });
+                            }}
+                            className="text-muted-foreground/30 hover:text-primary transition-colors ml-2 opacity-0 group-hover:opacity-100"
+                            title="Add to portfolio"
+                          >
+                            <Briefcase className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: stock.id });
                             }}
-                            className="text-muted-foreground/30 hover:text-red-400 transition-colors ml-2 opacity-0 group-hover:opacity-100"
+                            className="text-muted-foreground/30 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -360,6 +545,16 @@ export default function WatchlistPage() {
           )}
         </div>
       </div>
+
+      {/* Add to Portfolio Modal */}
+      {portfolioModal && (
+        <AddToPortfolioModal
+          ticker={portfolioModal.ticker}
+          stockName={portfolioModal.name}
+          currentPrice={portfolioModal.price}
+          onClose={() => setPortfolioModal(null)}
+        />
+      )}
     </div>
   );
 }

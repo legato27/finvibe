@@ -73,12 +73,98 @@ export const macroApi = {
 // ── Sentiment ─────────────────────────────────────────────────
 
 export const sentimentApi = {
-  newsFeed: (limit = 50, tickers?: string[]) => {
+  newsFeed: (limit = 50, tickers?: string[], sourceKind?: string) => {
     const params = new URLSearchParams({ limit: String(limit) });
     if (tickers?.length) params.set("tickers", tickers.join(","));
+    if (sourceKind) params.set("source_kind", sourceKind);
     return api.get(`/api/sentiment/news-feed?${params}`).then((r) => r.data);
   },
   ticker: (ticker: string) => api.get(`/api/sentiment/${ticker}`).then((r) => r.data),
+  category: (category: string, window = 60) =>
+    api.get(`/api/sentiment/category/${category}?window=${window}`).then((r) => r.data),
+  categoryWindows: (category: string) =>
+    api.get(`/api/sentiment/category/${category}/windows`).then((r) => r.data),
+  tickerBuzz: (ticker: string) =>
+    api.get(`/api/sentiment/ticker-buzz/${ticker}`).then((r) => r.data),
+  finnhub: (category: string) =>
+    api.get(`/api/sentiment/finnhub/${category}`).then((r) => r.data),
+};
+
+// ── OSINT ─────────────────────────────────────────────────────
+
+export type OsintEvent = {
+  id: string;
+  event_type: string;
+  event_code: string | null;
+  urgency: "low" | "medium" | "high" | "critical";
+  verification_level: string;
+  country_code: string | null;
+  location_name: string | null;
+  location: { type: string; coordinates: [number, number] } | null;
+  occurred_at: string | null;
+  summary: string | null;
+  tone: number | null;
+  primary_article_url: string | null;
+  article_count: number;
+  actors: { id: string; kind: string; name: string; role: string }[];
+};
+
+export type OsintArticle = {
+  content_hash: string;
+  source: string;
+  source_kind: string;
+  title: string | null;
+  summary: string | null;
+  url: string | null;
+  published_at: string | null;
+  language: string;
+  event_id: string | null;
+};
+
+export type OsintIndex = {
+  index_name: string;
+  value: number;
+  window_hours: number;
+  as_of: string;
+  components: Record<string, number>;
+};
+
+export const osintApi = {
+  events: (params?: { event_type?: string; urgency?: string; country?: string; since_hours?: number; limit?: number }) => {
+    const p = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
+    return api.get<OsintEvent[]>(`/api/osint/events?${p}`).then((r) => r.data);
+  },
+  event: (id: string) => api.get<OsintEvent>(`/api/osint/events/${id}`).then((r) => r.data),
+  eventsForTicker: (ticker: string, since_hours = 48, limit = 30) =>
+    api.get<OsintEvent[]>(`/api/osint/events/for-ticker/${ticker}?since_hours=${since_hours}&limit=${limit}`)
+      .then((r) => r.data),
+  timeline: (params?: { granularity?: "hour" | "day"; event_type?: string; actor?: string; since_hours?: number }) => {
+    const p = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
+    return api.get<{ ts: string; event_type: string; count: number }[]>(`/api/osint/timeline?${p}`).then((r) => r.data);
+  },
+  map: (params?: { bbox?: string; event_type?: string; since_hours?: number; limit?: number }) => {
+    const p = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
+    return api.get(`/api/osint/map?${p}`).then((r) => r.data);
+  },
+  actors: (params?: { kind?: string; q?: string; limit?: number }) => {
+    const p = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
+    return api.get(`/api/osint/actors?${p}`).then((r) => r.data);
+  },
+  actor: (id: string) => api.get(`/api/osint/actors/${encodeURIComponent(id)}`).then((r) => r.data),
+  indices: (params?: { names?: string; region?: string; window?: number }) => {
+    const p = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
+    return api.get<OsintIndex[]>(`/api/osint/indices?${p}`).then((r) => r.data);
+  },
+  articles: (params?: { source_kind?: string; since_hours?: number; limit?: number }) => {
+    const p = new URLSearchParams();
+    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
+    return api.get<OsintArticle[]>(`/api/osint/articles?${p}`).then((r) => r.data);
+  },
 };
 
 // ── Backtest ──────────────────────────────────────────────────

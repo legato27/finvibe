@@ -15,6 +15,7 @@ import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
 import { GexCard } from "@/components/dashboard/GexCard";
 import { BreadthStrip } from "@/components/dashboard/BreadthStrip";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
+import { OsintFeed } from "@/components/shared/OsintFeed";
 
 export default function DashboardPage() {
   const { setVix, setBusinessCycle, setSectorRotation, setSwarm } = useAppStore();
@@ -81,6 +82,9 @@ export default function DashboardPage() {
         <CryptoIndicators />
         <RealtimeNewsFeed />
       </div>
+
+      {/* ── OSINT live feed ──────────────────────────────── */}
+      <OsintFeed />
     </div>
   );
 }
