@@ -57,7 +57,7 @@ export default function Navbar() {
 
   return (
     <header className="border-b border-border bg-card/80 backdrop-blur sticky top-0 z-50">
-      <div className="container mx-auto px-4 max-w-[1600px] flex items-center h-14 gap-6">
+      <div className="container mx-auto px-3 sm:px-4 max-w-[1600px] flex items-center h-14 gap-2 sm:gap-6">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image src="/vibefin-icon.svg" alt="VibeFin" width={28} height={28} />
@@ -80,7 +80,7 @@ export default function Navbar() {
               }`}
             >
               <Icon className="w-4 h-4" />
-              {label}
+              <span className="hidden sm:inline">{label}</span>
             </Link>
           ))}
         </nav>

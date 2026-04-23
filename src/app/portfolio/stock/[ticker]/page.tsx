@@ -178,13 +178,14 @@ export default function PortfolioStockPage() {
           <button
             key={t.id}
             onClick={() => setActiveTab(t.id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs rounded-md transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs rounded-md transition-colors ${
               activeTab === t.id
                 ? "bg-background text-foreground shadow-sm font-semibold"
                 : "text-muted-foreground hover:text-foreground"
             }`}
+            title={t.label}
           >
-            {t.icon}{t.label}
+            {t.icon}<span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </div>

@@ -29,6 +29,8 @@ function AddToPortfolioModal({
   const [shares, setShares] = useState("");
   const [costBasis, setCostBasis] = useState(currentPrice?.toFixed(2) ?? "");
   const [acquiredDate, setAcquiredDate] = useState(new Date().toISOString().slice(0, 10));
+  const [broker, setBroker] = useState("");
+  const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -61,6 +63,8 @@ function AddToPortfolioModal({
         cost_basis: costNum,
         portfolio_id: portfolioId,
         acquired_date: acquiredDate || undefined,
+        broker: broker || undefined,
+        notes: notes || undefined,
       });
       setSuccess(true);
       setTimeout(onClose, 1200);
@@ -138,7 +142,7 @@ function AddToPortfolioModal({
                 value={shares}
                 onChange={(e) => setShares(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
               />
             </div>
             <div>
@@ -150,18 +154,45 @@ function AddToPortfolioModal({
                 value={costBasis}
                 onChange={(e) => setCostBasis(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
               />
             </div>
           </div>
 
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Acquired Date</label>
+              <input
+                type="date"
+                value={acquiredDate}
+                onChange={(e) => setAcquiredDate(e.target.value)}
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Broker</label>
+              <input
+                list="modal-broker-list"
+                value={broker}
+                onChange={(e) => setBroker(e.target.value)}
+                placeholder="e.g. Tiger, IBKR"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <datalist id="modal-broker-list">
+                {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab"].map((b) => (
+                  <option key={b} value={b} />
+                ))}
+              </datalist>
+            </div>
+          </div>
+
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Acquired Date</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Notes <span className="text-muted-foreground/50">(optional)</span></label>
             <input
-              type="date"
-              value={acquiredDate}
-              onChange={(e) => setAcquiredDate(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. DCA, earnings play…"
+              className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
@@ -171,7 +202,7 @@ function AddToPortfolioModal({
           <button
             onClick={handleSubmit}
             disabled={submitting || success}
-            className="w-full py-2 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="w-full py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
             {submitting ? "Adding..." : success ? "Added!" : "Add to Portfolio"}
           </button>
@@ -440,7 +471,7 @@ export default function WatchlistPage() {
                                 <span title="FinVibe's Thoughts available"><Brain className="w-3 h-3 text-primary/50" /></span>
                               )}
                             </div>
-                            <div className="text-xs text-muted-foreground truncate max-w-[250px]">
+                            <div className="text-xs text-muted-foreground truncate max-w-[130px] sm:max-w-[250px]">
                               {stock.name || "—"}
                             </div>
                             {sectorDisplay && (
@@ -456,7 +487,7 @@ export default function WatchlistPage() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-4 flex-shrink-0">
+                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                           {stock.last_price != null && stock.last_price > 0 && (
                             <div className="text-right">
                               <span className="font-mono text-sm text-foreground">${stock.last_price.toFixed(2)}</span>
@@ -468,13 +499,13 @@ export default function WatchlistPage() {
                             </div>
                           )}
                           {stock.intrinsic_value != null && stock.last_price != null && (
-                            <div className="text-right">
+                            <div className="text-right hidden sm:block">
                               <div className="text-[10px] text-muted-foreground/60">Fair Value</div>
                               <span className="font-mono text-xs text-muted-foreground">${stock.intrinsic_value.toFixed(2)}</span>
                             </div>
                           )}
                           {stock.margin_of_safety != null && (
-                            <div className="text-right">
+                            <div className="text-right hidden sm:block">
                               <div className="text-[10px] text-muted-foreground/60">MoS</div>
                               <span className={`font-mono text-xs flex items-center gap-0.5 ${
                                 stock.margin_of_safety > 0 ? "text-green-400" : "text-red-400"
@@ -486,7 +517,7 @@ export default function WatchlistPage() {
                           )}
                           {/* AI Intrinsic Value */}
                           {llm?.llm_intrinsic_value != null && (
-                            <div className="text-right">
+                            <div className="text-right hidden lg:block">
                               <div className="text-[10px] text-blue-400/70">Intrinsic (AI)</div>
                               <span className="font-mono text-xs text-blue-400">
                                 ${Number(llm.llm_intrinsic_value).toFixed(2)}
@@ -495,7 +526,7 @@ export default function WatchlistPage() {
                           )}
                           {/* AI MoS */}
                           {llm?.llm_margin_of_safety != null && (
-                            <div className="text-right">
+                            <div className="text-right hidden lg:block">
                               <div className="text-[10px] text-blue-400/70">MoS (AI)</div>
                               <span className={`font-mono text-xs ${
                                 Number(llm.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400"
@@ -505,7 +536,7 @@ export default function WatchlistPage() {
                             </div>
                           )}
                           {stock.quarterly_trend && (
-                            <div className="text-right">
+                            <div className="text-right hidden sm:block">
                               <div className="text-[10px] text-muted-foreground/60">Trend</div>
                               <span className={`text-xs ${
                                 stock.quarterly_trend === "up" ? "text-green-400" : stock.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
@@ -519,7 +550,7 @@ export default function WatchlistPage() {
                               e.stopPropagation();
                               setPortfolioModal({ ticker: stock.ticker, name: stock.name || null, price: stock.last_price ?? null });
                             }}
-                            className="text-muted-foreground/30 hover:text-primary transition-colors ml-2 opacity-0 group-hover:opacity-100"
+                            className="p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
                             title="Add to portfolio"
                           >
                             <Briefcase className="w-4 h-4" />
@@ -529,7 +560,7 @@ export default function WatchlistPage() {
                               e.stopPropagation();
                               removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: stock.id });
                             }}
-                            className="text-muted-foreground/30 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                            className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
                           >
                             <X className="w-4 h-4" />
                           </button>

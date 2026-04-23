@@ -354,7 +354,7 @@ export default function PortfolioPage() {
                 </button>
               </div>
               <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Ticker with search */}
                   <TickerInput
                     value={form.ticker}
@@ -366,7 +366,7 @@ export default function PortfolioPage() {
                     value={form.shares}
                     onChange={(e) => setForm({ ...form, shares: e.target.value })}
                     placeholder="Shares"
-                    className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     required
                   />
                   {/* Cost with $ prefix */}
@@ -378,7 +378,7 @@ export default function PortfolioPage() {
                       value={form.cost_basis}
                       onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
                       placeholder="Cost/share"
-                      className="w-full pl-7 pr-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="w-full pl-7 pr-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       required
                     />
                   </div>
@@ -386,33 +386,31 @@ export default function PortfolioPage() {
                     type="date"
                     value={form.acquired_date}
                     onChange={(e) => setForm({ ...form, acquired_date: e.target.value })}
-                    className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   {/* Broker */}
-                  <div className="relative">
-                    <input
-                      list="broker-list"
-                      value={form.broker}
-                      onChange={(e) => setForm({ ...form, broker: e.target.value })}
-                      placeholder="Broker (optional)"
-                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                    />
-                    <datalist id="broker-list">
-                      {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab","TD Ameritrade"].map((b) => (
-                        <option key={b} value={b} />
-                      ))}
-                    </datalist>
-                  </div>
+                  <input
+                    list="broker-list"
+                    value={form.broker}
+                    onChange={(e) => setForm({ ...form, broker: e.target.value })}
+                    placeholder="Broker (optional)"
+                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <datalist id="broker-list">
+                    {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab","TD Ameritrade"].map((b) => (
+                      <option key={b} value={b} />
+                    ))}
+                  </datalist>
                   {/* Notes */}
                   <input
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                     placeholder="Notes (optional)"
-                    className="col-span-2 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="sm:col-span-2 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
-                  <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
+                  <button type="submit" className="px-4 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
                     Add
                   </button>
                 </div>
@@ -453,11 +451,11 @@ export default function PortfolioPage() {
                       <th className="text-left px-3 py-2">Ticker</th>
                       <th className="text-left px-3 py-2 hidden md:table-cell">Name</th>
                       <th className="text-right px-3 py-2">Shares</th>
-                      <th className="text-right px-3 py-2">Avg Cost</th>
+                      <th className="text-right px-3 py-2 hidden sm:table-cell">Avg Cost</th>
                       <th className="text-right px-3 py-2">Price</th>
-                      <th className="text-right px-3 py-2">Mkt Value</th>
+                      <th className="text-right px-3 py-2 hidden sm:table-cell">Mkt Value</th>
                       <th className="text-right px-3 py-2">Gain/Loss</th>
-                      <th className="text-right px-3 py-2">Return</th>
+                      <th className="text-right px-3 py-2 hidden sm:table-cell">Return</th>
                       <th className="px-3 py-2 w-8"></th>
                     </tr>
                   </thead>
@@ -492,7 +490,7 @@ export default function PortfolioPage() {
                               <span className="ml-1 text-[9px] text-muted-foreground/60">{pos.lotIds.length} lots</span>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">${pos.avgCostBasis.toFixed(2)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">${pos.avgCostBasis.toFixed(2)}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
                             <div className="flex items-center justify-end gap-1">
                               {price > 0 ? `$${price.toFixed(2)}` : "—"}
@@ -501,19 +499,20 @@ export default function PortfolioPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
+                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
                             {price > 0 ? `$${mktValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
                           </td>
                           <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
                             gainLoss > 0 ? "text-green-500" : gainLoss < 0 ? "text-red-500" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (
-                              <>
-                                {gainLoss >= 0 ? "+" : ""}${Math.abs(gainLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}
-                              </>
+                              <div className="flex flex-col items-end">
+                                <span>{gainLoss >= 0 ? "+" : ""}${Math.abs(gainLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                <span className="text-[10px] sm:hidden">{returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%</span>
+                              </div>
                             ) : "—"}
                           </td>
-                          <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
+                          <td className={`px-3 py-2.5 text-right font-mono font-semibold hidden sm:table-cell ${
                             returnPct > 0 ? "text-green-500" : returnPct < 0 ? "text-red-500" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (

@@ -90,7 +90,7 @@ function EditRow({ lot, onDone }: EditRowProps) {
           {BROKERS.map((b) => <option key={b} value={b} />)}
         </datalist>
       </td>
-      <td className="px-3 py-2">
+      <td className="px-3 py-2 hidden sm:table-cell">
         <input
           value={fields.notes}
           onChange={(e) => setFields({ ...fields, notes: e.target.value })}
@@ -202,7 +202,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
           {BROKERS.map((b) => <option key={b} value={b} />)}
         </datalist>
       </td>
-      <td className="px-3 py-2">
+      <td className="px-3 py-2 hidden sm:table-cell">
         <input
           value={fields.notes}
           onChange={(e) => setFields({ ...fields, notes: e.target.value })}
@@ -234,12 +234,9 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
 // ── Confirm delete ────────────────────────────────────────────
 function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-red-400 flex items-center gap-1">
-        <AlertTriangle className="w-3 h-3" /> Delete?
-      </span>
-      <button onClick={onConfirm} className="text-xs px-2 py-0.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30">Yes</button>
-      <button onClick={onCancel} className="text-xs px-2 py-0.5 bg-accent rounded text-muted-foreground hover:bg-accent/70">No</button>
+    <div className="flex items-center gap-1.5">
+      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 min-h-[36px]">Yes</button>
+      <button onClick={onCancel} className="text-xs px-3 py-1.5 bg-accent rounded text-muted-foreground hover:bg-accent/70 min-h-[36px]">No</button>
     </div>
   );
 }
@@ -296,7 +293,7 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
               <th className="px-3 py-2 text-left font-medium">
                 <Building2 className="w-3 h-3 inline mr-1" />Broker
               </th>
-              <th className="px-3 py-2 text-left font-medium">
+              <th className="px-3 py-2 text-left font-medium hidden sm:table-cell">
                 <StickyNote className="w-3 h-3 inline mr-1" />Notes
               </th>
               <th className="px-3 py-2 w-20" />
@@ -333,7 +330,7 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
                       ? <span className="text-xs px-2 py-0.5 bg-accent/60 rounded text-muted-foreground">{lot.broker}</span>
                       : <span className="opacity-30 text-xs">—</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[160px] truncate">
+                  <td className="px-3 py-2.5 text-xs text-muted-foreground max-w-[160px] truncate hidden sm:table-cell">
                     {lot.notes || <span className="opacity-30">—</span>}
                   </td>
                   <td className="px-3 py-2.5">
@@ -346,16 +343,16 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
                         onCancel={() => setDeletingId(null)}
                       />
                     ) : (
-                      <div className="flex items-center gap-1 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => { setEditingId(lot.id); setDeletingId(null); }}
-                          className="p-1.5 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors"
+                          className="p-2 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => { setDeletingId(lot.id); setEditingId(null); }}
-                          className="p-1.5 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors"
+                          className="p-2 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
