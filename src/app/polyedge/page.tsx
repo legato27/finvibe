@@ -57,6 +57,28 @@ interface EngineState {
   trades_in_cycle: number | null;
   exposure_in_cycle: number | null;
   remaining_exposure: number | null;
+  llm_backend?: string;
+  llm_model?: string;
+}
+
+function formatLLM(backend?: string, model?: string): string {
+  if (!model) return "LLM";
+  if (backend === "local") {
+    const m = model.toLowerCase();
+    if (m.includes("gemma")) {
+      const match = model.match(/gemma-?(\d+(?:\.\d+)?)[\w-]*?-?(\d+B(?:-A\d+B)?)/i);
+      if (match) return `Gemma ${match[1]}-${match[2]} (local vLLM)`;
+      return `${model.split("/").pop()} (local vLLM)`;
+    }
+    return `${model.split("/").pop()} (local vLLM)`;
+  }
+  if (model.includes("claude")) {
+    if (model.includes("sonnet-4")) return "Claude Sonnet 4";
+    if (model.includes("opus-4")) return "Claude Opus 4";
+    if (model.includes("haiku-4")) return "Claude Haiku 4";
+    return model;
+  }
+  return model;
 }
 
 function formatSGT(dateStr: string | null) {
@@ -209,7 +231,7 @@ export default function PolyEdgePage() {
             PolyEdge
             <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-500">LIVE</span>
           </h1>
-          <p className="text-xs text-muted-foreground">Autonomous Polymarket trader powered by Claude Sonnet 4</p>
+          <p className="text-xs text-muted-foreground">Autonomous Polymarket trader powered by {formatLLM(engine?.llm_backend, engine?.llm_model)}</p>
         </div>
         <div className="flex items-center gap-3">
           {engine && (
