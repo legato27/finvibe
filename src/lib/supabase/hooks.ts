@@ -258,6 +258,7 @@ export interface HoldingWithPrice {
   cost_basis: number;
   acquired_date: string | null;
   notes: string | null;
+  broker: string | null;
   portfolio_id: number;
   // Joined from stock_catalog
   name?: string;
@@ -350,6 +351,7 @@ export function useAddHolding() {
       portfolio_id: number;
       acquired_date?: string;
       notes?: string;
+      broker?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -377,6 +379,7 @@ export function useAddHolding() {
           portfolio_id: holding.portfolio_id,
           acquired_date: holding.acquired_date || null,
           notes: holding.notes || null,
+          broker: holding.broker || null,
           user_id: user.id,
         })
         .select()
@@ -391,7 +394,7 @@ export function useAddHolding() {
 export function useUpdateHolding() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...updates }: { id: number; shares?: number; cost_basis?: number; notes?: string }) => {
+    mutationFn: async ({ id, ...updates }: { id: number; shares?: number; cost_basis?: number; acquired_date?: string | null; notes?: string | null; broker?: string | null }) => {
       const { error } = await supabase
         .from("portfolio_holdings")
         .update(updates)

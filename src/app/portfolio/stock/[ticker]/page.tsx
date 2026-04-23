@@ -7,13 +7,14 @@ import { usePortfolios, usePortfolioHoldings } from "@/lib/supabase/hooks";
 import { StockEvents } from "@/components/stock/StockEvents";
 import { StockOptionsStrategy } from "@/components/stock/StockOptionsStrategy";
 import { PortfolioAnalysis } from "@/components/stock/PortfolioAnalysis";
+import { TransactionHistory } from "@/components/stock/TransactionHistory";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Loader2,
-  Calendar, DollarSign, Briefcase, Brain,
+  Calendar, DollarSign, Briefcase, Brain, ReceiptText,
 } from "lucide-react";
 
-type Tab = "analysis" | "events_news" | "options";
+type Tab = "analysis" | "events_news" | "options" | "transactions";
 
 export default function PortfolioStockPage() {
   const params = useParams();
@@ -91,6 +92,7 @@ export default function PortfolioStockPage() {
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
     { id: "analysis", label: "Analysis", icon: <Brain className="w-3.5 h-3.5" /> },
+    { id: "transactions", label: "Transactions", icon: <ReceiptText className="w-3.5 h-3.5" /> },
     { id: "events_news", label: "Events & News", icon: <Calendar className="w-3.5 h-3.5" /> },
     { id: "options", label: "Options", icon: <DollarSign className="w-3.5 h-3.5" /> },
   ];
@@ -208,6 +210,14 @@ export default function PortfolioStockPage() {
         <div className="card p-8 text-center text-muted-foreground text-sm">
           {!position ? "No position data found." : "Price data unavailable."}
         </div>
+      )}
+
+      {activeTab === "transactions" && (
+        <TransactionHistory
+          ticker={ticker}
+          portfolioId={defaultPortfolio?.id ?? 0}
+          lots={(holdings ?? []).filter((h) => h.ticker === ticker)}
+        />
       )}
 
       {activeTab === "events_news" && (

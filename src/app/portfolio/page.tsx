@@ -118,7 +118,7 @@ export default function PortfolioPage() {
   const [newPortfolioName, setNewPortfolioName] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [form, setForm] = useState({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
+  const [form, setForm] = useState({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "", broker: "" });
 
   const activePortfolio = portfolios?.find((p: any) => p.id === activeId) || portfolios?.[0];
   const { data: holdings, isLoading: holdingsLoading } = usePortfolioHoldings(activePortfolio?.id ?? null);
@@ -146,8 +146,9 @@ export default function PortfolioPage() {
       portfolio_id: activePortfolio.id,
       acquired_date: form.acquired_date || undefined,
       notes: form.notes || undefined,
+      broker: form.broker || undefined,
     });
-    setForm({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "" });
+    setForm({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "", broker: "" });
     setShowForm(false);
   }
 
@@ -352,43 +353,69 @@ export default function PortfolioPage() {
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <form onSubmit={handleSubmit} className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {/* Ticker with search */}
-                <TickerInput
-                  value={form.ticker}
-                  onChange={(ticker, name) => setForm({ ...form, ticker, name })}
-                />
-                <input
-                  type="number"
-                  step="any"
-                  value={form.shares}
-                  onChange={(e) => setForm({ ...form, shares: e.target.value })}
-                  placeholder="Shares"
-                  className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                  required
-                />
-                {/* Cost with $ prefix */}
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+              <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Ticker with search */}
+                  <TickerInput
+                    value={form.ticker}
+                    onChange={(ticker, name) => setForm({ ...form, ticker, name })}
+                  />
                   <input
                     type="number"
                     step="any"
-                    value={form.cost_basis}
-                    onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
-                    placeholder="Cost/share"
-                    className="w-full pl-7 pr-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    value={form.shares}
+                    onChange={(e) => setForm({ ...form, shares: e.target.value })}
+                    placeholder="Shares"
+                    className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     required
                   />
+                  {/* Cost with $ prefix */}
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={form.cost_basis}
+                      onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
+                      placeholder="Cost/share"
+                      className="w-full pl-7 pr-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      required
+                    />
+                  </div>
+                  <input
+                    type="date"
+                    value={form.acquired_date}
+                    onChange={(e) => setForm({ ...form, acquired_date: e.target.value })}
+                    className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
                 </div>
-                <input
-                  type="date"
-                  value={form.acquired_date}
-                  onChange={(e) => setForm({ ...form, acquired_date: e.target.value })}
-                  className="px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
-                  Add
-                </button>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {/* Broker */}
+                  <div className="relative">
+                    <input
+                      list="broker-list"
+                      value={form.broker}
+                      onChange={(e) => setForm({ ...form, broker: e.target.value })}
+                      placeholder="Broker (optional)"
+                      className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <datalist id="broker-list">
+                      {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab","TD Ameritrade"].map((b) => (
+                        <option key={b} value={b} />
+                      ))}
+                    </datalist>
+                  </div>
+                  {/* Notes */}
+                  <input
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    placeholder="Notes (optional)"
+                    className="col-span-2 px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button type="submit" className="px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
+                    Add
+                  </button>
+                </div>
               </form>
               {form.name && (
                 <div className="mt-2 text-xs text-muted-foreground">
