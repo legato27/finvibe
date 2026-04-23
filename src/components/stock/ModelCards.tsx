@@ -6,19 +6,86 @@ import {
   TrendingUp, TrendingDown, Minus, Loader2, ShieldCheck, ShieldAlert,
   Activity, BarChart3, Brain, Zap, Target, Waves, Play, Clock,
 } from "lucide-react";
+import { InfoTip } from "@/components/shared/InfoTip";
 
-const MODEL_META: Record<string, { label: string; desc: string; icon: React.ReactNode }> = {
-  ensemble:         { label: "Ensemble",        desc: "Regime-weighted blend of all models", icon: <Brain className="w-4 h-4" /> },
-  factor_model:     { label: "Factor Model",    desc: "Fama-French 5 + Momentum + Quality", icon: <BarChart3 className="w-4 h-4" /> },
-  price_predictor:  { label: "Price Predictor",  desc: "Ridge/Lasso on 60 technical indicators", icon: <Target className="w-4 h-4" /> },
-  xgboost:          { label: "XGBoost",          desc: "Gradient boosting, non-linear signals", icon: <Zap className="w-4 h-4" /> },
-  lightgbm:         { label: "LightGBM",         desc: "Histogram boosting, fast inference", icon: <Zap className="w-4 h-4" /> },
-  monte_carlo:      { label: "Monte Carlo",      desc: "10K simulated paths, price distribution", icon: <Waves className="w-4 h-4" /> },
-  garch:            { label: "GARCH(1,1)",       desc: "Volatility clustering & persistence", icon: <Activity className="w-4 h-4" /> },
-  altman_zscore:    { label: "Altman Z-Score",   desc: "Bankruptcy probability score", icon: <ShieldCheck className="w-4 h-4" /> },
-  piotroski_fscore: { label: "Piotroski F",      desc: "9-point fundamental quality screen", icon: <ShieldAlert className="w-4 h-4" /> },
-  mean_reversion:   { label: "Mean Reversion",   desc: "OU equilibrium & reversion speed", icon: <Activity className="w-4 h-4" /> },
-  lstm_forecast:    { label: "LSTM Forecast",     desc: "Neural network with MC-Dropout", icon: <Brain className="w-4 h-4" /> },
+const MODEL_META: Record<string, { label: string; desc: string; long: string; icon: React.ReactNode }> = {
+  ensemble: {
+    label: "Ensemble",
+    desc: "Regime-weighted blend of all models",
+    long:
+      "The final blended prediction. We weight the other models by current market conditions — in calm markets we trust momentum models more, in turbulent markets we trust fundamentals more. The percentage is the expected 3-month return. A forecast, not a guarantee.",
+    icon: <Brain className="w-4 h-4" />,
+  },
+  factor_model: {
+    label: "Factor Model",
+    desc: "Fama-French 5 + Momentum + Quality",
+    long:
+      "Decomposes the stock's return into 7 well-studied drivers: market, size, value, profitability, investment, momentum, and quality. Tells you why the forecast is what it is — e.g. 'mostly a momentum bet' vs. 'pure market exposure'.",
+    icon: <BarChart3 className="w-4 h-4" />,
+  },
+  price_predictor: {
+    label: "Price Predictor",
+    desc: "Linear regression on technical indicators",
+    long:
+      "A simple linear regression baseline (Ridge/Lasso) on technical indicators. Acts as a sanity check — if the sophisticated models drift far from this simple one, the fancy forecast may be noise.",
+    icon: <Target className="w-4 h-4" />,
+  },
+  xgboost: {
+    label: "XGBoost",
+    desc: "Pattern recognition on 40+ indicators",
+    long:
+      "Tree-based machine learning that reads 40+ technical indicators (RSI, MACD, Bollinger Bands, moving averages, volatility, volume) and learns non-linear patterns from ~10 years of history. Outputs a 3-month return forecast. Only sees price and volume — blind to earnings and news.",
+    icon: <Zap className="w-4 h-4" />,
+  },
+  lightgbm: {
+    label: "LightGBM",
+    desc: "Fast boosting, handles missing data",
+    long:
+      "Same idea as XGBoost with a faster algorithm and better handling of missing data. Confirms or contradicts XGBoost — if both agree, the technical signal is robust. If they disagree, the pattern is ambiguous.",
+    icon: <Zap className="w-4 h-4" />,
+  },
+  monte_carlo: {
+    label: "Monte Carlo",
+    desc: "10K simulated paths, probability of profit",
+    long:
+      "Simulates 10,000 possible price paths using the stock's historical drift and volatility. The number is the probability of closing higher than today in 3 months. Above 55% = favorable odds, 45–55% = coin flip, below 45% = unfavorable.",
+    icon: <Waves className="w-4 h-4" />,
+  },
+  garch: {
+    label: "GARCH(1,1)",
+    desc: "Volatility forecast, not direction",
+    long:
+      "Does not predict direction. Answers: 'How turbulent will this stock be?' Reads annualized volatility: <25% calm, 25–40% normal, >40% turbulent. Persistence tells you how long a vol spike sticks — near 1.0 means turbulence feeds on itself.",
+    icon: <Activity className="w-4 h-4" />,
+  },
+  altman_zscore: {
+    label: "Altman Z-Score",
+    desc: "Bankruptcy warning from balance sheet",
+    long:
+      "A classic 5-ratio test on the balance sheet and income statement. SAFE (Z > 2.99) = healthy. GREY (1.81–2.99) = caution. DISTRESS (Z < 1.81) = elevated bankruptcy risk. Designed for manufacturers — banks and pure-tech can misclassify.",
+    icon: <ShieldCheck className="w-4 h-4" />,
+  },
+  piotroski_fscore: {
+    label: "Piotroski F",
+    desc: "9-point fundamental quality check",
+    long:
+      "Nine yes/no checks on profitability, leverage, liquidity, and operational efficiency (each pass = 1 point). 8–9 STRONG (improving fundamentals), 4–7 NEUTRAL, 0–3 WEAK (deteriorating). A trailing indicator — tells you about past health, not future price.",
+    icon: <ShieldAlert className="w-4 h-4" />,
+  },
+  mean_reversion: {
+    label: "Mean Reversion",
+    desc: "How stretched is the price vs. its mean",
+    long:
+      "Fits an Ornstein-Uhlenbeck process and measures how far price has drifted from its long-run average, in standard-deviation units. z < -2 → statistically cheap (likely to revert up). z > +2 → statistically rich (likely to revert down). |z| < 1 → near equilibrium. Breaks down on strongly trending stocks.",
+    icon: <Activity className="w-4 h-4" />,
+  },
+  lstm_forecast: {
+    label: "LSTM Forecast",
+    desc: "Neural net with uncertainty estimate",
+    long:
+      "A recurrent neural network that reads the last 60 days of price and volume to predict the next 63. Uses attention to focus on the most important bars. Our confidence interval comes from running the network 50× with random neurons turned off — tighter interval = higher conviction.",
+    icon: <Brain className="w-4 h-4" />,
+  },
 };
 
 function extractSignal(model: any): { value: string; label: string; color: string } {
@@ -294,6 +361,9 @@ export function ModelCards({ ticker }: { ticker: string }) {
                   <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{meta.icon}</span>
                   <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-foreground/80"}`}>
                     {meta.label}
+                  </span>
+                  <span className="ml-auto">
+                    <InfoTip tip={meta.long} size={12} />
                   </span>
                 </div>
                 <div className={`text-xl font-mono font-bold ${signal.color}`}>
