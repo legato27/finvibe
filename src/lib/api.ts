@@ -40,6 +40,7 @@ export const stocksApi = {
     api.get(`/api/stocks/${ticker}/price-history?period=${period}&interval=${interval}`).then((r) => r.data),
   refreshPrices: (tickers: string[]) =>
     api.post("/api/stocks/prices/batch", { tickers }).then((r) => r.data),
+  events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),
 };
 
 // ── Quant Models ──────────────────────────────────────────────
