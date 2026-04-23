@@ -9,7 +9,7 @@ import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { ModelCards } from "@/components/stock/ModelCards";
 import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
-import { OptionsStrategy } from "@/components/stock/OptionsStrategy";
+import { StockOptionsStrategy } from "@/components/stock/StockOptionsStrategy";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import { OsintFeed } from "@/components/shared/OsintFeed";
 import {
@@ -312,7 +312,7 @@ export default function StockDetailPage() {
       )}
 
       {activeTab === "options" && (
-        <OptionsStrategy
+        <StockOptionsStrategy
           ticker={ticker}
           currentPrice={currentPrice || 0}
           thoughts={thoughts}

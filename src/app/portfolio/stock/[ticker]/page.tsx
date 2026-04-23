@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import { usePortfolios, usePortfolioHoldings } from "@/lib/supabase/hooks";
 import { StockEvents } from "@/components/stock/StockEvents";
-import { PortfolioOptionsStrategy } from "@/components/stock/PortfolioOptionsStrategy";
+import { StockOptionsStrategy } from "@/components/stock/StockOptionsStrategy";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Loader2,
@@ -198,13 +198,12 @@ export default function PortfolioStockPage() {
       )}
 
       {activeTab === "options" && currentPrice > 0 && position ? (
-        <PortfolioOptionsStrategy
+        <StockOptionsStrategy
           ticker={ticker}
           currentPrice={currentPrice}
-          costBasis={position.avgCost}
-          shares={position.totalShares}
           stockInfo={stockInfo}
           thoughts={thoughts}
+          position={{ shares: position.totalShares, avgCost: position.avgCost }}
         />
       ) : activeTab === "options" && (
         <div className="card p-8 text-center text-muted-foreground text-sm">
