@@ -1,16 +1,17 @@
 "use client";
 import { useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
-import { usePortfolios, usePortfolioHoldings } from "@/lib/supabase/hooks";
+import { usePortfolios, usePortfolioHoldings, useLLMAnalysis } from "@/lib/supabase/hooks";
+import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
 import { StockEvents } from "@/components/stock/StockEvents";
 import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
 import { PortfolioAnalysis } from "@/components/stock/PortfolioAnalysis";
 import { TransactionHistory } from "@/components/stock/TransactionHistory";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
-  ArrowLeft, TrendingUp, TrendingDown, Loader2,
+  TrendingUp, TrendingDown, Loader2,
   Calendar, DollarSign, Briefcase, Brain, ReceiptText,
 } from "lucide-react";
 
@@ -18,7 +19,6 @@ type Tab = "analysis" | "events_news" | "options" | "transactions";
 
 export default function PortfolioStockPage() {
   const params = useParams();
-  const router = useRouter();
   const ticker = (params.ticker as string)?.toUpperCase();
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
   const [generatingThoughts, setGeneratingThoughts] = useState(false);
@@ -61,6 +61,8 @@ export default function PortfolioStockPage() {
     refetchInterval: generatingThoughts ? 8_000 : false,
   });
 
+  const { data: supabaseLlm } = useLLMAnalysis(ticker);
+
   // Auto-refresh price on mount
   useQuery({
     queryKey: ["stock-price-refresh", ticker],
@@ -100,36 +102,16 @@ export default function PortfolioStockPage() {
   return (
     <div className="space-y-4 max-w-[1000px] mx-auto">
       {/* ── Header ── */}
-      <div className="card p-5">
-        <div className="flex items-start gap-4">
-          <button
-            onClick={() => router.push("/portfolio")}
-            className="text-muted-foreground hover:text-primary mt-1 transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold font-mono text-primary">{ticker}</h1>
-              <span className="text-lg text-foreground/80 truncate">{detail?.name || "—"}</span>
-              {detail?.sector && (
-                <span className="text-[10px] px-2 py-0.5 bg-muted rounded text-muted-foreground">
-                  {detail.sector}
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4 mt-2 flex-wrap">
-              {currentPrice > 0 && (
-                <span className="text-3xl font-bold font-mono">
-                  ${currentPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+      <StockHeroHeader
+        ticker={ticker}
+        backHref="/portfolio"
+        detail={detail}
+        stockInfo={stockInfo}
+        currentPrice={currentPrice}
+        verdict={thoughts?.verdict}
+        conviction={thoughts?.conviction}
+        llm={detail?.llm || supabaseLlm}
+      />
 
       {/* ── Position Summary ── */}
       {position && (
