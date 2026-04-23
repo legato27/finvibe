@@ -41,12 +41,15 @@ export default function StockDetailPage() {
     staleTime: 300_000,
   });
 
+  const [generatingThoughts, setGeneratingThoughts] = useState(false);
   const { data: thoughtsData } = useQuery({
     queryKey: ["stock-thoughts", ticker],
     queryFn: () => stocksApi.thoughts(ticker),
     enabled: !!ticker,
     staleTime: 60_000,
     retry: false,
+    // Poll every 8s while generating until thoughts arrive
+    refetchInterval: generatingThoughts ? 8_000 : false,
   });
 
   const { data: supabaseLlm } = useLLMAnalysis(ticker);
@@ -296,6 +299,9 @@ export default function StockDetailPage() {
           ticker={ticker}
           thoughts={thoughts}
           generatedAt={thoughtsGeneratedAt}
+          isGenerating={generatingThoughts && !thoughts}
+          onGenerate={() => setGeneratingThoughts(true)}
+          onGenerateDone={() => setGeneratingThoughts(false)}
           llmIntrinsicValue={
             llm.intrinsic_value ?? llm.llm_intrinsic_value ?? thoughtsData?.llm_intrinsic_value
           }

@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Brain, RefreshCw, ChevronDown, ChevronUp, Shield, Target, AlertTriangle } from "lucide-react";
 import { MarketDirectionCard } from "./MarketDirectionCard";
 import { stocksApi } from "@/lib/api";
@@ -8,6 +8,9 @@ interface FinVibeThoughtsProps {
   ticker: string;
   thoughts: any | null;
   generatedAt: string | null;
+  isGenerating?: boolean;
+  onGenerate?: () => void;
+  onGenerateDone?: () => void;
   llmIntrinsicValue?: number | null;
   llmMarginOfSafety?: number | null;
 }
@@ -38,19 +41,31 @@ export function FinVibeThoughts({
   ticker,
   thoughts,
   generatedAt,
+  isGenerating = false,
+  onGenerate,
+  onGenerateDone,
   llmIntrinsicValue,
   llmMarginOfSafety,
 }: FinVibeThoughtsProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [localGenerating, setLocalGenerating] = useState(false);
+
+  // Stop polling once thoughts arrive
+  useEffect(() => {
+    if (thoughts && isGenerating && onGenerateDone) {
+      onGenerateDone();
+      setLocalGenerating(false);
+    }
+  }, [thoughts, isGenerating, onGenerateDone]);
+
+  const generating = isGenerating || localGenerating;
 
   async function handleGenerate() {
-    setIsGenerating(true);
+    setLocalGenerating(true);
+    onGenerate?.();
     try {
       await stocksApi.generateThoughts(ticker);
     } catch {
-      // ignore — user can retry
-    } finally {
-      setTimeout(() => setIsGenerating(false), 3000);
+      setLocalGenerating(false);
     }
   }
 
@@ -64,16 +79,19 @@ export function FinVibeThoughts({
           </div>
           <button
             onClick={handleGenerate}
-            disabled={isGenerating}
+            disabled={generating}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-50"
           >
-            <RefreshCw className={`w-3 h-3 ${isGenerating ? "animate-spin" : ""}`} />
-            {isGenerating ? "Generating..." : "Generate Analysis"}
+            <RefreshCw className={`w-3 h-3 ${generating ? "animate-spin" : ""}`} />
+            {generating ? "Generating..." : "Generate Analysis"}
           </button>
         </div>
         <div className="py-8 text-center text-muted-foreground text-sm">
-          <Brain className="w-10 h-10 mx-auto mb-2 opacity-30" />
-          No analysis available yet. Click &quot;Generate Analysis&quot; to create one.
+          <Brain className={`w-10 h-10 mx-auto mb-2 ${generating ? "opacity-60 animate-pulse" : "opacity-30"}`} />
+          {generating
+            ? "AI analysis in progress — this takes about 60–90 seconds…"
+            : <>No analysis available yet. Click &quot;Generate Analysis&quot; to create one.</>
+          }
         </div>
       </div>
     );
@@ -97,11 +115,11 @@ export function FinVibeThoughts({
         </div>
         <button
           onClick={handleGenerate}
-          disabled={isGenerating}
+          disabled={generating}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent text-muted-foreground rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
         >
-          <RefreshCw className={`w-3 h-3 ${isGenerating ? "animate-spin" : ""}`} />
-          Refresh
+          <RefreshCw className={`w-3 h-3 ${generating ? "animate-spin" : ""}`} />
+          {generating ? "Generating..." : "Refresh"}
         </button>
       </div>
 
