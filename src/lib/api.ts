@@ -41,6 +41,10 @@ export const stocksApi = {
   refreshPrices: (tickers: string[]) =>
     api.post("/api/stocks/prices/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),
+  optionsInference: (ticker: string, body: Record<string, unknown>) =>
+    api.post(`/api/stocks/${ticker}/options-inference`, body).then((r) => r.data),
+  positionAdvice: (ticker: string, body: Record<string, unknown>) =>
+    api.post(`/api/stocks/${ticker}/position-advice`, body).then((r) => r.data),
 };
 
 // ── Quant Models ──────────────────────────────────────────────

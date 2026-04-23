@@ -1,32 +1,32 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import { usePortfolios, usePortfolioHoldings } from "@/lib/supabase/hooks";
 import { StockEvents } from "@/components/stock/StockEvents";
 import { StockOptionsStrategy } from "@/components/stock/StockOptionsStrategy";
+import { PortfolioAnalysis } from "@/components/stock/PortfolioAnalysis";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import {
   ArrowLeft, TrendingUp, TrendingDown, Loader2,
-  Calendar, Newspaper, DollarSign, Briefcase,
+  Calendar, DollarSign, Briefcase, Brain,
 } from "lucide-react";
-import { useState } from "react";
 
-type Tab = "events" | "news" | "options";
+type Tab = "analysis" | "events_news" | "options";
 
 export default function PortfolioStockPage() {
   const params = useParams();
   const router = useRouter();
   const ticker = (params.ticker as string)?.toUpperCase();
-  const [activeTab, setActiveTab] = useState<Tab>("events");
+  const [activeTab, setActiveTab] = useState<Tab>("analysis");
+  const [generatingThoughts, setGeneratingThoughts] = useState(false);
 
   // ── Portfolio position data ──────────────────────────────
   const { data: portfolios } = usePortfolios();
   const defaultPortfolio = portfolios?.[0];
   const { data: holdings } = usePortfolioHoldings(defaultPortfolio?.id ?? null);
 
-  // Aggregate position for this ticker across all portfolios
   const position = useMemo(() => {
     if (!holdings) return null;
     const lots = holdings.filter((h) => h.ticker === ticker);
@@ -57,6 +57,7 @@ export default function PortfolioStockPage() {
     enabled: !!ticker,
     staleTime: 60_000,
     retry: false,
+    refetchInterval: generatingThoughts ? 8_000 : false,
   });
 
   // Auto-refresh price on mount
@@ -79,6 +80,7 @@ export default function PortfolioStockPage() {
 
   const currentPrice = stockInfo?.current_price || detail?.last_price || 0;
   const thoughts = thoughtsData?.thoughts || null;
+  const thoughtsGeneratedAt = thoughtsData?.generated_at || null;
 
   // ── Position P&L ─────────────────────────────────────────
   const mktValue = position ? currentPrice * position.totalShares : 0;
@@ -88,8 +90,8 @@ export default function PortfolioStockPage() {
   const isUnderwater = gainLoss < 0;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "events", label: "Events", icon: <Calendar className="w-3.5 h-3.5" /> },
-    { id: "news", label: "Latest News", icon: <Newspaper className="w-3.5 h-3.5" /> },
+    { id: "analysis", label: "Analysis", icon: <Brain className="w-3.5 h-3.5" /> },
+    { id: "events_news", label: "Events & News", icon: <Calendar className="w-3.5 h-3.5" /> },
     { id: "options", label: "Options", icon: <DollarSign className="w-3.5 h-3.5" /> },
   ];
 
@@ -186,14 +188,37 @@ export default function PortfolioStockPage() {
       </div>
 
       {/* ── Tab Content ── */}
-      {activeTab === "events" && <StockEvents ticker={ticker} />}
 
-      {activeTab === "news" && (
-        <div className="card">
-          <div className="card-header">
-            <span className="card-title">Latest News — {ticker}</span>
+      {activeTab === "analysis" && position && currentPrice > 0 && (
+        <PortfolioAnalysis
+          ticker={ticker}
+          currentPrice={currentPrice}
+          position={{ shares: position.totalShares, avgCost: position.avgCost }}
+          stockInfo={stockInfo}
+          thoughts={thoughts}
+          thoughtsGeneratedAt={thoughtsGeneratedAt}
+          thoughtsData={thoughtsData}
+          isGenerating={generatingThoughts && !thoughts}
+          onGenerate={() => setGeneratingThoughts(true)}
+          onGenerateDone={() => setGeneratingThoughts(false)}
+        />
+      )}
+
+      {activeTab === "analysis" && (!position || currentPrice === 0) && (
+        <div className="card p-8 text-center text-muted-foreground text-sm">
+          {!position ? "No position data found." : "Price data unavailable."}
+        </div>
+      )}
+
+      {activeTab === "events_news" && (
+        <div className="space-y-4">
+          <StockEvents ticker={ticker} />
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Latest News — {ticker}</span>
+            </div>
+            <RealtimeNewsFeed tickers={[ticker]} />
           </div>
-          <RealtimeNewsFeed tickers={[ticker]} />
         </div>
       )}
 
