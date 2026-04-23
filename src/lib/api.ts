@@ -44,7 +44,9 @@ export const stocksApi = {
   optionsInference: (ticker: string, body: Record<string, unknown>) =>
     api.post(`/api/stocks/${ticker}/options-inference`, body).then((r) => r.data),
   optionsStrategyRecommendation: (ticker: string, body: Record<string, unknown>) =>
-    api.post(`/api/stocks/${ticker}/options-strategy-recommendation`, body).then((r) => r.data),
+    api
+      .post(`/api/stocks/${ticker}/options-strategy-recommendation`, body, { timeout: 120_000 })
+      .then((r) => r.data),
   positionAdvice: (ticker: string, body: Record<string, unknown>) =>
     api.post(`/api/stocks/${ticker}/position-advice`, body).then((r) => r.data),
 };
