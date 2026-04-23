@@ -153,7 +153,7 @@ interface Props {
 }
 
 type RiskTol = "conservative" | "moderate" | "aggressive";
-type Objective = "income" | "protection" | "speculation" | "balanced";
+type Objective = "income" | "protection" | "speculation" | "balanced" | "repair";
 
 export function OptionsStrategyRecommendation({
   ticker, currentPrice, stockInfo, thoughts, position,
@@ -168,6 +168,12 @@ export function OptionsStrategyRecommendation({
   const high52 = stockInfo?.fifty_two_week_high || currentPrice * 1.25;
   const low52 = stockInfo?.fifty_two_week_low || currentPrice * 0.75;
   const pe = stockInfo?.pe_ratio || stockInfo?.forward_pe || null;
+
+  const isUnderwater = !!position && position.avgCost > currentPrice && currentPrice > 0;
+  const lossPerShareStr = isUnderwater ? (position!.avgCost - currentPrice).toFixed(2) : "0";
+  const lossPctStr = isUnderwater
+    ? (((position!.avgCost - currentPrice) / position!.avgCost) * 100).toFixed(1)
+    : "0";
 
   const body = submittedProfile && {
     current_price: currentPrice,
@@ -244,6 +250,9 @@ export function OptionsStrategyRecommendation({
               { v: "protection", label: "Protection (hedge downside)" },
               { v: "speculation", label: "Speculation (leveraged upside)" },
               { v: "balanced", label: "Balanced" },
+              ...(isUnderwater
+                ? [{ v: "repair" as const, label: `Repair position (recover −${lossPctStr}%)` }]
+                : []),
             ] as const).map((o) => (
               <button
                 key={o.v}
@@ -256,6 +265,11 @@ export function OptionsStrategyRecommendation({
               >{o.label}</button>
             ))}
           </div>
+          {isUnderwater && (
+            <div className="text-[10px] text-amber-400/80 mt-1">
+              You hold {position!.shares} sh of {ticker} at avg ${position!.avgCost.toFixed(2)}, currently −${lossPerShareStr}/sh. "Repair" designs a zero-cost ratio spread or covered combo to lower your breakeven without adding capital.
+            </div>
+          )}
         </div>
 
         <button
@@ -324,7 +338,10 @@ export function OptionsStrategyRecommendation({
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-muted-foreground">Goal:</span>
-          {(["income", "protection", "speculation", "balanced"] as const).map((o) => (
+          {([
+            "income", "protection", "speculation", "balanced",
+            ...(isUnderwater ? ["repair" as const] : []),
+          ] as Objective[]).map((o) => (
             <button
               key={o}
               onClick={() => { setObjective(o); setSubmittedProfile({ risk: submittedProfile.risk, obj: o }); }}
