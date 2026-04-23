@@ -183,9 +183,21 @@ export function OptionsStrategyRecommendation({
     queryKey: ["options-strategy", ticker, verdict, conviction, position?.avgCost, riskTol, objective],
     queryFn: () => stocksApi.optionsStrategyRecommendation(ticker, body),
     staleTime: 6 * 60 * 60 * 1000,
-    retry: 1,
+    retry: false,
     enabled: currentPrice > 0,
   });
+
+  const errorMessage = (() => {
+    if (data?.error) return data.error;
+    if (!error) return null;
+    const e = error as { code?: string; message?: string; response?: { status?: number; data?: { detail?: unknown } } };
+    if (e.code === "ECONNABORTED") return "Request timed out after 120s. The LLM may be under load — retry in a minute.";
+    if (e.response?.status) {
+      const detail = e.response.data?.detail;
+      return `HTTP ${e.response.status}${detail ? `: ${typeof detail === "string" ? detail : JSON.stringify(detail)}` : ""}`;
+    }
+    return e.message || "Unknown error";
+  })();
 
   const payoffPoints = useMemo(() => {
     if (!data?.trade_setup?.legs?.length) return [];
@@ -203,15 +215,21 @@ export function OptionsStrategyRecommendation({
     );
   }
 
-  if (error || data?.error) {
+  if (errorMessage) {
     return (
       <div className="card p-6 text-sm text-amber-400 flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-        <div>
+        <div className="flex-1">
           <div className="font-semibold">Strategy engine unavailable</div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {data?.error || "The LLM returned an invalid response. Retry in a minute."}
+          <div className="text-xs text-muted-foreground mt-1 font-mono break-all">
+            {errorMessage}
           </div>
+          <button
+            onClick={() => refetch()}
+            className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <RefreshCw className="w-3 h-3" /> Retry
+          </button>
         </div>
       </div>
     );
