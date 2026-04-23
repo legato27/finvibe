@@ -5,7 +5,6 @@ import { useQuery } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import { usePortfolios, usePortfolioHoldings } from "@/lib/supabase/hooks";
 import { StockEvents } from "@/components/stock/StockEvents";
-import { StockOptionsStrategy } from "@/components/stock/StockOptionsStrategy";
 import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
 import { PortfolioAnalysis } from "@/components/stock/PortfolioAnalysis";
 import { TransactionHistory } from "@/components/stock/TransactionHistory";
@@ -235,22 +234,13 @@ export default function PortfolioStockPage() {
       )}
 
       {activeTab === "options" && currentPrice > 0 && position ? (
-        <div className="space-y-4">
-          <OptionsStrategyRecommendation
-            ticker={ticker}
-            currentPrice={currentPrice}
-            stockInfo={stockInfo}
-            thoughts={thoughts}
-            position={{ shares: position.totalShares, avgCost: position.avgCost }}
-          />
-          <StockOptionsStrategy
-            ticker={ticker}
-            currentPrice={currentPrice}
-            stockInfo={stockInfo}
-            thoughts={thoughts}
-            position={{ shares: position.totalShares, avgCost: position.avgCost }}
-          />
-        </div>
+        <OptionsStrategyRecommendation
+          ticker={ticker}
+          currentPrice={currentPrice}
+          stockInfo={stockInfo}
+          thoughts={thoughts}
+          position={{ shares: position.totalShares, avgCost: position.avgCost }}
+        />
       ) : activeTab === "options" && (
         <div className="card p-8 text-center text-muted-foreground text-sm">
           {!position ? "No position data found for this ticker." : "Price data unavailable."}

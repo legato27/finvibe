@@ -158,8 +158,9 @@ type Objective = "income" | "protection" | "speculation" | "balanced";
 export function OptionsStrategyRecommendation({
   ticker, currentPrice, stockInfo, thoughts, position,
 }: Props) {
-  const [riskTol, setRiskTol] = useState<RiskTol>("moderate");
-  const [objective, setObjective] = useState<Objective>("balanced");
+  const [riskTol, setRiskTol] = useState<RiskTol | null>(null);
+  const [objective, setObjective] = useState<Objective | null>(null);
+  const [submittedProfile, setSubmittedProfile] = useState<{ risk: RiskTol; obj: Objective } | null>(null);
 
   const verdict = thoughts?.verdict || "hold";
   const conviction = thoughts?.conviction || "medium";
@@ -168,23 +169,23 @@ export function OptionsStrategyRecommendation({
   const low52 = stockInfo?.fifty_two_week_low || currentPrice * 0.75;
   const pe = stockInfo?.pe_ratio || stockInfo?.forward_pe || null;
 
-  const body = {
+  const body = submittedProfile && {
     current_price: currentPrice,
     verdict, conviction, beta,
     high_52w: high52, low_52w: low52,
     pe: pe || undefined,
     shares: position?.shares,
     cost_basis: position?.avgCost,
-    risk_tolerance: riskTol,
-    objective,
+    risk_tolerance: submittedProfile.risk,
+    objective: submittedProfile.obj,
   };
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<Recommendation>({
-    queryKey: ["options-strategy", ticker, verdict, conviction, position?.avgCost, riskTol, objective],
-    queryFn: () => stocksApi.optionsStrategyRecommendation(ticker, body),
+    queryKey: ["options-strategy", ticker, verdict, conviction, position?.avgCost, submittedProfile?.risk, submittedProfile?.obj],
+    queryFn: () => stocksApi.optionsStrategyRecommendation(ticker, body!),
     staleTime: 6 * 60 * 60 * 1000,
     retry: false,
-    enabled: currentPrice > 0,
+    enabled: currentPrice > 0 && !!submittedProfile,
   });
 
   const errorMessage = (() => {
@@ -206,7 +207,73 @@ export function OptionsStrategyRecommendation({
 
   // ── Empty / loading / error ────────────────────────────────
 
-  if (isLoading) {
+  // Pre-submission picker: user chooses risk + goal, then clicks Generate
+  if (!submittedProfile) {
+    const canSubmit = !!riskTol && !!objective;
+    return (
+      <div className="card p-5 space-y-4">
+        <div>
+          <div className="text-sm font-semibold text-foreground">Design an options strategy</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            Tell the strategist your risk tolerance and goal. The LLM will design one tailored trade with exact legs, economics, and Greeks.
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Risk tolerance</div>
+          <div className="flex flex-wrap gap-2">
+            {(["conservative", "moderate", "aggressive"] as const).map((r) => (
+              <button
+                key={r}
+                onClick={() => setRiskTol(r)}
+                className={`px-3 py-1.5 rounded text-xs capitalize transition-colors border ${
+                  riskTol === r
+                    ? "bg-primary/20 text-primary border-primary/40"
+                    : "bg-muted/30 hover:bg-muted border-transparent"
+                }`}
+              >{r}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground/70">Goal</div>
+          <div className="flex flex-wrap gap-2">
+            {([
+              { v: "income", label: "Income (collect premium)" },
+              { v: "protection", label: "Protection (hedge downside)" },
+              { v: "speculation", label: "Speculation (leveraged upside)" },
+              { v: "balanced", label: "Balanced" },
+            ] as const).map((o) => (
+              <button
+                key={o.v}
+                onClick={() => setObjective(o.v)}
+                className={`px-3 py-1.5 rounded text-xs transition-colors border ${
+                  objective === o.v
+                    ? "bg-primary/20 text-primary border-primary/40"
+                    : "bg-muted/30 hover:bg-muted border-transparent"
+                }`}
+              >{o.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <button
+          onClick={() => riskTol && objective && setSubmittedProfile({ risk: riskTol, obj: objective })}
+          disabled={!canSubmit}
+          className="w-full px-4 py-2 rounded bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+        >
+          <Activity className="w-4 h-4" />
+          Generate strategy
+        </button>
+        <div className="text-[10px] text-muted-foreground/60 text-center">
+          Uses a D.E. Shaw–style LLM prompt. ~30–60s on first run, cached for 6h after.
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading || isFetching) {
     return (
       <div className="card p-8 flex items-center justify-center gap-2 text-muted-foreground text-sm">
         <Loader2 className="w-4 h-4 animate-spin" />
@@ -248,9 +315,9 @@ export function OptionsStrategyRecommendation({
           {(["conservative", "moderate", "aggressive"] as const).map((r) => (
             <button
               key={r}
-              onClick={() => setRiskTol(r)}
+              onClick={() => { setRiskTol(r); setSubmittedProfile({ risk: r, obj: submittedProfile.obj }); }}
               className={`px-2 py-0.5 rounded transition-colors ${
-                riskTol === r ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
+                submittedProfile.risk === r ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
               }`}
             >{r}</button>
           ))}
@@ -260,9 +327,9 @@ export function OptionsStrategyRecommendation({
           {(["income", "protection", "speculation", "balanced"] as const).map((o) => (
             <button
               key={o}
-              onClick={() => setObjective(o)}
+              onClick={() => { setObjective(o); setSubmittedProfile({ risk: submittedProfile.risk, obj: o }); }}
               className={`px-2 py-0.5 rounded transition-colors ${
-                objective === o ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
+                submittedProfile.obj === o ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
               }`}
             >{o}</button>
           ))}
