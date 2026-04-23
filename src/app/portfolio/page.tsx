@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
@@ -126,11 +126,10 @@ export default function PortfolioPage() {
   const deleteHolding = useDeleteHolding();
 
   async function handleRefreshPrices() {
-    if (!holdings?.length || refreshing) return;
+    if (!positions.length || refreshing) return;
     setRefreshing(true);
     try {
-      const tickers = [...new Set(holdings.map((h) => h.ticker))];
-      await stocksApi.refreshPrices(tickers);
+      await stocksApi.refreshPrices(positions.map((p) => p.ticker));
       queryClient.invalidateQueries({ queryKey: ["portfolio-holdings"] });
     } finally {
       setRefreshing(false);
@@ -152,6 +151,40 @@ export default function PortfolioPage() {
     setShowForm(false);
   }
 
+  // ── Consolidate lots into positions (one row per ticker) ──
+  const positions = useMemo(() => {
+    if (!holdings) return [];
+    const map = new Map<string, {
+      ticker: string;
+      name?: string;
+      totalShares: number;
+      avgCostBasis: number;
+      current_price?: number;
+      last_price_updated_at?: string;
+      lotIds: number[];
+    }>();
+    for (const h of holdings) {
+      if (map.has(h.ticker)) {
+        const pos = map.get(h.ticker)!;
+        const newShares = pos.totalShares + h.shares;
+        pos.avgCostBasis = (pos.totalShares * pos.avgCostBasis + h.shares * h.cost_basis) / newShares;
+        pos.totalShares = newShares;
+        pos.lotIds.push(h.id);
+      } else {
+        map.set(h.ticker, {
+          ticker: h.ticker,
+          name: h.name,
+          totalShares: h.shares,
+          avgCostBasis: h.cost_basis,
+          current_price: h.current_price,
+          last_price_updated_at: h.last_price_updated_at,
+          lotIds: [h.id],
+        });
+      }
+    }
+    return Array.from(map.values());
+  }, [holdings]);
+
   // ── Aggregate stats ──────────────────────────────────────
   const totalCost = holdings?.reduce((sum, h) => sum + h.shares * h.cost_basis, 0) || 0;
   const totalValue = holdings?.reduce((sum, h) => {
@@ -160,8 +193,8 @@ export default function PortfolioPage() {
   }, 0) || 0;
   const totalGainLoss = totalValue - totalCost;
   const totalReturnPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
-  const holdingCount = holdings?.length || 0;
-  const tickerCount = new Set(holdings?.map((h) => h.ticker) || []).size;
+  const positionCount = positions.length;
+  const lotCount = holdings?.length || 0;
 
   if (portfoliosLoading) {
     return (
@@ -179,7 +212,7 @@ export default function PortfolioPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">Portfolio</h1>
         <div className="flex items-center gap-2">
-          {activePortfolio && holdings?.length ? (
+          {activePortfolio && positions.length ? (
             <button
               onClick={handleRefreshPrices}
               disabled={refreshing}
@@ -302,9 +335,11 @@ export default function PortfolioPage() {
               </div>
             </div>
             <div className="card p-3">
-              <div className="stat-label">Holdings</div>
-              <div className="stat-value text-lg">{holdingCount}</div>
-              <div className="text-[10px] text-muted-foreground">{tickerCount} ticker{tickerCount !== 1 ? "s" : ""}</div>
+              <div className="stat-label">Positions</div>
+              <div className="stat-value text-lg">{positionCount}</div>
+              {lotCount > positionCount && (
+                <div className="text-[10px] text-muted-foreground">{lotCount} lot{lotCount !== 1 ? "s" : ""}</div>
+              )}
             </div>
           </div>
 
@@ -367,7 +402,7 @@ export default function PortfolioPage() {
           <div className="card">
             <div className="card-header flex items-center justify-between">
               <span className="card-title">{activePortfolio?.name || "Holdings"}</span>
-              {holdings?.length ? (
+              {positions.length ? (
                 <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                   <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
                   Auto-refresh 60s
@@ -378,7 +413,7 @@ export default function PortfolioPage() {
               <div className="py-12 flex items-center justify-center">
                 <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
               </div>
-            ) : !holdings?.length ? (
+            ) : !positions.length ? (
               <div className="py-12 text-center text-muted-foreground text-sm">
                 <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-40" />
                 No investments yet. Click &quot;Add Investment&quot; to track your positions.
@@ -400,32 +435,37 @@ export default function PortfolioPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
-                    {holdings.map((h) => {
-                      const price = h.current_price || 0;
-                      const mktValue = h.shares * price;
-                      const costTotal = h.shares * h.cost_basis;
+                    {positions.map((pos) => {
+                      const price = pos.current_price || 0;
+                      const mktValue = pos.totalShares * price;
+                      const costTotal = pos.totalShares * pos.avgCostBasis;
                       const gainLoss = price > 0 ? mktValue - costTotal : 0;
-                      const returnPct = h.cost_basis > 0 && price > 0
-                        ? ((price - h.cost_basis) / h.cost_basis) * 100
+                      const returnPct = pos.avgCostBasis > 0 && price > 0
+                        ? ((price - pos.avgCostBasis) / pos.avgCostBasis) * 100
                         : 0;
-                      const isStale = h.last_price_updated_at
-                        ? (Date.now() - new Date(h.last_price_updated_at).getTime()) > 24 * 60 * 60 * 1000
+                      const isStale = pos.last_price_updated_at
+                        ? (Date.now() - new Date(pos.last_price_updated_at).getTime()) > 24 * 60 * 60 * 1000
                         : true;
 
                       return (
                         <tr
-                          key={h.id}
+                          key={pos.ticker}
                           className="hover:bg-accent/50 transition-colors cursor-pointer group"
-                          onClick={() => router.push(`/stock/${h.ticker}`)}
+                          onClick={() => router.push(`/stock/${pos.ticker}`)}
                         >
                           <td className="px-3 py-2.5">
-                            <span className="font-mono font-bold text-primary">{h.ticker}</span>
+                            <span className="font-mono font-bold text-primary">{pos.ticker}</span>
                           </td>
                           <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px] hidden md:table-cell">
-                            {h.name || "—"}
+                            {pos.name || "—"}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">{h.shares}</td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">${h.cost_basis.toFixed(2)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
+                            {pos.totalShares % 1 === 0 ? pos.totalShares : pos.totalShares.toFixed(4).replace(/\.?0+$/, "")}
+                            {pos.lotIds.length > 1 && (
+                              <span className="ml-1 text-[9px] text-muted-foreground/60">{pos.lotIds.length} lots</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">${pos.avgCostBasis.toFixed(2)}</td>
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
                             <div className="flex items-center justify-end gap-1">
                               {price > 0 ? `$${price.toFixed(2)}` : "—"}
@@ -459,7 +499,10 @@ export default function PortfolioPage() {
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                if (confirm("Delete this investment?")) deleteHolding.mutate(h.id);
+                                const msg = pos.lotIds.length > 1
+                                  ? `Delete all ${pos.lotIds.length} lots of ${pos.ticker}?`
+                                  : `Delete ${pos.ticker}?`;
+                                if (confirm(msg)) deleteHolding.mutate(pos.lotIds);
                               }}
                               className="text-muted-foreground/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                             >

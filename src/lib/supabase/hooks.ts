@@ -405,8 +405,9 @@ export function useUpdateHolding() {
 export function useDeleteHolding() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: number) => {
-      const { error } = await supabase.from("portfolio_holdings").delete().eq("id", id);
+    mutationFn: async (ids: number | number[]) => {
+      const idArray = Array.isArray(ids) ? ids : [ids];
+      const { error } = await supabase.from("portfolio_holdings").delete().in("id", idArray);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-holdings"] }),
