@@ -10,6 +10,7 @@ import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { ModelCards } from "@/components/stock/ModelCards";
 import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
 import { StockOptionsStrategy } from "@/components/stock/StockOptionsStrategy";
+import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import { OsintFeed } from "@/components/shared/OsintFeed";
 import {
@@ -312,12 +313,20 @@ export default function StockDetailPage() {
       )}
 
       {activeTab === "options" && (
-        <StockOptionsStrategy
-          ticker={ticker}
-          currentPrice={currentPrice || 0}
-          thoughts={thoughts}
-          stockInfo={stockInfo}
-        />
+        <div className="space-y-4">
+          <OptionsStrategyRecommendation
+            ticker={ticker}
+            currentPrice={currentPrice || 0}
+            stockInfo={stockInfo}
+            thoughts={thoughts}
+          />
+          <StockOptionsStrategy
+            ticker={ticker}
+            currentPrice={currentPrice || 0}
+            thoughts={thoughts}
+            stockInfo={stockInfo}
+          />
+        </div>
       )}
 
       {activeTab === "quant" && (
