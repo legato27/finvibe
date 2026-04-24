@@ -35,6 +35,38 @@ export function useProfile() {
   });
 }
 
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (patch: { default_currency?: string; display_name?: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("profiles")
+        .update(patch)
+        .eq("id", user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["profile"] }),
+  });
+}
+
+// ── FX rates (proxied from DGX /api/fx/rates) ───────────────
+
+import { fxApi } from "@/lib/api";
+
+export function useFxRates(base: string = "USD") {
+  return useQuery({
+    queryKey: ["fx-rates", base],
+    queryFn: () => fxApi.rates(base),
+    staleTime: 15 * 60 * 1000, // refresh at most every 15 min on the client
+    gcTime: 60 * 60 * 1000,
+  });
+}
+
 // ── Watchlists ──────────────────────────────────────────────
 
 export function useWatchlists() {
@@ -260,6 +292,7 @@ export interface HoldingWithPrice {
   notes: string | null;
   broker: string | null;
   portfolio_id: number;
+  currency: string;
   // Joined from stock_catalog
   name?: string;
   current_price?: number;
@@ -329,6 +362,7 @@ export function usePortfolioHoldings(portfolioId: number | null) {
         const stock = stockMap[h.ticker];
         return {
           ...h,
+          currency: (h.currency || "USD").toUpperCase(),
           name: stock?.name || undefined,
           current_price: stock?.last_price || undefined,
           last_price_updated_at: stock?.last_price_updated_at || undefined,
@@ -352,6 +386,7 @@ export function useAddHolding() {
       acquired_date?: string;
       notes?: string;
       broker?: string;
+      currency?: string;
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
@@ -380,6 +415,7 @@ export function useAddHolding() {
           acquired_date: holding.acquired_date || null,
           notes: holding.notes || null,
           broker: holding.broker || null,
+          currency: (holding.currency || "USD").toUpperCase(),
           user_id: user.id,
         })
         .select()

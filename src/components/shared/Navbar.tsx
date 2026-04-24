@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, TrendingUp, DollarSign } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, TrendingUp, DollarSign, Settings } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import type { User } from "@supabase/supabase-js";
 
@@ -102,6 +102,13 @@ export default function Navbar() {
               <span className="text-xs text-muted-foreground hidden sm:block">
                 {user.user_metadata?.full_name || user.email}
               </span>
+              <Link
+                href="/settings"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                title="Settings"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </Link>
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"

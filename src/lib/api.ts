@@ -31,7 +31,11 @@ export const watchlistApi = {
 // ── Stocks ────────────────────────────────────────────────────
 
 export const stocksApi = {
-  search: (q: string) => api.get(`/api/stocks/search?q=${encodeURIComponent(q)}`).then((r) => r.data),
+  search: (q: string, market?: string) => {
+    const params = new URLSearchParams({ q });
+    if (market) params.set("market", market);
+    return api.get(`/api/stocks/search?${params.toString()}`).then((r) => r.data);
+  },
   info: (ticker: string) => api.get(`/api/stocks/${ticker}/info`).then((r) => r.data),
   detail: (ticker: string) => api.get(`/api/stocks/${ticker}/detail`).then((r) => r.data),
   thoughts: (ticker: string) => api.get(`/api/stocks/${ticker}/thoughts`).then((r) => r.data),
@@ -49,6 +53,19 @@ export const stocksApi = {
       .then((r) => r.data),
   positionAdvice: (ticker: string, body: Record<string, unknown>) =>
     api.post(`/api/stocks/${ticker}/position-advice`, body).then((r) => r.data),
+};
+
+// ── FX ───────────────────────────────────────────────────────
+
+export type FxRatesResponse = {
+  base: string;
+  as_of: string;
+  rates: Record<string, number>;
+};
+
+export const fxApi = {
+  rates: (base = "USD") =>
+    api.get<FxRatesResponse>(`/api/fx/rates?base=${encodeURIComponent(base)}`).then((r) => r.data),
 };
 
 // ── Portfolio Analysis (Claude / Gemma) ──────────────────────

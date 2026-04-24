@@ -10,13 +10,22 @@ import {
   usePortfolioHoldings,
   useAddHolding,
   useDeleteHolding,
-  type HoldingWithPrice,
+  useProfile,
+  useFxRates,
 } from "@/lib/supabase/hooks";
 import {
   Plus, Trash2, X, Briefcase, TrendingUp, TrendingDown,
   Loader2, Clock, FolderOpen, Search, RefreshCw,
 } from "lucide-react";
 import { PortfolioAnalysisPanel } from "@/components/dashboard/PortfolioAnalysisPanel";
+import {
+  SUPPORTED_CURRENCIES,
+  inferCurrency,
+  convert,
+  formatCurrency,
+  type Currency,
+  type FxRates,
+} from "@/lib/currency";
 
 /* ── Inline ticker search with dropdown ──────────────────── */
 function TickerInput({
@@ -24,7 +33,7 @@ function TickerInput({
   onChange,
 }: {
   value: string;
-  onChange: (ticker: string, name: string) => void;
+  onChange: (ticker: string, name: string, currency?: string) => void;
 }) {
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
@@ -59,7 +68,7 @@ function TickerInput({
           onChange={(e) => {
             const v = e.target.value.toUpperCase();
             setQuery(v);
-            onChange(v, "");
+            onChange(v, "", inferCurrency(v));
             setOpen(true);
           }}
           onFocus={() => query.length >= 1 && setOpen(true)}
@@ -74,33 +83,37 @@ function TickerInput({
 
       {open && query.length >= 1 && stocks.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto">
-          {stocks.map((stock: any) => (
-            <button
-              key={stock.ticker}
-              type="button"
-              onClick={() => {
-                setQuery(stock.ticker);
-                onChange(stock.ticker, stock.name);
-                setOpen(false);
-              }}
-              className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent/50 transition-colors text-left border-b border-border/20 last:border-0"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
-                  {stock.exchange && (
-                    <span className="text-[9px] text-muted-foreground/60 bg-muted px-1 rounded">{stock.exchange}</span>
-                  )}
+          {stocks.map((stock: any) => {
+            const ccy = stock.currency || inferCurrency(stock.ticker);
+            return (
+              <button
+                key={stock.ticker}
+                type="button"
+                onClick={() => {
+                  setQuery(stock.ticker);
+                  onChange(stock.ticker, stock.name, ccy);
+                  setOpen(false);
+                }}
+                className="w-full flex items-center justify-between px-3 py-2 hover:bg-accent/50 transition-colors text-left border-b border-border/20 last:border-0"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
+                    <span className="text-[9px] text-amber-400 bg-amber-400/10 border border-amber-400/30 px-1 rounded">{ccy}</span>
+                    {stock.exchange && (
+                      <span className="text-[9px] text-muted-foreground/60 bg-muted px-1 rounded">{stock.exchange}</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
                 </div>
-                <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
-              </div>
-              {stock.price != null && (
-                <span className="font-mono text-xs text-foreground/70 flex-shrink-0 ml-2">
-                  ${stock.price.toFixed(2)}
-                </span>
-              )}
-            </button>
-          ))}
+                {(stock.current_price ?? stock.price) != null && (
+                  <span className="font-mono text-xs text-foreground/70 flex-shrink-0 ml-2">
+                    {(stock.current_price ?? stock.price).toFixed(2)} {ccy}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </div>
@@ -113,18 +126,42 @@ export default function PortfolioPage() {
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
   const createPortfolio = useCreatePortfolio();
   const deletePortfolio = useDeletePortfolio();
+  const { data: profile } = useProfile();
+  const defaultCurrency: Currency = (profile?.default_currency as Currency) || "USD";
+  const { data: fxRates } = useFxRates(defaultCurrency);
 
   const [activeId, setActiveId] = useState<number | null>(null);
   const [showNewPortfolio, setShowNewPortfolio] = useState(false);
   const [newPortfolioName, setNewPortfolioName] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [form, setForm] = useState({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "", broker: "" });
+  const [form, setForm] = useState({
+    ticker: "",
+    name: "",
+    shares: "",
+    cost_basis: "",
+    acquired_date: "",
+    notes: "",
+    broker: "",
+    currency: "USD" as Currency,
+  });
 
   const activePortfolio = portfolios?.find((p: any) => p.id === activeId) || portfolios?.[0];
   const { data: holdings, isLoading: holdingsLoading } = usePortfolioHoldings(activePortfolio?.id ?? null);
   const addHolding = useAddHolding();
   const deleteHolding = useDeleteHolding();
+
+  // Convert a native-currency amount to the user's default currency.
+  // Falls back to the raw amount if rates aren't loaded yet.
+  function toDefault(amount: number, native: Currency): number {
+    const converted = convert(amount, native, defaultCurrency, fxRates as FxRates | undefined);
+    return converted ?? amount;
+  }
+
+  // Pre-fill the add-investment form's currency with the user's default.
+  useEffect(() => {
+    setForm((prev) => (prev.ticker ? prev : { ...prev, currency: defaultCurrency }));
+  }, [defaultCurrency]);
 
   async function handleRefreshPrices() {
     if (!positions.length || refreshing) return;
@@ -148,8 +185,9 @@ export default function PortfolioPage() {
       acquired_date: form.acquired_date || undefined,
       notes: form.notes || undefined,
       broker: form.broker || undefined,
+      currency: form.currency,
     });
-    setForm({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "", broker: "" });
+    setForm({ ticker: "", name: "", shares: "", cost_basis: "", acquired_date: "", notes: "", broker: "", currency: defaultCurrency });
     setShowForm(false);
   }
 
@@ -159,6 +197,8 @@ export default function PortfolioPage() {
     const map = new Map<string, {
       ticker: string;
       name?: string;
+      sector?: string;
+      currency: Currency;
       totalShares: number;
       avgCostBasis: number;
       current_price?: number;
@@ -176,6 +216,8 @@ export default function PortfolioPage() {
         map.set(h.ticker, {
           ticker: h.ticker,
           name: h.name,
+          sector: h.sector,
+          currency: ((h.currency as Currency) || inferCurrency(h.ticker)),
           totalShares: h.shares,
           avgCostBasis: h.cost_basis,
           current_price: h.current_price,
@@ -187,12 +229,18 @@ export default function PortfolioPage() {
     return Array.from(map.values());
   }, [holdings]);
 
-  // ── Aggregate stats ──────────────────────────────────────
-  const totalCost = holdings?.reduce((sum, h) => sum + h.shares * h.cost_basis, 0) || 0;
-  const totalValue = holdings?.reduce((sum, h) => {
-    const price = h.current_price || h.cost_basis;
-    return sum + h.shares * price;
-  }, 0) || 0;
+  // ── Aggregate stats (converted to user's default currency) ─
+  const { totalCost, totalValue } = useMemo(() => {
+    let cost = 0;
+    let value = 0;
+    for (const h of holdings || []) {
+      const ccy = ((h.currency as Currency) || inferCurrency(h.ticker));
+      const price = h.current_price || h.cost_basis;
+      cost += toDefault(h.shares * h.cost_basis, ccy);
+      value += toDefault(h.shares * price, ccy);
+    }
+    return { totalCost: cost, totalValue: value };
+  }, [holdings, defaultCurrency, fxRates]);
   const totalGainLoss = totalValue - totalCost;
   const totalReturnPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
   const positionCount = positions.length;
@@ -313,15 +361,18 @@ export default function PortfolioPage() {
           {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="card p-3">
-              <div className="stat-label">Total Value</div>
+              <div className="stat-label flex items-center justify-between">
+                <span>Total Value</span>
+                <span className="text-[9px] text-muted-foreground/70 font-mono">{defaultCurrency}</span>
+              </div>
               <div className="stat-value text-lg">
-                ${totalValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {formatCurrency(totalValue, defaultCurrency, { decimals: 0 })}
               </div>
             </div>
             <div className="card p-3">
               <div className="stat-label">Total Cost</div>
               <div className="stat-value text-lg">
-                ${totalCost.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {formatCurrency(totalCost, defaultCurrency, { decimals: 0 })}
               </div>
             </div>
             <div className="card p-3">
@@ -330,7 +381,7 @@ export default function PortfolioPage() {
                 totalGainLoss >= 0 ? "text-green-500" : "text-red-500"
               }`}>
                 {totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {totalGainLoss >= 0 ? "+" : ""}${Math.abs(totalGainLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {totalGainLoss >= 0 ? "+" : ""}{formatCurrency(Math.abs(totalGainLoss), defaultCurrency, { decimals: 0 })}
                 <span className="text-xs ml-1">
                   ({totalReturnPct >= 0 ? "+" : ""}{totalReturnPct.toFixed(1)}%)
                 </span>
@@ -356,10 +407,17 @@ export default function PortfolioPage() {
               </div>
               <form onSubmit={handleSubmit} className="space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {/* Ticker with search */}
+                  {/* Ticker with search — also sets currency */}
                   <TickerInput
                     value={form.ticker}
-                    onChange={(ticker, name) => setForm({ ...form, ticker, name })}
+                    onChange={(ticker, name, currency) =>
+                      setForm({
+                        ...form,
+                        ticker,
+                        name,
+                        currency: (currency as Currency) || form.currency,
+                      })
+                    }
                   />
                   <input
                     type="number"
@@ -370,18 +428,27 @@ export default function PortfolioPage() {
                     className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     required
                   />
-                  {/* Cost with $ prefix */}
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  {/* Cost + currency selector */}
+                  <div className="flex items-stretch gap-1.5">
                     <input
                       type="number"
                       step="any"
                       value={form.cost_basis}
                       onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
                       placeholder="Cost/share"
-                      className="w-full pl-7 pr-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex-1 min-w-0 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       required
                     />
+                    <select
+                      value={form.currency}
+                      onChange={(e) => setForm({ ...form, currency: e.target.value as Currency })}
+                      className="px-2 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                      title="Currency"
+                    >
+                      {SUPPORTED_CURRENCIES.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                   </div>
                   <input
                     type="date"
@@ -424,12 +491,20 @@ export default function PortfolioPage() {
             </div>
           )}
 
-          {/* AI portfolio risk analysis */}
+          {/* AI portfolio risk analysis — prices normalized to default currency */}
           {activePortfolio && (
             <PortfolioAnalysisPanel
               portfolioId={activePortfolio.id}
               portfolioName={activePortfolio.name}
-              positions={positions}
+              positions={positions.map((p) => ({
+                ticker: p.ticker,
+                name: p.name,
+                sector: p.sector,
+                totalShares: p.totalShares,
+                avgCostBasis: toDefault(p.avgCostBasis, p.currency),
+                current_price:
+                  p.current_price != null ? toDefault(p.current_price, p.currency) : undefined,
+              }))}
               totalValue={totalValue}
               totalCost={totalCost}
             />
@@ -483,6 +558,10 @@ export default function PortfolioPage() {
                       const isStale = pos.last_price_updated_at
                         ? (Date.now() - new Date(pos.last_price_updated_at).getTime()) > 24 * 60 * 60 * 1000
                         : true;
+                      const nativeCcy = pos.currency;
+                      const showConversion = nativeCcy !== defaultCurrency;
+                      const mktValueDefault = showConversion ? toDefault(mktValue, nativeCcy) : mktValue;
+                      const gainLossDefault = showConversion ? toDefault(gainLoss, nativeCcy) : gainLoss;
 
                       return (
                         <tr
@@ -491,7 +570,12 @@ export default function PortfolioPage() {
                           onClick={() => router.push(`/portfolio/stock/${pos.ticker}`)}
                         >
                           <td className="px-3 py-2.5">
-                            <span className="font-mono font-bold text-primary">{pos.ticker}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono font-bold text-primary">{pos.ticker}</span>
+                              <span className="text-[9px] text-amber-400/80 bg-amber-400/10 border border-amber-400/30 px-1 rounded font-mono">
+                                {nativeCcy}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px] hidden md:table-cell">
                             {pos.name || "—"}
@@ -502,24 +586,38 @@ export default function PortfolioPage() {
                               <span className="ml-1 text-[9px] text-muted-foreground/60">{pos.lotIds.length} lots</span>
                             )}
                           </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">${pos.avgCostBasis.toFixed(2)}</td>
+                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
+                            {formatCurrency(pos.avgCostBasis, nativeCcy)}
+                          </td>
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
                             <div className="flex items-center justify-end gap-1">
-                              {price > 0 ? `$${price.toFixed(2)}` : "—"}
+                              {price > 0 ? formatCurrency(price, nativeCcy) : "—"}
                               {isStale && price > 0 && (
                                 <span title="Price may be stale (>24h)"><Clock className="w-3 h-3 text-yellow-500" /></span>
                               )}
                             </div>
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
-                            {price > 0 ? `$${mktValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
+                            {price > 0 ? (
+                              <div className="flex flex-col items-end">
+                                <span>{formatCurrency(mktValue, nativeCcy, { decimals: 0 })}</span>
+                                {showConversion && (
+                                  <span className="text-[9px] text-muted-foreground/70">
+                                    ≈ {formatCurrency(mktValueDefault, defaultCurrency, { decimals: 0 })}
+                                  </span>
+                                )}
+                              </div>
+                            ) : "—"}
                           </td>
                           <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
                             gainLoss > 0 ? "text-green-500" : gainLoss < 0 ? "text-red-500" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (
                               <div className="flex flex-col items-end">
-                                <span>{gainLoss >= 0 ? "+" : ""}${Math.abs(gainLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                <span>
+                                  {gainLoss >= 0 ? "+" : ""}
+                                  {formatCurrency(Math.abs(gainLossDefault), defaultCurrency, { decimals: 0 })}
+                                </span>
                                 <span className="text-[10px] sm:hidden">{returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%</span>
                               </div>
                             ) : "—"}
