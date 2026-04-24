@@ -51,6 +51,40 @@ export const stocksApi = {
     api.post(`/api/stocks/${ticker}/position-advice`, body).then((r) => r.data),
 };
 
+// ── Portfolio Analysis (Claude / Gemma) ──────────────────────
+
+export type PortfolioAnalysisBody = {
+  holdings: Array<{
+    ticker: string;
+    name?: string;
+    sector?: string;
+    shares: number;
+    cost_basis: number;
+    current_price?: number;
+    mkt_value: number;
+    weight_pct: number;
+  }>;
+  total_value: number;
+  portfolio_name?: string;
+};
+
+export type PortfolioAnalysisResponse = {
+  analysis: string;
+  model: string;
+  prompt: string;
+};
+
+export const portfolioAnalysisApi = {
+  claude: (body: PortfolioAnalysisBody) =>
+    api
+      .post<PortfolioAnalysisResponse>("/api/portfolio/analyze/claude", body, { timeout: 180_000 })
+      .then((r) => r.data),
+  gemma: (body: PortfolioAnalysisBody) =>
+    api
+      .post<PortfolioAnalysisResponse>("/api/portfolio/analyze/gemma", body, { timeout: 180_000 })
+      .then((r) => r.data),
+};
+
 // ── Quant Models ──────────────────────────────────────────────
 
 export const modelsApi = {

@@ -417,6 +417,104 @@ export function useDeleteHolding() {
   });
 }
 
+// ── Portfolio Analyses (Claude / Gemma risk memos) ─────────
+
+export interface PortfolioAnalysis {
+  id: number;
+  portfolio_id: number;
+  user_id: string;
+  provider: "claude" | "gemma";
+  model: string | null;
+  holdings_snapshot: Array<{
+    ticker: string;
+    name?: string;
+    sector?: string;
+    shares: number;
+    cost_basis: number;
+    current_price?: number;
+    mkt_value: number;
+    weight_pct: number;
+  }>;
+  total_value: number | null;
+  total_cost: number | null;
+  analysis: string;
+  summary: Record<string, unknown> | null;
+  prompt: string | null;
+  error: string | null;
+  status: "complete" | "failed";
+  created_at: string;
+}
+
+export function usePortfolioAnalyses(portfolioId: number | null) {
+  return useQuery({
+    queryKey: ["portfolio-analyses", portfolioId],
+    queryFn: async (): Promise<PortfolioAnalysis[]> => {
+      if (!portfolioId) return [];
+      const { data, error } = await supabase
+        .from("portfolio_analyses")
+        .select("*")
+        .eq("portfolio_id", portfolioId)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as PortfolioAnalysis[]) || [];
+    },
+    enabled: !!portfolioId,
+    staleTime: 30_000,
+  });
+}
+
+export function useSavePortfolioAnalysis() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      portfolio_id: number;
+      provider: "claude" | "gemma";
+      model?: string;
+      holdings_snapshot: PortfolioAnalysis["holdings_snapshot"];
+      total_value: number;
+      total_cost: number;
+      analysis: string;
+      prompt?: string;
+      status?: "complete" | "failed";
+      error?: string;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("portfolio_analyses")
+        .insert({ user_id: user.id, status: "complete", ...payload })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as PortfolioAnalysis;
+    },
+    onSuccess: (row) =>
+      qc.invalidateQueries({ queryKey: ["portfolio-analyses", row.portfolio_id] }),
+  });
+}
+
+export function useDeletePortfolioAnalysis() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { data: existing } = await supabase
+        .from("portfolio_analyses")
+        .select("portfolio_id")
+        .eq("id", id)
+        .single();
+      const { error } = await supabase
+        .from("portfolio_analyses")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+      return existing?.portfolio_id as number | undefined;
+    },
+    onSuccess: (portfolioId) => {
+      qc.invalidateQueries({ queryKey: ["portfolio-analyses", portfolioId] });
+    },
+  });
+}
+
 // ── Notes ───────────────────────────────────────────────────
 
 export function useStockNotes(ticker: string) {

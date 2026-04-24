@@ -16,6 +16,7 @@ import {
   Plus, Trash2, X, Briefcase, TrendingUp, TrendingDown,
   Loader2, Clock, FolderOpen, Search, RefreshCw,
 } from "lucide-react";
+import { PortfolioAnalysisPanel } from "@/components/dashboard/PortfolioAnalysisPanel";
 
 /* ── Inline ticker search with dropdown ──────────────────── */
 function TickerInput({
@@ -421,6 +422,17 @@ export default function PortfolioPage() {
                 </div>
               )}
             </div>
+          )}
+
+          {/* AI portfolio risk analysis */}
+          {activePortfolio && (
+            <PortfolioAnalysisPanel
+              portfolioId={activePortfolio.id}
+              portfolioName={activePortfolio.name}
+              positions={positions}
+              totalValue={totalValue}
+              totalCost={totalCost}
+            />
           )}
 
           {/* Holdings table */}
