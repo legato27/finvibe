@@ -358,7 +358,7 @@ function AnalysisBlock({
           {structured ? (
             <StructuredMemo structured={structured} riskContext={riskContext} raw={analysis.analysis} />
           ) : (
-            <MemoMarkdown source={analysis.analysis} />
+            <UnstructuredFallback raw={analysis.analysis} />
           )}
 
           {analysis.model && (
@@ -598,6 +598,43 @@ function Section({
       {children}
     </div>
   );
+}
+
+// ── Fallback rendering when the structured parse fails ──────
+// Most commonly this means the model's JSON was truncated. We still want the
+// user to see something useful, so we try a pretty-print and flag it.
+
+function UnstructuredFallback({ raw }: { raw: string }) {
+  const trimmed = raw.trim();
+  const looksLikeJson = trimmed.startsWith("{") || trimmed.startsWith("```json");
+  // Attempt a best-effort pretty-print even if the JSON is truncated.
+  let pretty: string | null = null;
+  if (looksLikeJson) {
+    const stripped = trimmed.replace(/^```json\s*|\s*```$/g, "");
+    try {
+      pretty = JSON.stringify(JSON.parse(stripped), null, 2);
+    } catch {
+      pretty = null;
+    }
+  }
+  if (looksLikeJson) {
+    return (
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-400">
+          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          <div>
+            Model returned JSON but it couldn&apos;t be parsed — likely truncated
+            at the token limit. Showing the raw payload below. Re-running
+            usually fixes it.
+          </div>
+        </div>
+        <pre className="p-3 text-[11px] leading-relaxed rounded-lg border border-border/30 bg-muted/30 overflow-x-auto text-foreground/85 whitespace-pre-wrap">
+          {pretty ?? trimmed}
+        </pre>
+      </div>
+    );
+  }
+  return <MemoMarkdown source={raw} />;
 }
 
 // ── Markdown renderer (fallback when structured parse fails) ──
