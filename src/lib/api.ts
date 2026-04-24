@@ -68,8 +68,40 @@ export type PortfolioAnalysisBody = {
   portfolio_name?: string;
 };
 
+export type StructuredAnalysis = {
+  summary_headline: string;
+  risk_dashboard: Array<{
+    metric: string;
+    value: string;
+    severity: "normal" | "elevated" | "high" | "critical";
+    note?: string;
+  }>;
+  position_risks: Array<{
+    ticker: string;
+    beta?: number | null;
+    ann_vol_pct?: number | null;
+    max_drawdown_pct?: number | null;
+    notes?: string;
+  }>;
+  portfolio_risks: Array<{
+    title: string;
+    severity: "normal" | "elevated" | "high" | "critical";
+    detail: string;
+  }>;
+  stress_test: Array<{
+    scenario: string;
+    portfolio_return_pct?: number | null;
+    spy_return_pct?: number | null;
+    interpretation?: string;
+  }>;
+  hedges: Array<{ strategy: string; rationale: string; sizing?: string }>;
+  verdict: string;
+};
+
 export type PortfolioAnalysisResponse = {
   analysis: string;
+  structured: StructuredAnalysis | null;
+  risk_context?: unknown;
   model: string;
   prompt: string;
 };
@@ -77,11 +109,11 @@ export type PortfolioAnalysisResponse = {
 export const portfolioAnalysisApi = {
   claude: (body: PortfolioAnalysisBody) =>
     api
-      .post<PortfolioAnalysisResponse>("/api/portfolio/analyze/claude", body, { timeout: 180_000 })
+      .post<PortfolioAnalysisResponse>("/api/portfolio/analyze/claude", body, { timeout: 220_000 })
       .then((r) => r.data),
   gemma: (body: PortfolioAnalysisBody) =>
     api
-      .post<PortfolioAnalysisResponse>("/api/portfolio/analyze/gemma", body, { timeout: 180_000 })
+      .post<PortfolioAnalysisResponse>("/api/portfolio/analyze/gemma", body, { timeout: 220_000 })
       .then((r) => r.data),
 };
 

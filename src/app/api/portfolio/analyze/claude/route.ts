@@ -1,19 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildPortfolioAnalysisPrompt,
+  extractJson,
   type HoldingSnapshot,
+  type StructuredAnalysis,
 } from "@/lib/portfolioAnalysis";
 
-export const maxDuration = 120;
+export const maxDuration = 180;
 
 const CLAUDE_MODEL = process.env.ANTHROPIC_MODEL || "claude-opus-4-7";
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
+const DGX_API_URL = process.env.DGX_API_URL || "https://api.vibelife.sg";
 
 type Body = {
   holdings: HoldingSnapshot[];
   total_value: number;
   portfolio_name?: string;
+  risk_context?: unknown;
 };
+
+async function fetchRiskContext(holdings: HoldingSnapshot[]): Promise<unknown> {
+  const resp = await fetch(`${DGX_API_URL}/api/portfolio/risk-context`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ holdings }),
+    signal: AbortSignal.timeout(60_000),
+  });
+  if (!resp.ok) {
+    throw new Error(`risk-context failed: ${resp.status} ${await resp.text()}`);
+  }
+  return resp.json();
+}
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -38,9 +55,20 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  let riskContext: unknown;
+  try {
+    riskContext = body.risk_context ?? (await fetchRiskContext(body.holdings));
+  } catch (e: any) {
+    return NextResponse.json(
+      { error: `Could not compute risk context: ${e?.message ?? "unknown"}` },
+      { status: 502 },
+    );
+  }
+
   const prompt = buildPortfolioAnalysisPrompt(
     body.holdings,
     body.total_value,
+    riskContext,
     body.portfolio_name,
   );
 
@@ -81,8 +109,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const structured = extractJson<StructuredAnalysis>(analysis);
+
     return NextResponse.json({
       analysis,
+      structured,
+      risk_context: riskContext,
       model: data?.model || CLAUDE_MODEL,
       prompt,
     });

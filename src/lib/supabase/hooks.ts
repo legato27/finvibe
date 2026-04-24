@@ -474,6 +474,7 @@ export function useSavePortfolioAnalysis() {
       total_value: number;
       total_cost: number;
       analysis: string;
+      summary?: Record<string, unknown> | null;
       prompt?: string;
       status?: "complete" | "failed";
       error?: string;
