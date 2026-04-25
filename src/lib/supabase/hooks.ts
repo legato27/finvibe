@@ -453,6 +453,102 @@ export function useDeleteHolding() {
   });
 }
 
+// ── Stock Sales (sell transactions against lots) ───────────
+
+export interface StockSale {
+  id: number;
+  user_id: string;
+  portfolio_id: number;
+  holding_id: number | null;
+  ticker: string;
+  shares_sold: number;
+  sale_price: number;
+  cost_basis: number;
+  realized_pnl: number;
+  currency: string;
+  sale_date: string | null;
+  broker: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
+export function useStockSales(portfolioId: number | null, ticker?: string) {
+  return useQuery({
+    queryKey: ["stock-sales", portfolioId, ticker ?? null],
+    queryFn: async (): Promise<StockSale[]> => {
+      if (!portfolioId) return [];
+      let q = supabase
+        .from("stock_sales")
+        .select("*")
+        .eq("portfolio_id", portfolioId)
+        .order("sale_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false });
+      if (ticker) q = q.eq("ticker", ticker.toUpperCase());
+      const { data, error } = await q;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!portfolioId,
+    staleTime: 30_000,
+  });
+}
+
+export function useSellLot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      lot: HoldingWithPrice;
+      shares_sold: number;
+      sale_price: number;
+      sale_date?: string;
+      broker?: string;
+      notes?: string;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { lot, shares_sold, sale_price } = input;
+      if (shares_sold <= 0) throw new Error("Shares sold must be positive");
+      if (shares_sold > lot.shares + 1e-9) throw new Error("Cannot sell more shares than the lot holds");
+
+      const realized_pnl = (sale_price - lot.cost_basis) * shares_sold;
+
+      const { error: insertErr } = await supabase.from("stock_sales").insert({
+        user_id: user.id,
+        portfolio_id: lot.portfolio_id,
+        holding_id: lot.id,
+        ticker: lot.ticker,
+        shares_sold,
+        sale_price,
+        cost_basis: lot.cost_basis,
+        realized_pnl,
+        currency: (lot.currency || "USD").toUpperCase(),
+        sale_date: input.sale_date || null,
+        broker: input.broker || lot.broker || null,
+        notes: input.notes || null,
+      });
+      if (insertErr) throw insertErr;
+
+      // Reduce or delete the lot.
+      const remaining = lot.shares - shares_sold;
+      if (remaining <= 1e-9) {
+        const { error } = await supabase.from("portfolio_holdings").delete().eq("id", lot.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("portfolio_holdings")
+          .update({ shares: remaining })
+          .eq("id", lot.id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+      qc.invalidateQueries({ queryKey: ["stock-sales"] });
+    },
+  });
+}
+
 // ── Portfolio Analyses (Claude / Gemma risk memos) ─────────
 
 export interface PortfolioAnalysis {
