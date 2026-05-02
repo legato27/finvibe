@@ -86,6 +86,13 @@ const MODEL_META: Record<string, { label: string; desc: string; long: string; ic
       "A recurrent neural network that reads the last 60 days of price and volume to predict the next 63. Uses attention to focus on the most important bars. Our confidence interval comes from running the network 50× with random neurons turned off — tighter interval = higher conviction.",
     icon: <Brain className="w-4 h-4" />,
   },
+  kronos: {
+    label: "Kronos",
+    desc: "Transformer foundation model trained on 45+ exchanges",
+    long:
+      "An open-source Transformer foundation model (Kronos-base, 102M parameters) pre-trained on candlesticks from 45+ global exchanges. Reads the last ~400 days of OHLCV and autoregressively generates the next 63 days. Confidence bands come from 20 stochastic samples — wider bands mean the model sees multiple plausible futures.",
+    icon: <Brain className="w-4 h-4" />,
+  },
 };
 
 function extractSignal(model: any): { value: string; label: string; color: string } {
