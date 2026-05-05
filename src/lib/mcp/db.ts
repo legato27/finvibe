@@ -16,16 +16,27 @@ function tickerOf(t: string): string {
 // and mirror it into Supabase ourselves. DGX has its own enrichment worker
 // that eventually syncs to Supabase, but timing is unreliable — this puts
 // MCP in the driver's seat so the watchlist UI shows what DGX knows.
+//
+// Status promotion (own this column locally, don't wait on DGX):
+//   - DGX returned an explicit non-pending status → mirror it.
+//   - basic data landed (name) AND LLM analysis has substantive content
+//     (thoughts_summary or llm_intrinsic_value) → done.
+//   - basic data landed but LLM analysis is still empty → processing.
+//   - DGX returned nothing usable → leave row as-is so a future sweep retries.
 export async function ensureBasicEnrichment(
   supabase: ServiceSupabase,
   ticker: string,
-): Promise<{ basic_fields: string[]; llm_fields: string[] }> {
-  const result = { basic_fields: [] as string[], llm_fields: [] as string[] };
+): Promise<{ basic_fields: string[]; llm_fields: string[]; status?: string }> {
+  const result = {
+    basic_fields: [] as string[],
+    llm_fields: [] as string[],
+    status: undefined as string | undefined,
+  };
   try {
     const detail = (await market.detail(ticker)) as Record<string, unknown> | null;
     if (!detail) return result;
 
-    // 1. Update stock_catalog with whatever DGX has populated.
+    // 1. Build stock_catalog patch from whatever DGX has populated.
     const stockPatch: Record<string, unknown> = {};
     const copy = (k: string, v: unknown, write?: string) => {
       if (v === null || v === undefined) return;
@@ -51,25 +62,11 @@ export async function ensureBasicEnrichment(
     copy("yearly_trend", detail.yearly_trend);
     copy("is_etf", detail.is_etf);
     copy("etf_memberships", detail.etf_memberships);
-    if (
-      typeof detail.enrichment_status === "string" &&
-      detail.enrichment_status !== "pending"
-    ) {
-      stockPatch.enrichment_status = detail.enrichment_status;
-    }
-    if (Object.keys(stockPatch).length) {
-      const { error } = await supabase
-        .from("stock_catalog")
-        .update(stockPatch)
-        .eq("ticker", ticker);
-      if (error) {
-        console.error(`[mcp] stock_catalog update ${ticker}:`, error);
-      } else {
-        result.basic_fields = Object.keys(stockPatch);
-      }
-    }
 
     // 2. Upsert llm_analysis from the nested `llm` object if DGX has any.
+    //    Done before the status decision so we know whether substantive LLM
+    //    data is now present in the DB.
+    let llmHasSubstance = false;
     const llm = detail.llm as Record<string, unknown> | null | undefined;
     if (llm && typeof llm === "object") {
       const llmPatch: Record<string, unknown> = { ticker };
@@ -97,7 +94,52 @@ export async function ensureBasicEnrichment(
           console.error(`[mcp] llm_analysis upsert ${ticker}:`, error);
         } else {
           result.llm_fields = Object.keys(llmPatch).filter((k) => k !== "ticker");
+          llmHasSubstance =
+            llmPatch.thoughts_summary != null ||
+            llmPatch.llm_intrinsic_value != null;
         }
+      }
+    }
+
+    // If DGX hasn't already promoted basic data on its own, also check the
+    // existing llm_analysis row — we may have flipped it in a prior call.
+    if (!llmHasSubstance) {
+      const { data: existingLlm } = await supabase
+        .from("llm_analysis")
+        .select("thoughts_summary, llm_intrinsic_value")
+        .eq("ticker", ticker)
+        .maybeSingle();
+      llmHasSubstance =
+        !!existingLlm &&
+        (existingLlm.thoughts_summary != null ||
+          existingLlm.llm_intrinsic_value != null);
+    }
+
+    // 3. Decide enrichment_status to write.
+    let nextStatus: string | undefined;
+    if (
+      typeof detail.enrichment_status === "string" &&
+      detail.enrichment_status !== "pending"
+    ) {
+      nextStatus = detail.enrichment_status;
+    } else if (stockPatch.name) {
+      nextStatus = llmHasSubstance ? "done" : "processing";
+    }
+    if (nextStatus) {
+      stockPatch.enrichment_status = nextStatus;
+      result.status = nextStatus;
+    }
+
+    // 4. Persist the stock_catalog patch (only if we actually have changes).
+    if (Object.keys(stockPatch).length) {
+      const { error } = await supabase
+        .from("stock_catalog")
+        .update(stockPatch)
+        .eq("ticker", ticker);
+      if (error) {
+        console.error(`[mcp] stock_catalog update ${ticker}:`, error);
+      } else {
+        result.basic_fields = Object.keys(stockPatch);
       }
     }
   } catch (err) {
@@ -140,61 +182,95 @@ async function kickoffEnrichment(
   return out;
 }
 
-// Walk a list_watchlists payload, find any ticker that's missing basic
-// metadata in stock_catalog OR missing LLM data in llm_analysis, and sync
-// them from DGX. Also queues LLM/quant jobs for tickers DGX has nothing
-// on yet so subsequent calls have data to pick up.
-export async function backfillStaleWatchlistItems(
+// Find tickers across the user's watchlists + portfolio holdings whose
+// stock_catalog rows are still stuck enriching. "Stuck" means:
+//   - enrichment_status = 'pending', OR
+//   - enrichment_status = 'processing' but updated_at is older than the
+//     STALE_PROCESSING_MIN cutoff (DGX worker probably dropped the ball).
+const STALE_PROCESSING_MIN = 10;
+
+export async function findStaleEnrichmentTickers(
+  userId: string,
   supabase: ServiceSupabase,
-  rows: Array<Record<string, unknown>>,
-): Promise<{ synced: string[]; thoughts_queued: string[] }> {
-  const seen = new Map<string, Record<string, unknown>>();
-  for (const row of rows ?? []) {
-    const items = (row?.watchlist_items as Array<Record<string, unknown>>) ?? [];
-    for (const item of items) {
-      const stock = (item?.stock_catalog as Record<string, unknown> | null) ?? null;
-      const ticker = stock?.ticker as string | undefined;
-      if (ticker && !seen.has(ticker)) seen.set(ticker, stock!);
+  limit = 25,
+): Promise<string[]> {
+  const cutoff = new Date(
+    Date.now() - STALE_PROCESSING_MIN * 60_000,
+  ).toISOString();
+
+  // Watchlist tickers via watchlists → watchlist_items → stock_catalog.
+  const { data: wl } = await supabase
+    .from("watchlists")
+    .select("watchlist_items(stock_catalog(ticker, enrichment_status, updated_at))")
+    .eq("user_id", userId);
+
+  // Portfolio tickers — direct user_id filter on portfolio_holdings, then
+  // join stock_catalog by ticker (separate query since holdings store the
+  // ticker text, not a stock_id).
+  const { data: holdings } = await supabase
+    .from("portfolio_holdings")
+    .select("ticker")
+    .eq("user_id", userId);
+
+  const out = new Set<string>();
+  for (const w of wl ?? []) {
+    const items = (w as { watchlist_items?: Array<{ stock_catalog?: { ticker?: string; enrichment_status?: string; updated_at?: string } | null }> }).watchlist_items ?? [];
+    for (const it of items) {
+      const sc = it?.stock_catalog;
+      if (!sc?.ticker) continue;
+      if (sc.enrichment_status === "pending") out.add(sc.ticker);
+      else if (
+        sc.enrichment_status === "processing" &&
+        sc.updated_at &&
+        sc.updated_at < cutoff
+      )
+        out.add(sc.ticker);
     }
   }
-  if (!seen.size) return { synced: [], thoughts_queued: [] };
 
-  const allTickers = [...seen.keys()];
-  const { data: existingLlm } = await supabase
-    .from("llm_analysis")
-    .select("ticker, llm_intrinsic_value, thoughts_summary")
-    .in("ticker", allTickers);
-  const llmMap = new Map<string, Record<string, unknown>>();
-  for (const r of existingLlm ?? [])
-    llmMap.set((r as { ticker: string }).ticker, r as Record<string, unknown>);
-
-  const needsSync: string[] = [];
-  const needsThoughtsQueue: string[] = [];
-  for (const ticker of allTickers) {
-    const stock = seen.get(ticker)!;
-    const llm = llmMap.get(ticker);
-    const missingBasic = !stock.name || stock.last_price == null;
-    const missingLlm = !llm || llm.llm_intrinsic_value == null;
-    if (missingBasic || missingLlm) needsSync.push(ticker);
-    // If neither stock_catalog nor llm_analysis has anything substantive,
-    // also queue fresh LLM/quant jobs on DGX.
-    if (!llm) needsThoughtsQueue.push(ticker);
+  const holdingTickers = (holdings ?? [])
+    .map((h: { ticker?: string }) => h.ticker)
+    .filter((t): t is string => !!t);
+  if (holdingTickers.length) {
+    const { data: stocks } = await supabase
+      .from("stock_catalog")
+      .select("ticker, enrichment_status, updated_at")
+      .in("ticker", [...new Set(holdingTickers)]);
+    for (const s of stocks ?? []) {
+      const sc = s as { ticker: string; enrichment_status?: string; updated_at?: string };
+      if (sc.enrichment_status === "pending") out.add(sc.ticker);
+      else if (
+        sc.enrichment_status === "processing" &&
+        sc.updated_at &&
+        sc.updated_at < cutoff
+      )
+        out.add(sc.ticker);
+    }
   }
 
-  // 1. Sync from DGX (writes both tables).
-  await Promise.allSettled(
-    needsSync.map((t) => ensureBasicEnrichment(supabase, t)),
-  );
+  return [...out].slice(0, limit);
+}
 
-  // 2. Queue fresh DGX work for tickers DGX has no LLM data on.
-  await Promise.allSettled(
-    needsThoughtsQueue.flatMap((t) => [
-      market.generateThoughts(t).catch(() => null),
-      market.runAllModels(t).catch(() => null),
-    ]),
+// Re-kick enrichment for the user's stale tickers. Both the web /api/enrich
+// route and the MCP list_watchlists path delegate here so they agree on
+// what "stale" means and how it gets recovered.
+export async function sweepUserEnrichment(
+  userId: string,
+  supabase: ServiceSupabase,
+  limit = 25,
+): Promise<{ enriched: string[]; failed: string[] }> {
+  const tickers = await findStaleEnrichmentTickers(userId, supabase, limit);
+  if (!tickers.length) return { enriched: [], failed: [] };
+  const results = await Promise.allSettled(
+    tickers.map((t) => kickoffEnrichment(supabase, t)),
   );
-
-  return { synced: needsSync, thoughts_queued: needsThoughtsQueue };
+  const enriched: string[] = [];
+  const failed: string[] = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") enriched.push(tickers[i]);
+    else failed.push(tickers[i]);
+  });
+  return { enriched, failed };
 }
 
 // ── Profile ────────────────────────────────────────────────

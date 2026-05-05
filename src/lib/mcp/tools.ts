@@ -39,12 +39,10 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     { ...meta("list_watchlists"), inputSchema: {} },
     async () => {
       const data = await db.listWatchlists(ctx.userId, ctx.supabase);
-      // Self-heal: if any items are missing name/price/thoughts, queue
-      // enrichment now (DGX returns 202 immediately so this is fast).
-      const backfilled = await db.backfillStaleWatchlistItems(
-        ctx.supabase,
-        data as Array<Record<string, unknown>>,
-      );
+      // Self-heal: any stale (pending or long-stuck processing) tickers in
+      // this user's watchlists or portfolio holdings get re-kicked. Same
+      // helper the /api/enrich route uses so both surfaces agree.
+      const backfilled = await db.sweepUserEnrichment(ctx.userId, ctx.supabase);
       return ok({ watchlists: data, backfilled });
     },
   );

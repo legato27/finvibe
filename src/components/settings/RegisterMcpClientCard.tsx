@@ -5,7 +5,7 @@ import { AlertCircle, Check, Copy, Loader2, Plus } from "lucide-react";
 
 interface CreatedClient {
   client_id: string;
-  client_secret?: string;
+  client_secret: string;
   client_name: string;
   redirect_uris: string[];
   token_endpoint_auth_method: string;
@@ -29,7 +29,6 @@ const PRESETS: Array<{ label: string; redirect_uris: string[] }> = [
 export function RegisterMcpClientCard() {
   const [name, setName] = useState("");
   const [redirectInput, setRedirectInput] = useState("");
-  const [confidential, setConfidential] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedClient | null>(null);
@@ -56,7 +55,6 @@ export function RegisterMcpClientCard() {
         body: JSON.stringify({
           client_name: name.trim(),
           redirect_uris,
-          confidential,
         }),
       });
       if (!res.ok) {
@@ -66,7 +64,6 @@ export function RegisterMcpClientCard() {
       setCreated(await res.json());
       setName("");
       setRedirectInput("");
-      setConfidential(false);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -83,15 +80,15 @@ export function RegisterMcpClientCard() {
   return (
     <div className="card mt-4">
       <div className="card-header">
-        <span className="card-title">Register a connected app manually</span>
+        <span className="card-title">Add a connected app</span>
       </div>
       <div className="p-4 space-y-4">
         <p className="text-xs text-muted-foreground">
-          Most MCP clients (Claude Desktop, Cursor, Cline, Continue) auto-register
-          themselves via OAuth Dynamic Client Registration when you point them at
-          our endpoint. Use this form only if you need a stable{" "}
-          <code className="font-mono">client_id</code> ahead of time, or if your
-          client doesn&apos;t support DCR.
+          Each app you connect needs its own credentials. Fill in a name and
+          the app&apos;s redirect URI(s), and you&apos;ll get a fresh{" "}
+          <code className="font-mono">client_id</code> + <code className="font-mono">client_secret</code>{" "}
+          pair (shown once). Repeat this for every distinct app you want to use
+          with vibefin.
         </p>
 
         {!created && (
@@ -140,17 +137,6 @@ export function RegisterMcpClientCard() {
               </p>
             </div>
 
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <input
-                type="checkbox"
-                checked={confidential}
-                onChange={(e) => setConfidential(e.target.checked)}
-                className="accent-primary"
-              />
-              Issue a client secret (for confidential clients only — most MCP
-              clients are public + PKCE only)
-            </label>
-
             {error && (
               <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
@@ -186,14 +172,12 @@ export function RegisterMcpClientCard() {
                 copied={copied === "client_id"}
                 onCopy={() => copy("client_id", created.client_id)}
               />
-              {created.client_secret && (
-                <Field
-                  label="client_secret (shown once)"
-                  value={created.client_secret}
-                  copied={copied === "client_secret"}
-                  onCopy={() => copy("client_secret", created.client_secret!)}
-                />
-              )}
+              <Field
+                label="client_secret (shown once)"
+                value={created.client_secret}
+                copied={copied === "client_secret"}
+                onCopy={() => copy("client_secret", created.client_secret)}
+              />
               <Field
                 label="redirect_uris"
                 value={created.redirect_uris.join(", ")}

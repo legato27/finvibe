@@ -24,7 +24,6 @@ export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   const client_name = String(body.client_name ?? "").trim();
   const redirect_uris_raw = body.redirect_uris;
-  const wantsSecret = Boolean(body.confidential);
 
   if (!client_name) {
     return NextResponse.json({ error: "client_name is required" }, { status: 400 });
@@ -58,14 +57,11 @@ export async function POST(req: Request) {
     redirect_uris.push(uri);
   }
 
+  // Manually-registered apps are always confidential — caller gets a fresh
+  // client_id + client_secret pair on every call. Re-run the form to create
+  // distinct credentials per app you intend to connect.
   const id = generateClientId();
-  let client_secret: string | undefined;
-  let client_secret_hash: string | null = null;
-  if (wantsSecret) {
-    const pair = generateClientSecret();
-    client_secret = pair.secret;
-    client_secret_hash = pair.hash;
-  }
+  const { secret: client_secret, hash: client_secret_hash } = generateClientSecret();
 
   const service = createServiceSupabase();
   const { error } = await service.from("mcp_oauth_clients").insert({
@@ -74,17 +70,17 @@ export async function POST(req: Request) {
     client_name: client_name.slice(0, 200),
     redirect_uris,
     grant_types: ["authorization_code", "refresh_token"],
-    token_endpoint_auth_method: wantsSecret ? "client_secret_post" : "none",
+    token_endpoint_auth_method: "client_secret_post",
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   return NextResponse.json(
     {
       client_id: id,
-      ...(client_secret ? { client_secret } : {}),
+      client_secret,
       client_name,
       redirect_uris,
-      token_endpoint_auth_method: wantsSecret ? "client_secret_post" : "none",
+      token_endpoint_auth_method: "client_secret_post",
     },
     { status: 201, headers: { "Cache-Control": "no-store" } },
   );
