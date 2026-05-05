@@ -21,9 +21,17 @@ async function handler(req: Request) {
       },
     );
   }
-  const mcp = createMcpHandler((server) => {
-    registerTools(server, { userId: auth.userId, supabase });
-  });
+  const mcp = createMcpHandler(
+    (server) => {
+      registerTools(server, { userId: auth.userId, supabase });
+    },
+    {},
+    {
+      basePath: "/api/mcp",
+      maxDuration: 60,
+      verboseLogs: false,
+    },
+  );
   return mcp(req);
 }
 
