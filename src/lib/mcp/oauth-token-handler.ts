@@ -13,6 +13,7 @@ import {
 } from "@/lib/mcp/oauth";
 
 function err(code: string, description: string, status = 400) {
+  console.error(`[oauth/token] ${code}: ${description} (status ${status})`);
   return Response.json(
     { error: code, error_description: description },
     {
@@ -91,6 +92,13 @@ async function authenticateClient(
 
 export async function handleTokenPost(req: Request): Promise<Response> {
   const body = await readForm(req);
+  console.error(
+    `[oauth/token] incoming POST grant_type=${body.grant_type ?? "?"} ` +
+      `client_id=${body.client_id ?? "?"} ` +
+      `has_secret=${Boolean(body.client_secret)} ` +
+      `has_verifier=${Boolean(body.code_verifier)} ` +
+      `redirect_uri=${body.redirect_uri ?? "?"}`,
+  );
   const grant_type = body.grant_type;
   if (!grant_type) return err("invalid_request", "grant_type is required");
 
