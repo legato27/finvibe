@@ -2,6 +2,7 @@ import { createMcpHandler } from "mcp-handler";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { validateBearer } from "@/lib/mcp/tokens";
 import { registerTools } from "@/lib/mcp/tools";
+import { originOf } from "@/lib/mcp/oauth";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -10,13 +11,17 @@ async function handler(req: Request) {
   const supabase = createServiceSupabase();
   const auth = await validateBearer(req, supabase);
   if (!auth) {
+    const resourceMetadataUrl = `${originOf(req)}/api/mcp/.well-known/oauth-protected-resource`;
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
       {
         status: 401,
         headers: {
-          "WWW-Authenticate": "Bearer",
+          // RFC 9728: clients use this to discover the auth server.
+          "WWW-Authenticate": `Bearer realm="vibefin", resource_metadata="${resourceMetadataUrl}"`,
           "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Expose-Headers": "WWW-Authenticate",
         },
       },
     );
