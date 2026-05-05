@@ -1,16 +1,13 @@
-// Root-level forward to /api/mcp/oauth/token. 308 preserves method + body
-// so the form-encoded POST round-trips intact.
+// Root-level /token endpoint. Serves the request directly (no redirect)
+// because some MCP clients (Claude.ai's backend) don't follow 308 with
+// POST bodies preserved.
 
-import { NextResponse } from "next/server";
+import { handleTokenPost } from "@/lib/mcp/oauth-token-handler";
 
 export const dynamic = "force-dynamic";
 
-function forward(req: Request) {
-  const dest = new URL("/api/mcp/oauth/token", req.url);
-  return NextResponse.redirect(dest.toString(), 308);
-}
+export const POST = handleTokenPost;
 
-export const POST = forward;
 export function OPTIONS() {
   return new Response(null, {
     status: 204,
