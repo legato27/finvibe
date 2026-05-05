@@ -9,6 +9,7 @@ import {
   type Currency,
 } from "@/lib/currency";
 import { McpTokensCard } from "@/components/settings/McpTokensCard";
+import { McpOauthGrantsCard } from "@/components/settings/McpOauthGrantsCard";
 
 export default function SettingsPage() {
   const { data: profile, isLoading } = useProfile();
@@ -151,6 +152,7 @@ export default function SettingsPage() {
       </div>
 
       <McpTokensCard />
+      <McpOauthGrantsCard />
     </div>
   );
 }
