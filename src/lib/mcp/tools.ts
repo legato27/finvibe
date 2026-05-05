@@ -255,30 +255,13 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => {
       const tickers = [...new Set(args.tickers.map((t) => t.toUpperCase()))];
 
-      // 1. Fetch /info per ticker → write name/sector/price to stock_catalog.
-      const basicResults = await Promise.allSettled(
-        tickers.map(async (t) => {
-          const info = (await market.info(t)) as Record<string, unknown> | null;
-          if (!info) return { ticker: t, basic: false as const };
-          const patch: Record<string, unknown> = {};
-          if (typeof info.name === "string") patch.name = info.name;
-          if (typeof info.sector === "string") patch.sector = info.sector;
-          if (typeof info.industry === "string") patch.industry = info.industry;
-          if (typeof info.current_price === "number") {
-            patch.last_price = info.current_price;
-            patch.last_price_updated_at = new Date().toISOString();
-          }
-          if (Object.keys(patch).length) {
-            await ctx.supabase
-              .from("stock_catalog")
-              .update(patch)
-              .eq("ticker", t);
-          }
-          return { ticker: t, basic: true as const, fields: Object.keys(patch) };
-        }),
+      // 1. Pull DGX /detail per ticker → mirror stock_catalog + llm_analysis.
+      const syncResults = await Promise.allSettled(
+        tickers.map((t) => db.ensureBasicEnrichment(ctx.supabase, t)),
       );
 
-      // 2. Queue thoughts + quant models per ticker (each returns 202 fast).
+      // 2. Queue fresh thoughts + quant models so DGX has new data to sync
+      //    on the next run.
       const queueResults = await Promise.allSettled(
         tickers.map(async (t) => {
           const [thoughts, models] = await Promise.allSettled([
@@ -301,25 +284,25 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
         }),
       );
 
-      const refreshed = basicResults.filter(
-        (r) => r.status === "fulfilled" && r.value.basic,
-      ).length;
+      const synced = syncResults
+        .map((r, i) =>
+          r.status === "fulfilled"
+            ? { ticker: tickers[i], ...r.value }
+            : { ticker: tickers[i], error: String(r.reason) },
+        );
 
       return ok({
-        refreshed,
-        queued: tickers.length,
         tickers,
-        basic: basicResults.map((r) =>
-          r.status === "fulfilled" ? r.value : { error: String(r.reason) },
-        ),
+        synced,
         jobs: queueResults.map((r) =>
           r.status === "fulfilled" ? r.value : { error: String(r.reason) },
         ),
         note:
-          "Basic metadata (name/sector/price) written immediately. AI thoughts " +
-          "and quant models run async on DGX — LLM intrinsic value and moat " +
-          "appear in 30-90s. The 'Fair Value' column (stock_catalog.intrinsic_value) " +
-          "is populated by a separate DGX worker we cannot trigger directly.",
+          "Pulled DGX's view of each ticker and mirrored it into both " +
+          "stock_catalog (name/sector/price/moat/intrinsic when available) and " +
+          "llm_analysis (LLM-derived intrinsic + thoughts summary). Also queued " +
+          "fresh thoughts + quant models so the next sync picks up new data. " +
+          "Re-run enrich_stock after ~60s to capture the LLM completion.",
       });
     },
   );

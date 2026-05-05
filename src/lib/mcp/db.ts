@@ -12,34 +12,98 @@ function tickerOf(t: string): string {
   return t.trim().toUpperCase();
 }
 
-// Pull basic metadata from DGX (name, sector, industry, current price) and
-// write it directly into stock_catalog. The DGX `info` endpoint may also
-// write back, but doing it explicitly here means the catalog is populated
-// regardless of DGX's worker timing.
-async function ensureBasicEnrichment(
+// Pull DGX's full view of a ticker (stock_catalog basics + LLM sub-object)
+// and mirror it into Supabase ourselves. DGX has its own enrichment worker
+// that eventually syncs to Supabase, but timing is unreliable — this puts
+// MCP in the driver's seat so the watchlist UI shows what DGX knows.
+export async function ensureBasicEnrichment(
   supabase: ServiceSupabase,
   ticker: string,
-): Promise<void> {
+): Promise<{ basic_fields: string[]; llm_fields: string[] }> {
+  const result = { basic_fields: [] as string[], llm_fields: [] as string[] };
   try {
-    const info = (await market.info(ticker)) as Record<string, unknown> | null;
-    if (!info) return;
-    const patch: Record<string, unknown> = {};
-    if (typeof info.name === "string") patch.name = info.name;
-    if (typeof info.sector === "string") patch.sector = info.sector;
-    if (typeof info.industry === "string") patch.industry = info.industry;
-    if (typeof info.current_price === "number") {
-      patch.last_price = info.current_price;
-      patch.last_price_updated_at = new Date().toISOString();
+    const detail = (await market.detail(ticker)) as Record<string, unknown> | null;
+    if (!detail) return result;
+
+    // 1. Update stock_catalog with whatever DGX has populated.
+    const stockPatch: Record<string, unknown> = {};
+    const copy = (k: string, v: unknown, write?: string) => {
+      if (v === null || v === undefined) return;
+      stockPatch[write ?? k] = v;
+    };
+    copy("name", detail.name);
+    copy("sector", detail.sector);
+    copy("industry", detail.industry);
+    copy("description", detail.description);
+    if (typeof detail.last_price === "number") {
+      stockPatch.last_price = detail.last_price;
+      stockPatch.last_price_updated_at = new Date().toISOString();
     }
-    if (Object.keys(patch).length === 0) return;
-    const { error } = await supabase
-      .from("stock_catalog")
-      .update(patch)
-      .eq("ticker", ticker);
-    if (error) console.error(`[mcp] stock_catalog update for ${ticker}:`, error);
+    copy("ten_yr_low", detail.ten_yr_low);
+    copy("ten_yr_high", detail.ten_yr_high);
+    copy("moat_rating", detail.moat_rating);
+    copy("moat_confidence", detail.moat_confidence);
+    copy("moat_detail", detail.moat_detail);
+    copy("intrinsic_value", detail.intrinsic_value);
+    copy("margin_of_safety", detail.margin_of_safety);
+    copy("wacc", detail.wacc);
+    copy("quarterly_trend", detail.quarterly_trend);
+    copy("yearly_trend", detail.yearly_trend);
+    copy("is_etf", detail.is_etf);
+    copy("etf_memberships", detail.etf_memberships);
+    if (
+      typeof detail.enrichment_status === "string" &&
+      detail.enrichment_status !== "pending"
+    ) {
+      stockPatch.enrichment_status = detail.enrichment_status;
+    }
+    if (Object.keys(stockPatch).length) {
+      const { error } = await supabase
+        .from("stock_catalog")
+        .update(stockPatch)
+        .eq("ticker", ticker);
+      if (error) {
+        console.error(`[mcp] stock_catalog update ${ticker}:`, error);
+      } else {
+        result.basic_fields = Object.keys(stockPatch);
+      }
+    }
+
+    // 2. Upsert llm_analysis from the nested `llm` object if DGX has any.
+    const llm = detail.llm as Record<string, unknown> | null | undefined;
+    if (llm && typeof llm === "object") {
+      const llmPatch: Record<string, unknown> = { ticker };
+      const llmCopy = (k: string, v: unknown, write: string) => {
+        if (v === null || v === undefined) return;
+        llmPatch[write] = v;
+      };
+      llmCopy("sector", llm.sector, "llm_sector");
+      llmCopy("moat", llm.moat, "llm_moat");
+      llmCopy("description", llm.description, "llm_description");
+      llmCopy("intrinsic_value", llm.intrinsic_value, "llm_intrinsic_value");
+      llmCopy("margin_of_safety", llm.margin_of_safety, "llm_margin_of_safety");
+      llmCopy("thoughts_summary", llm.thoughts_summary, "thoughts_summary");
+      llmCopy(
+        "thoughts_generated_at",
+        llm.thoughts_generated_at,
+        "thoughts_generated_at",
+      );
+      // Only upsert if we got at least one substantive field beyond the ticker.
+      if (Object.keys(llmPatch).length > 1) {
+        const { error } = await supabase
+          .from("llm_analysis")
+          .upsert(llmPatch, { onConflict: "ticker" });
+        if (error) {
+          console.error(`[mcp] llm_analysis upsert ${ticker}:`, error);
+        } else {
+          result.llm_fields = Object.keys(llmPatch).filter((k) => k !== "ticker");
+        }
+      }
+    }
   } catch (err) {
     console.error(`[mcp] ensureBasicEnrichment ${ticker} failed`, err);
   }
+  return result;
 }
 
 // Synchronously populate name/sector/price into stock_catalog (so the
@@ -76,43 +140,61 @@ async function kickoffEnrichment(
   return out;
 }
 
-// Find watchlist tickers that look like they haven't been enriched yet
-// (missing name, price, or no LLM thoughts yet) and queue enrichment.
+// Walk a list_watchlists payload, find any ticker that's missing basic
+// metadata in stock_catalog OR missing LLM data in llm_analysis, and sync
+// them from DGX. Also queues LLM/quant jobs for tickers DGX has nothing
+// on yet so subsequent calls have data to pick up.
 export async function backfillStaleWatchlistItems(
   supabase: ServiceSupabase,
   rows: Array<Record<string, unknown>>,
-): Promise<{ basic: string[]; thoughts: string[] }> {
-  const stale = new Set<string>();
+): Promise<{ synced: string[]; thoughts_queued: string[] }> {
+  const seen = new Map<string, Record<string, unknown>>();
   for (const row of rows ?? []) {
     const items = (row?.watchlist_items as Array<Record<string, unknown>>) ?? [];
     for (const item of items) {
       const stock = (item?.stock_catalog as Record<string, unknown> | null) ?? null;
-      if (!stock) continue;
-      const ticker = stock.ticker as string | undefined;
-      if (!ticker) continue;
-      if (!stock.name || stock.last_price == null) stale.add(ticker);
+      const ticker = stock?.ticker as string | undefined;
+      if (ticker && !seen.has(ticker)) seen.set(ticker, stock!);
     }
   }
-  const list = [...stale];
-  if (!list.length) return { basic: [], thoughts: [] };
+  if (!seen.size) return { synced: [], thoughts_queued: [] };
 
-  await Promise.allSettled(list.map((t) => ensureBasicEnrichment(supabase, t)));
-
-  // Also queue LLM thoughts for any ticker missing them (separate read so we
-  // don't accidentally re-queue tickers that already have analysis).
-  const { data: existing } = await supabase
+  const allTickers = [...seen.keys()];
+  const { data: existingLlm } = await supabase
     .from("llm_analysis")
-    .select("ticker")
-    .in("ticker", list);
-  const have = new Set((existing ?? []).map((r: { ticker: string }) => r.ticker));
-  const need = list.filter((t) => !have.has(t));
+    .select("ticker, llm_intrinsic_value, thoughts_summary")
+    .in("ticker", allTickers);
+  const llmMap = new Map<string, Record<string, unknown>>();
+  for (const r of existingLlm ?? [])
+    llmMap.set((r as { ticker: string }).ticker, r as Record<string, unknown>);
+
+  const needsSync: string[] = [];
+  const needsThoughtsQueue: string[] = [];
+  for (const ticker of allTickers) {
+    const stock = seen.get(ticker)!;
+    const llm = llmMap.get(ticker);
+    const missingBasic = !stock.name || stock.last_price == null;
+    const missingLlm = !llm || llm.llm_intrinsic_value == null;
+    if (missingBasic || missingLlm) needsSync.push(ticker);
+    // If neither stock_catalog nor llm_analysis has anything substantive,
+    // also queue fresh LLM/quant jobs on DGX.
+    if (!llm) needsThoughtsQueue.push(ticker);
+  }
+
+  // 1. Sync from DGX (writes both tables).
   await Promise.allSettled(
-    need.flatMap((t) => [
+    needsSync.map((t) => ensureBasicEnrichment(supabase, t)),
+  );
+
+  // 2. Queue fresh DGX work for tickers DGX has no LLM data on.
+  await Promise.allSettled(
+    needsThoughtsQueue.flatMap((t) => [
       market.generateThoughts(t).catch(() => null),
       market.runAllModels(t).catch(() => null),
     ]),
   );
-  return { basic: list, thoughts: need };
+
+  return { synced: needsSync, thoughts_queued: needsThoughtsQueue };
 }
 
 // ── Profile ────────────────────────────────────────────────

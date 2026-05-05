@@ -38,6 +38,12 @@ export const market = {
   },
   info: (ticker: string) =>
     dgxJson<unknown>(`/api/stocks/${encodeURIComponent(ticker)}/info`),
+  // Returns the full record including stock_catalog fields (name, sector,
+  // moat, intrinsic_value, margin_of_safety, trends, enrichment_status)
+  // AND a nested `llm` object with the LLM-derived analysis. Strict superset
+  // of /info — prefer this when populating Supabase.
+  detail: (ticker: string) =>
+    dgxJson<unknown>(`/api/stocks/${encodeURIComponent(ticker)}/detail`),
   refreshPrices: (tickers: string[]) =>
     dgxJson<unknown>(`/api/stocks/prices/batch`, {
       method: "POST",
