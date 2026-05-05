@@ -12,6 +12,34 @@ import {
   verifyPkceS256,
 } from "@/lib/mcp/oauth";
 
+// Normalize a redirect_uri so trivial differences (trailing slash on the
+// path, case in scheme/host) don't cause a false "mismatch" rejection. Per
+// OAuth 2.1 the URIs should match exactly, but Claude/Cursor/etc. sometimes
+// canonicalize differently between /authorize and /token.
+function sameRedirectUri(a: string, b: string): boolean {
+  if (!a || !b) return a === b;
+  const norm = (s: string) => {
+    try {
+      const u = new URL(s);
+      u.protocol = u.protocol.toLowerCase();
+      u.hostname = u.hostname.toLowerCase();
+      // Strip a single trailing "/" only if there's no query/hash to follow.
+      if (
+        u.pathname.length > 1 &&
+        u.pathname.endsWith("/") &&
+        !u.search &&
+        !u.hash
+      ) {
+        u.pathname = u.pathname.replace(/\/+$/, "");
+      }
+      return u.toString();
+    } catch {
+      return s.trim();
+    }
+  };
+  return norm(a) === norm(b);
+}
+
 function err(code: string, description: string, status = 400) {
   console.error(`[oauth/token] ${code}: ${description} (status ${status})`);
   return Response.json(
@@ -140,7 +168,10 @@ async function exchangeCode(
   if (row.client_id !== client_id) {
     return err("invalid_grant", "Code was issued to a different client");
   }
-  if (row.redirect_uri !== redirect_uri) {
+  if (!sameRedirectUri(row.redirect_uri as string, redirect_uri)) {
+    console.error(
+      `[oauth/token] redirect_uri mismatch: stored="${row.redirect_uri}" sent="${redirect_uri}"`,
+    );
     return err("invalid_grant", "redirect_uri mismatch");
   }
   if (new Date(row.expires_at as string).getTime() <= Date.now()) {

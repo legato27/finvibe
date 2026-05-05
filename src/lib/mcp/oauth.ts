@@ -61,19 +61,28 @@ export function generateTokenPair(): IssuedTokens {
 
 // PKCE: verify that sha256(code_verifier) base64url-encoded == code_challenge
 // (we only support S256, the only method the MCP spec mandates).
+//
+// Plain string compare (not timingSafeEqual) on purpose: PKCE values are
+// short, the auth code is single-use, and timingSafeEqual throws on
+// length mismatch which becomes a 500 + generic "rejected the credentials"
+// surface error. Both sides are normalized to padded-stripped base64url so
+// we don't reject because one side included `=` padding and the other
+// didn't.
 export function verifyPkceS256(code_verifier: string, code_challenge: string): boolean {
-  const hash = crypto
+  if (!code_verifier || !code_challenge) return false;
+  const computed = crypto
     .createHash("sha256")
     .update(code_verifier)
-    .digest()
-    .toString("base64")
+    .digest("base64")
     .replace(/=+$/g, "")
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
-  return crypto.timingSafeEqual(
-    Buffer.from(hash),
-    Buffer.from(code_challenge),
-  );
+  const normalized = code_challenge
+    .trim()
+    .replace(/=+$/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+  return computed === normalized;
 }
 
 // Look up an OAuth access token. Returns null if missing, expired, or revoked.
