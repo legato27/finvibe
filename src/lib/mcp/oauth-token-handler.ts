@@ -111,36 +111,57 @@ async function authenticateClient(
   // many editors) authenticate against clients we issued with a secret.
   const secret = body.client_secret;
   if (secret && client.client_secret_hash) {
-    if (sha256(secret) !== client.client_secret_hash) {
+    const got = sha256(secret);
+    if (got !== client.client_secret_hash) {
+      console.error(
+        `[oauth/token] secret mismatch for ${client.id}: ` +
+          `got_hash_prefix=${got.slice(0, 8)} ` +
+          `expected_hash_prefix=${(client.client_secret_hash as string).slice(0, 8)} ` +
+          `secret_len=${secret.length}`,
+      );
       return { ok: false, resp: err("invalid_client", "Bad client_secret", 401) };
     }
+    console.error(`[oauth/token] secret check OK for ${client.id}`);
+  } else if (secret && !client.client_secret_hash) {
+    // Client doesn't have a stored secret but caller sent one — accept and log.
+    console.error(
+      `[oauth/token] caller sent a secret but client ${client.id} has no stored hash; accepting on PKCE only`,
+    );
   }
   return { ok: true, client_id: client.id as string };
 }
 
 export async function handleTokenPost(req: Request): Promise<Response> {
-  const body = await readForm(req);
-  console.error(
-    `[oauth/token] incoming POST grant_type=${body.grant_type ?? "?"} ` +
-      `client_id=${body.client_id ?? "?"} ` +
-      `has_secret=${Boolean(body.client_secret)} ` +
-      `has_verifier=${Boolean(body.code_verifier)} ` +
-      `redirect_uri=${body.redirect_uri ?? "?"}`,
-  );
-  const grant_type = body.grant_type;
-  if (!grant_type) return err("invalid_request", "grant_type is required");
+  try {
+    const body = await readForm(req);
+    console.error(
+      `[oauth/token] incoming POST grant_type=${body.grant_type ?? "?"} ` +
+        `client_id=${body.client_id ?? "?"} ` +
+        `has_secret=${Boolean(body.client_secret)} ` +
+        `has_verifier=${Boolean(body.code_verifier)} ` +
+        `redirect_uri=${body.redirect_uri ?? "?"}`,
+    );
+    const grant_type = body.grant_type;
+    if (!grant_type) return err("invalid_request", "grant_type is required");
 
-  const supabase = createServiceSupabase();
-  const auth = await authenticateClient(supabase, body);
-  if (!auth.ok) return auth.resp;
+    const supabase = createServiceSupabase();
+    const auth = await authenticateClient(supabase, body);
+    if (!auth.ok) return auth.resp;
 
-  if (grant_type === "authorization_code") {
-    return exchangeCode(supabase, auth.client_id, body);
+    let resp: Response;
+    if (grant_type === "authorization_code") {
+      resp = await exchangeCode(supabase, auth.client_id, body);
+    } else if (grant_type === "refresh_token") {
+      resp = await exchangeRefresh(supabase, auth.client_id, body);
+    } else {
+      resp = err("unsupported_grant_type", `Unsupported grant_type=${grant_type}`);
+    }
+    console.error(`[oauth/token] response status=${resp.status}`);
+    return resp;
+  } catch (e) {
+    console.error(`[oauth/token] uncaught error:`, e);
+    return err("server_error", (e as Error)?.message ?? String(e), 500);
   }
-  if (grant_type === "refresh_token") {
-    return exchangeRefresh(supabase, auth.client_id, body);
-  }
-  return err("unsupported_grant_type", `Unsupported grant_type=${grant_type}`);
 }
 
 async function exchangeCode(
@@ -158,12 +179,23 @@ async function exchangeCode(
     );
   }
 
-  const { data: row } = await supabase
+  const { data: row, error: rowErr } = await supabase
     .from("mcp_oauth_codes")
     .select("*")
     .eq("code", code)
     .maybeSingle();
-  if (!row) return err("invalid_grant", "Unknown or expired code");
+  if (rowErr) {
+    console.error(`[oauth/token] db error fetching code:`, rowErr);
+    return err("server_error", rowErr.message, 500);
+  }
+  if (!row) {
+    console.error(`[oauth/token] no code row for code_prefix=${code.slice(0, 8)}`);
+    return err("invalid_grant", "Unknown or expired code");
+  }
+  console.error(
+    `[oauth/token] code row: client=${row.client_id} consumed=${!!row.consumed_at} ` +
+      `expires_at=${row.expires_at} stored_redirect=${row.redirect_uri}`,
+  );
   if (row.consumed_at) return err("invalid_grant", "Code already used");
   if (row.client_id !== client_id) {
     return err("invalid_grant", "Code was issued to a different client");
@@ -178,6 +210,10 @@ async function exchangeCode(
     return err("invalid_grant", "Code expired");
   }
   if (!verifyPkceS256(code_verifier, row.code_challenge as string)) {
+    console.error(
+      `[oauth/token] PKCE failed: verifier_len=${code_verifier.length} ` +
+        `challenge_len=${(row.code_challenge as string).length}`,
+    );
     return err("invalid_grant", "PKCE verification failed");
   }
 
