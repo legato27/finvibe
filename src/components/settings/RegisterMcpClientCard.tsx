@@ -13,6 +13,10 @@ interface CreatedClient {
 
 const PRESETS: Array<{ label: string; redirect_uris: string[] }> = [
   {
+    label: "Claude.ai",
+    redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
+  },
+  {
     label: "Claude Desktop",
     redirect_uris: ["http://localhost:33418/oauth/callback/debug"],
   },
@@ -27,8 +31,10 @@ const PRESETS: Array<{ label: string; redirect_uris: string[] }> = [
 ];
 
 export function RegisterMcpClientCard() {
-  const [name, setName] = useState("");
-  const [redirectInput, setRedirectInput] = useState("");
+  const [name, setName] = useState(PRESETS[0].label);
+  const [redirectInput, setRedirectInput] = useState(
+    PRESETS[0].redirect_uris.join("\n"),
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedClient | null>(null);
