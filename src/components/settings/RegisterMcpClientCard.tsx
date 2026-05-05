@@ -16,18 +16,6 @@ const PRESETS: Array<{ label: string; redirect_uris: string[] }> = [
     label: "Claude.ai",
     redirect_uris: ["https://claude.ai/api/mcp/auth_callback"],
   },
-  {
-    label: "Claude Desktop",
-    redirect_uris: ["http://localhost:33418/oauth/callback/debug"],
-  },
-  {
-    label: "Cursor",
-    redirect_uris: ["cursor://anysphere.cursor-deeplink/mcp/oauth/callback"],
-  },
-  {
-    label: "Cline",
-    redirect_uris: ["http://localhost:3000/oauth/callback"],
-  },
 ];
 
 export function RegisterMcpClientCard() {
