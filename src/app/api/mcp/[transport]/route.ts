@@ -7,14 +7,33 @@ import { originOf } from "@/lib/mcp/oauth";
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
+// Add CORS headers to any Response. mcp-handler's own responses don't
+// include Access-Control-Allow-Origin, so cross-origin browsers (or CORS-
+// strict server-side fetchers) treat them as failures even when status=200.
+function withCors(resp: Response): Response {
+  const headers = new Headers(resp.headers);
+  headers.set("Access-Control-Allow-Origin", "*");
+  headers.set(
+    "Access-Control-Expose-Headers",
+    "WWW-Authenticate, Mcp-Session-Id, Mcp-Protocol-Version",
+  );
+  return new Response(resp.body, {
+    status: resp.status,
+    statusText: resp.statusText,
+    headers,
+  });
+}
+
 async function handler(req: Request) {
   const url = new URL(req.url);
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
   const headerSummary = authHeader
-    ? `${authHeader.slice(0, 12)}…(${authHeader.length}ch)`
+    ? `${authHeader.slice(0, 18)}…(${authHeader.length}ch)`
     : "(none)";
   console.error(
-    `[mcp] ${req.method} ${url.pathname} auth=${headerSummary}`,
+    `[mcp] ${req.method} ${url.pathname} auth=${headerSummary} ` +
+      `origin=${req.headers.get("origin") ?? "?"} ` +
+      `referer=${req.headers.get("referer") ?? "?"}`,
   );
 
   const supabase = createServiceSupabase();
@@ -29,7 +48,6 @@ async function handler(req: Request) {
       {
         status: 401,
         headers: {
-          // RFC 9728: clients use this to discover the auth server.
           "WWW-Authenticate": `Bearer realm="vibefin", resource_metadata="${resourceMetadataUrl}"`,
           "Content-Type": "application/json",
           "Access-Control-Allow-Origin": "*",
@@ -54,12 +72,14 @@ async function handler(req: Request) {
   try {
     const resp = await mcp(req);
     console.error(`[mcp] handler responded status=${resp.status}`);
-    return resp;
+    return withCors(resp);
   } catch (e) {
     console.error(`[mcp] mcp-handler threw:`, e);
-    return new Response(
-      JSON.stringify({ error: "Internal", detail: (e as Error)?.message }),
-      { status: 500, headers: { "Content-Type": "application/json" } },
+    return withCors(
+      new Response(
+        JSON.stringify({ error: "Internal", detail: (e as Error)?.message }),
+        { status: 500, headers: { "Content-Type": "application/json" } },
+      ),
     );
   }
 }
