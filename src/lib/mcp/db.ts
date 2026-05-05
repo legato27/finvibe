@@ -153,7 +153,7 @@ export async function ensureBasicEnrichment(
 // LLM thoughts and quant model jobs on DGX. Both DGX endpoints return 202
 // immediately (the actual work runs async on DGX), so awaiting them
 // directly is fast and far more reliable than after() inside mcp-handler.
-async function kickoffEnrichment(
+export async function kickoffEnrichment(
   supabase: ServiceSupabase,
   ticker: string,
 ): Promise<{ thoughts_task?: string; models_task?: string }> {

@@ -5,6 +5,18 @@ import { stocksApi } from "@/lib/api";
 
 const supabase = createClient();
 
+// Fire-and-forget call to the unified enrichment endpoint. Both watchlist
+// add and portfolio add use this; the sweep variant is used by the
+// background queries inside useWatchlists / usePortfolioHoldings to
+// auto-requeue any rows still stuck in pending.
+function kickEnrich(body: { tickers?: string[]; sweep?: boolean }) {
+  return fetch("/api/enrich", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
 // ── Auth ────────────────────────────────────────────────────
 
 export function useUser() {
@@ -99,6 +111,25 @@ export function useWatchlists() {
     retry: 2,
   });
 
+  // Periodic auto-requeue: any rows still pending (or processing for >10
+  // minutes) get re-kicked through DGX. Server-side scoped to this user.
+  useQuery({
+    queryKey: ["watchlist-enrich-sweep"],
+    queryFn: async () => {
+      const res = await kickEnrich({ sweep: true });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { enriched?: string[] };
+      if (body.enriched?.length) {
+        qc.invalidateQueries({ queryKey: ["watchlists"] });
+      }
+      return body;
+    },
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+
   return useQuery({
     queryKey: ["watchlists"],
     queryFn: async () => {
@@ -149,17 +180,18 @@ export function useAddStock() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ watchlistId, ticker }: { watchlistId: number; ticker: string }) => {
+      const upper = ticker.toUpperCase();
       // Upsert into stock_catalog (shared)
       let { data: stock } = await supabase
         .from("stock_catalog")
         .select("id")
-        .eq("ticker", ticker.toUpperCase())
+        .eq("ticker", upper)
         .single();
 
       if (!stock) {
         const { data: newStock, error: insertErr } = await supabase
           .from("stock_catalog")
-          .insert({ ticker: ticker.toUpperCase(), enrichment_status: "pending" })
+          .insert({ ticker: upper, enrichment_status: "pending" })
           .select("id")
           .single();
         if (insertErr) throw insertErr;
@@ -171,8 +203,14 @@ export function useAddStock() {
         .from("watchlist_items")
         .insert({ watchlist_id: watchlistId, stock_id: stock!.id });
       if (error) throw error;
+      return upper;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlists"] }),
+    onSuccess: (upper) => {
+      qc.invalidateQueries({ queryKey: ["watchlists"] });
+      // Trigger DGX enrichment server-side. Fire-and-forget — the sweep
+      // query inside useWatchlists will pick it up if this drops.
+      void kickEnrich({ tickers: [upper] }).catch(() => null);
+    },
   });
 }
 
@@ -331,6 +369,27 @@ export function usePortfolioHoldings(portfolioId: number | null) {
     refetchIntervalInBackground: false, // pause when tab hidden
   });
 
+  // Auto-requeue stale enrichments while the user has a portfolio open.
+  // Same /api/enrich sweep used by useWatchlists — server scopes by user
+  // so this picks up holdings (and any watchlist items too).
+  useQuery({
+    queryKey: ["portfolio-enrich-sweep", portfolioId],
+    queryFn: async () => {
+      const res = await kickEnrich({ sweep: true });
+      if (!res.ok) return null;
+      const body = (await res.json()) as { enriched?: string[] };
+      if (body.enriched?.length) {
+        qc.invalidateQueries({ queryKey: ["portfolio-holdings", portfolioId] });
+      }
+      return body;
+    },
+    enabled: !!portfolioId,
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+
   return useQuery({
     queryKey: ["portfolio-holdings", portfolioId],
     queryFn: async (): Promise<HoldingWithPrice[]> => {
@@ -421,9 +480,13 @@ export function useAddHolding() {
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return { data, ticker: upperTicker };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["portfolio-holdings"] }),
+    onSuccess: ({ ticker }) => {
+      qc.invalidateQueries({ queryKey: ["portfolio-holdings"] });
+      // Same DGX enrichment path the watchlist add uses.
+      void kickEnrich({ tickers: [ticker] }).catch(() => null);
+    },
   });
 }
 
