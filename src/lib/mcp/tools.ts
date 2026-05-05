@@ -1,8 +1,9 @@
 import { z } from "zod";
+import { after } from "next/server";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import * as db from "@/lib/mcp/db";
-import { market } from "@/lib/mcp/market";
+import { market, enrichTickers } from "@/lib/mcp/market";
 import { toolByName } from "@/lib/mcp/catalog";
 
 export interface ToolContext {
@@ -235,5 +236,28 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       inputSchema: { ticker: z.string().min(1) },
     },
     async (args) => ok(await db.getLlmThoughts(ctx.userId, ctx.supabase, args)),
+  );
+
+  server.registerTool(
+    "enrich_stock",
+    {
+      ...meta("enrich_stock"),
+      inputSchema: { tickers: z.array(z.string().min(1)).min(1) },
+    },
+    async (args) => {
+      const tickers = [...new Set(args.tickers.map((t) => t.toUpperCase()))];
+      // Refresh prices synchronously; defer thoughts + quant models so the
+      // MCP response stays snappy.
+      await market.refreshPrices(tickers).catch((err) => {
+        console.error("[mcp enrich_stock] refreshPrices failed", err);
+      });
+      after(() => enrichTickers(tickers));
+      return ok({
+        refreshed: tickers.length,
+        scheduled: tickers.length,
+        tickers,
+        note: "Prices updated. Thoughts + quant models running in the background.",
+      });
+    },
   );
 }

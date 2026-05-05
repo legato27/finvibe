@@ -43,4 +43,39 @@ export const market = {
       method: "POST",
       body: JSON.stringify({ tickers }),
     }),
+  generateThoughts: (ticker: string) =>
+    dgxJson<unknown>(
+      `/api/stocks/${encodeURIComponent(ticker)}/generate-thoughts`,
+      { method: "POST" },
+    ),
+  runAllModels: (ticker: string) =>
+    dgxJson<unknown>(
+      `/api/models/${encodeURIComponent(ticker)}/run/all`,
+      { method: "GET" },
+    ),
 };
+
+// Kick off the full enrichment pipeline for a set of tickers.
+// Errors are swallowed per-stage so one slow/broken backend doesn't
+// block the others.
+export async function enrichTickers(tickers: string[]): Promise<void> {
+  if (!tickers.length) return;
+  const unique = [...new Set(tickers.map((t) => t.toUpperCase()))];
+
+  // Prices first (single batched call, usually fast).
+  await market.refreshPrices(unique).catch((err) => {
+    console.error("[mcp enrich] refreshPrices failed", err);
+  });
+
+  // Then thoughts + quant models per ticker, in parallel.
+  await Promise.allSettled(
+    unique.flatMap((ticker) => [
+      market.generateThoughts(ticker).catch((err) => {
+        console.error(`[mcp enrich] generateThoughts ${ticker} failed`, err);
+      }),
+      market.runAllModels(ticker).catch((err) => {
+        console.error(`[mcp enrich] runAllModels ${ticker} failed`, err);
+      }),
+    ]),
+  );
+}

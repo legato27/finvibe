@@ -5,10 +5,28 @@
 // The supabase client here is the service-role client, which bypasses RLS.
 // Forgetting the user_id filter would let one user touch another user's data.
 
+import { after } from "next/server";
 import type { ServiceSupabase } from "@/lib/supabase/service";
+import { market, enrichTickers } from "./market";
 
 function tickerOf(t: string): string {
   return t.trim().toUpperCase();
+}
+
+// Refresh price synchronously (fast — single DGX call, updates stock_catalog
+// before we return) and schedule the slower enrichments (LLM thoughts +
+// quant models) to run after the response is sent. `after()` is Vercel/Next
+// native; it keeps the function alive until the work finishes.
+async function kickoffEnrichment(ticker: string) {
+  await market.refreshPrices([ticker]).catch((err) => {
+    console.error("[mcp] refreshPrices failed", err);
+  });
+  after(async () => {
+    await Promise.allSettled([
+      market.generateThoughts(ticker),
+      market.runAllModels(ticker),
+    ]);
+  });
 }
 
 // ── Profile ────────────────────────────────────────────────
@@ -109,7 +127,15 @@ export async function addToWatchlist(
     .from("watchlist_items")
     .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
   if (error) throw new Error(error.message);
-  return { watchlist_id: args.watchlist_id, ticker: stock.ticker, stock_id: stock.id };
+
+  await kickoffEnrichment(stock.ticker);
+
+  return {
+    watchlist_id: args.watchlist_id,
+    ticker: stock.ticker,
+    stock_id: stock.id,
+    enrichment: "price refreshed; thoughts + quant models scheduled",
+  };
 }
 
 export async function removeFromWatchlist(
@@ -310,6 +336,9 @@ export async function addHolding(
     .select()
     .single();
   if (error) throw new Error(error.message);
+
+  await kickoffEnrichment(stock.ticker);
+
   return data;
 }
 

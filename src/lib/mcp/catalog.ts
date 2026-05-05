@@ -269,6 +269,20 @@ export const TOOL_CATALOG: ToolDoc[] = [
     ],
     returns: "llm_analysis row, or null if no analysis exists.",
   },
+  {
+    name: "enrich_stock",
+    group: "AI",
+    title: "Refresh price + run AI thoughts and quant models",
+    description:
+      "Manually kick off the full enrichment pipeline for one or more tickers: " +
+      "refresh price (synchronous, batched), then generate FinVibe LLM thoughts and " +
+      "run all quant models (in the background after the response). Useful when " +
+      "data feels stale; runs automatically when adding to a watchlist or holding.",
+    params: [
+      { name: "tickers", type: "string[]", required: true },
+    ],
+    returns: "{ refreshed: <count>, scheduled: <count> } once price refresh completes.",
+  },
 ];
 
 export function toolByName(name: string): ToolDoc | undefined {
