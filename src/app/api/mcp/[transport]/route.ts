@@ -67,3 +67,22 @@ async function handler(req: Request) {
 export const GET = handler;
 export const POST = handler;
 export const DELETE = handler;
+
+// Explicit CORS preflight for cross-origin MCP clients (Claude.ai's
+// browser-side validation hits this first). Without these headers the
+// preflight fails and Claude treats the connection as broken even though
+// /token issued tokens correctly.
+export function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, DELETE, HEAD, OPTIONS",
+      "Access-Control-Allow-Headers":
+        "Content-Type, Authorization, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-Id",
+      "Access-Control-Expose-Headers":
+        "WWW-Authenticate, Mcp-Session-Id, Mcp-Protocol-Version",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
+}

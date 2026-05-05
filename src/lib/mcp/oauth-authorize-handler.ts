@@ -27,6 +27,7 @@ export async function handleAuthorizeGet(req: Request): Promise<Response> {
   const code_challenge_method = params.get("code_challenge_method") ?? "";
   const state = params.get("state") ?? "";
   const scope = params.get("scope") ?? "mcp.full";
+  const resource = params.get("resource") ?? "";
 
   if (response_type !== "code") {
     return errorPage("unsupported_response_type", "Only response_type=code is supported");
@@ -67,5 +68,6 @@ export async function handleAuthorizeGet(req: Request): Promise<Response> {
   consent.searchParams.set("code_challenge_method", code_challenge_method);
   consent.searchParams.set("scope", scope);
   if (state) consent.searchParams.set("state", state);
+  if (resource) consent.searchParams.set("resource", resource);
   return NextResponse.redirect(consent);
 }

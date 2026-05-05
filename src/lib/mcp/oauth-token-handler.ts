@@ -226,6 +226,7 @@ async function exchangeCode(
     user_id: row.user_id as string,
     client_id,
     scope: (row.scope as string | null) ?? "mcp.full",
+    resource: (row.resource as string | null) ?? null,
   });
 }
 
@@ -267,12 +268,13 @@ async function exchangeRefresh(
     user_id: row.user_id as string,
     client_id,
     scope: (row.scope as string | null) ?? "mcp.full",
+    resource: null,
   });
 }
 
 async function issueTokens(
   supabase: ReturnType<typeof createServiceSupabase>,
-  args: { user_id: string; client_id: string; scope: string },
+  args: { user_id: string; client_id: string; scope: string; resource: string | null },
 ) {
   const tokens = generateTokenPair();
   const now = Date.now();
@@ -298,6 +300,9 @@ async function issueTokens(
       token_type: "Bearer",
       expires_in: ACCESS_TTL_SECONDS,
       scope: args.scope,
+      // RFC 8707: echo back the resource indicator so clients can confirm
+      // the token is bound to the protected resource they requested.
+      ...(args.resource ? { resource: args.resource } : {}),
     },
     {
       headers: {

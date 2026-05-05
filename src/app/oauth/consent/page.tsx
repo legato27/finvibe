@@ -17,6 +17,7 @@ interface SP {
   code_challenge_method?: string;
   scope?: string;
   state?: string;
+  resource?: string;
 }
 
 export default async function ConsentPage(props: {
@@ -31,6 +32,7 @@ export default async function ConsentPage(props: {
     code_challenge_method,
     scope = "mcp.full",
     state,
+    resource,
   } = sp;
 
   if (
@@ -69,6 +71,7 @@ export default async function ConsentPage(props: {
     const expiresAt = new Date(Date.now() + CODE_TTL_SECONDS * 1000).toISOString();
 
     const service = createServiceSupabase();
+    const resourceVal = formData.get("resource");
     const { error } = await service.from("mcp_oauth_codes").insert({
       code,
       client_id: String(formData.get("client_id")),
@@ -77,6 +80,7 @@ export default async function ConsentPage(props: {
       code_challenge: String(formData.get("code_challenge")),
       code_challenge_method: "S256",
       scope: String(formData.get("scope") ?? "mcp.full"),
+      resource: resourceVal ? String(resourceVal) : null,
       expires_at: expiresAt,
     });
     if (error) throw new Error(error.message);
@@ -154,6 +158,7 @@ export default async function ConsentPage(props: {
         <input type="hidden" name="code_challenge" value={code_challenge} />
         <input type="hidden" name="scope" value={scope} />
         {state ? <input type="hidden" name="state" value={state} /> : null}
+        {resource ? <input type="hidden" name="resource" value={resource} /> : null}
 
         <button
           formAction={approve}
