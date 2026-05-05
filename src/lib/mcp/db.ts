@@ -5,9 +5,8 @@
 // The supabase client here is the service-role client, which bypasses RLS.
 // Forgetting the user_id filter would let one user touch another user's data.
 
-import { after } from "next/server";
 import type { ServiceSupabase } from "@/lib/supabase/service";
-import { market, enrichTickers } from "./market";
+import { market } from "./market";
 
 function tickerOf(t: string): string {
   return t.trim().toUpperCase();
@@ -44,28 +43,45 @@ async function ensureBasicEnrichment(
 }
 
 // Synchronously populate name/sector/price into stock_catalog (so the
-// watchlist UI shows data immediately on next read), then schedule the
-// slower DGX-side enrichments — LLM thoughts and quant models — to run
-// after the response. `after()` is Vercel/Next native; it keeps the
-// function alive until background work finishes without blocking the
-// MCP response.
-async function kickoffEnrichment(supabase: ServiceSupabase, ticker: string) {
+// watchlist UI shows data immediately on next read), then queue the
+// LLM thoughts and quant model jobs on DGX. Both DGX endpoints return 202
+// immediately (the actual work runs async on DGX), so awaiting them
+// directly is fast and far more reliable than after() inside mcp-handler.
+async function kickoffEnrichment(
+  supabase: ServiceSupabase,
+  ticker: string,
+): Promise<{ thoughts_task?: string; models_task?: string }> {
   await ensureBasicEnrichment(supabase, ticker);
-  after(async () => {
-    await Promise.allSettled([
-      market.generateThoughts(ticker),
-      market.runAllModels(ticker),
-    ]);
-  });
+  const [thoughtsRes, modelsRes] = await Promise.allSettled([
+    market.generateThoughts(ticker),
+    market.runAllModels(ticker),
+  ]);
+  const out: { thoughts_task?: string; models_task?: string } = {};
+  if (thoughtsRes.status === "fulfilled") {
+    const r = thoughtsRes.value as { task_id?: string } | null;
+    if (r?.task_id) out.thoughts_task = r.task_id;
+  } else {
+    console.error(`[mcp] generateThoughts ${ticker} failed`, thoughtsRes.reason);
+  }
+  if (modelsRes.status === "fulfilled") {
+    const r = modelsRes.value as { task_id?: string } | null;
+    if (r?.task_id) out.models_task = r.task_id;
+  } else {
+    // 429 "Already run today" is expected — quant models are once-daily.
+    const msg = String(modelsRes.reason);
+    if (!msg.includes("429")) {
+      console.error(`[mcp] runAllModels ${ticker} failed`, modelsRes.reason);
+    }
+  }
+  return out;
 }
 
 // Find watchlist tickers that look like they haven't been enriched yet
-// (no name OR no last_price) and schedule enrichment for them. Caller is
-// expected to wrap in `after()` so this never blocks an MCP response.
+// (missing name, price, or no LLM thoughts yet) and queue enrichment.
 export async function backfillStaleWatchlistItems(
   supabase: ServiceSupabase,
   rows: Array<Record<string, unknown>>,
-): Promise<number> {
+): Promise<{ basic: string[]; thoughts: string[] }> {
   const stale = new Set<string>();
   for (const row of rows ?? []) {
     const items = (row?.watchlist_items as Array<Record<string, unknown>>) ?? [];
@@ -77,18 +93,26 @@ export async function backfillStaleWatchlistItems(
       if (!stock.name || stock.last_price == null) stale.add(ticker);
     }
   }
-  if (!stale.size) return 0;
   const list = [...stale];
+  if (!list.length) return { basic: [], thoughts: [] };
+
+  await Promise.allSettled(list.map((t) => ensureBasicEnrichment(supabase, t)));
+
+  // Also queue LLM thoughts for any ticker missing them (separate read so we
+  // don't accidentally re-queue tickers that already have analysis).
+  const { data: existing } = await supabase
+    .from("llm_analysis")
+    .select("ticker")
+    .in("ticker", list);
+  const have = new Set((existing ?? []).map((r: { ticker: string }) => r.ticker));
+  const need = list.filter((t) => !have.has(t));
   await Promise.allSettled(
-    list.map((t) => ensureBasicEnrichment(supabase, t)),
-  );
-  await Promise.allSettled(
-    list.flatMap((t) => [
+    need.flatMap((t) => [
       market.generateThoughts(t).catch(() => null),
       market.runAllModels(t).catch(() => null),
     ]),
   );
-  return list.length;
+  return { basic: list, thoughts: need };
 }
 
 // ── Profile ────────────────────────────────────────────────
@@ -190,13 +214,20 @@ export async function addToWatchlist(
     .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
   if (error) throw new Error(error.message);
 
-  await kickoffEnrichment(supabase, stock.ticker);
+  const enrichment = await kickoffEnrichment(supabase, stock.ticker);
 
   return {
     watchlist_id: args.watchlist_id,
     ticker: stock.ticker,
     stock_id: stock.id,
-    enrichment: "price refreshed; thoughts + quant models scheduled",
+    enrichment: {
+      basic: "name/sector/price written to stock_catalog",
+      ...enrichment,
+      note:
+        "AI thoughts and quant models run async on the backend; LLM-derived " +
+        "intrinsic value and moat appear in 30-90s. The 'Fair Value' column " +
+        "(stock_catalog.intrinsic_value) is filled by a separate DGX worker.",
+    },
   };
 }
 

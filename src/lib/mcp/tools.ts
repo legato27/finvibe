@@ -1,9 +1,8 @@
 import { z } from "zod";
-import { after } from "next/server";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import * as db from "@/lib/mcp/db";
-import { market, enrichTickers } from "@/lib/mcp/market";
+import { market } from "@/lib/mcp/market";
 import { toolByName } from "@/lib/mcp/catalog";
 
 export interface ToolContext {
@@ -40,15 +39,13 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     { ...meta("list_watchlists"), inputSchema: {} },
     async () => {
       const data = await db.listWatchlists(ctx.userId, ctx.supabase);
-      // Self-heal: if any items are missing name or price, schedule
-      // enrichment in the background so the next list call shows real data.
-      after(() =>
-        db.backfillStaleWatchlistItems(
-          ctx.supabase,
-          data as Array<Record<string, unknown>>,
-        ),
+      // Self-heal: if any items are missing name/price/thoughts, queue
+      // enrichment now (DGX returns 202 immediately so this is fast).
+      const backfilled = await db.backfillStaleWatchlistItems(
+        ctx.supabase,
+        data as Array<Record<string, unknown>>,
       );
-      return ok(data);
+      return ok({ watchlists: data, backfilled });
     },
   );
 
@@ -257,13 +254,12 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     },
     async (args) => {
       const tickers = [...new Set(args.tickers.map((t) => t.toUpperCase()))];
-      // Synchronously fetch info for each (fills name/sector/price into
-      // stock_catalog) so the next read shows data; defer the slower
-      // thoughts + quant models via after().
-      const results = await Promise.allSettled(
+
+      // 1. Fetch /info per ticker → write name/sector/price to stock_catalog.
+      const basicResults = await Promise.allSettled(
         tickers.map(async (t) => {
           const info = (await market.info(t)) as Record<string, unknown> | null;
-          if (!info) return { ticker: t, ok: false };
+          if (!info) return { ticker: t, basic: false as const };
           const patch: Record<string, unknown> = {};
           if (typeof info.name === "string") patch.name = info.name;
           if (typeof info.sector === "string") patch.sector = info.sector;
@@ -278,23 +274,52 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
               .update(patch)
               .eq("ticker", t);
           }
-          return { ticker: t, ok: true, patched: Object.keys(patch) };
+          return { ticker: t, basic: true as const, fields: Object.keys(patch) };
         }),
       );
-      after(() => enrichTickers(tickers));
-      const refreshed = results.filter(
-        (r) => r.status === "fulfilled" && r.value.ok,
+
+      // 2. Queue thoughts + quant models per ticker (each returns 202 fast).
+      const queueResults = await Promise.allSettled(
+        tickers.map(async (t) => {
+          const [thoughts, models] = await Promise.allSettled([
+            market.generateThoughts(t),
+            market.runAllModels(t),
+          ]);
+          return {
+            ticker: t,
+            thoughts:
+              thoughts.status === "fulfilled"
+                ? (thoughts.value as { task_id?: string })?.task_id ?? "queued"
+                : `error: ${String(thoughts.reason).slice(0, 120)}`,
+            models:
+              models.status === "fulfilled"
+                ? (models.value as { task_id?: string })?.task_id ?? "queued"
+                : String(models.reason).includes("429")
+                  ? "skipped (already run today)"
+                  : `error: ${String(models.reason).slice(0, 120)}`,
+          };
+        }),
+      );
+
+      const refreshed = basicResults.filter(
+        (r) => r.status === "fulfilled" && r.value.basic,
       ).length;
+
       return ok({
         refreshed,
-        scheduled: tickers.length,
+        queued: tickers.length,
         tickers,
-        details: results.map((r) =>
+        basic: basicResults.map((r) =>
+          r.status === "fulfilled" ? r.value : { error: String(r.reason) },
+        ),
+        jobs: queueResults.map((r) =>
           r.status === "fulfilled" ? r.value : { error: String(r.reason) },
         ),
         note:
-          "Basic metadata (name/sector/price) written. " +
-          "Thoughts + quant models running in the background.",
+          "Basic metadata (name/sector/price) written immediately. AI thoughts " +
+          "and quant models run async on DGX — LLM intrinsic value and moat " +
+          "appear in 30-90s. The 'Fair Value' column (stock_catalog.intrinsic_value) " +
+          "is populated by a separate DGX worker we cannot trigger directly.",
       });
     },
   );
