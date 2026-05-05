@@ -8,6 +8,7 @@ import {
   CURRENCY_LABELS,
   type Currency,
 } from "@/lib/currency";
+import { McpTokensCard } from "@/components/settings/McpTokensCard";
 
 export default function SettingsPage() {
   const { data: profile, isLoading } = useProfile();
@@ -148,6 +149,8 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      <McpTokensCard />
     </div>
   );
 }
