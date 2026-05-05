@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServiceSupabase } from "@/lib/supabase/service";
@@ -85,8 +86,18 @@ export default async function ConsentPage(props: {
     });
     if (error) throw new Error(error.message);
 
+    // RFC 9207: include `iss` so the client can verify the response came
+    // from the expected authorization server. Some clients (Claude.ai
+    // included) reject the callback if this is missing.
+    const hdrs = await headers();
+    const xfHost = hdrs.get("x-forwarded-host");
+    const xfProto = hdrs.get("x-forwarded-proto") ?? "https";
+    const host = xfHost ?? hdrs.get("host") ?? "fin.vibelife.sg";
+    const issuer = `${xfProto}://${host}`;
+
     const cb = new URL(String(formData.get("redirect_uri")));
     cb.searchParams.set("code", code);
+    cb.searchParams.set("iss", issuer);
     const st = formData.get("state");
     if (st) cb.searchParams.set("state", String(st));
     redirect(cb.toString());

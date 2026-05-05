@@ -27,6 +27,8 @@ function handler(req: Request) {
       token_endpoint_auth_methods_supported: ["none", "client_secret_post"],
       scopes_supported: ["mcp.full"],
       service_documentation: `${origin}/mcp`,
+      // RFC 9207
+      authorization_response_iss_parameter_supported: true,
     },
     {
       headers: {
