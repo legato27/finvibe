@@ -57,9 +57,11 @@ export async function POST(req: Request) {
     redirect_uris.push(uri);
   }
 
-  // Manually-registered apps are always confidential — caller gets a fresh
-  // client_id + client_secret pair on every call. Re-run the form to create
-  // distinct credentials per app you intend to connect.
+  // Issue both client_id and client_secret on every registration (the user
+  // wants both values). The advertised auth method is "none" (PKCE-only) so
+  // PKCE-only clients like Claude.ai connect successfully — but the token
+  // endpoint will accept a client_secret if a stricter client chooses to send
+  // one. PKCE is mandatory in either case.
   const id = generateClientId();
   const { secret: client_secret, hash: client_secret_hash } = generateClientSecret();
 
@@ -70,7 +72,7 @@ export async function POST(req: Request) {
     client_name: client_name.slice(0, 200),
     redirect_uris,
     grant_types: ["authorization_code", "refresh_token"],
-    token_endpoint_auth_method: "client_secret_post",
+    token_endpoint_auth_method: "none",
     created_by_user_id: user.id,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -81,7 +83,7 @@ export async function POST(req: Request) {
       client_secret,
       client_name,
       redirect_uris,
-      token_endpoint_auth_method: "client_secret_post",
+      token_endpoint_auth_method: "none",
     },
     { status: 201, headers: { "Cache-Control": "no-store" } },
   );

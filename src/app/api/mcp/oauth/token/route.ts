@@ -58,11 +58,14 @@ async function authenticateClient(
     .eq("id", client_id)
     .maybeSingle();
   if (!client) return { ok: false, resp: err("invalid_client", "Unknown client_id", 401) };
-  if (client.token_endpoint_auth_method === "client_secret_post") {
-    const secret = body.client_secret;
-    if (!secret) {
-      return { ok: false, resp: err("invalid_client", "client_secret required", 401) };
-    }
+
+  // PKCE is mandatory in our flow (validated below in exchangeCode), so the
+  // client_secret is treated as an *optional* second factor: if a secret is
+  // sent it must match, but its absence isn't fatal. This matches OAuth 2.1
+  // public-client behavior and lets PKCE-only clients (Claude.ai, ChatGPT,
+  // many editors) authenticate against clients we issued with a secret.
+  const secret = body.client_secret;
+  if (secret && client.client_secret_hash) {
     if (sha256(secret) !== client.client_secret_hash) {
       return { ok: false, resp: err("invalid_client", "Bad client_secret", 401) };
     }
