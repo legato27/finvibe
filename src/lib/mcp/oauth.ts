@@ -90,7 +90,10 @@ export async function lookupOAuthToken(
   supabase: ServiceSupabase,
   access_token: string,
 ): Promise<{ userId: string; clientId: string; tokenId: number } | null> {
-  if (!access_token.startsWith(ACCESS_PREFIX)) return null;
+  if (!access_token.startsWith(ACCESS_PREFIX)) {
+    console.error(`[lookupOAuthToken] wrong prefix: ${access_token.slice(0, 6)}`);
+    return null;
+  }
   const hash = sha256(access_token);
   const { data, error } = await supabase
     .from("mcp_oauth_tokens")
@@ -98,8 +101,20 @@ export async function lookupOAuthToken(
     .eq("access_token_hash", hash)
     .is("revoked_at", null)
     .maybeSingle();
-  if (error || !data) return null;
+  if (error) {
+    console.error(`[lookupOAuthToken] db error:`, error);
+    return null;
+  }
+  if (!data) {
+    console.error(
+      `[lookupOAuthToken] no row for hash_prefix=${hash.slice(0, 8)} (token_prefix=${access_token.slice(0, 12)})`,
+    );
+    return null;
+  }
   if (new Date(data.access_expires_at as string).getTime() <= Date.now()) {
+    console.error(
+      `[lookupOAuthToken] token expired: id=${data.id} expires_at=${data.access_expires_at}`,
+    );
     return null;
   }
   void supabase

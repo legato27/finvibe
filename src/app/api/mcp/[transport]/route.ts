@@ -8,9 +8,21 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 async function handler(req: Request) {
+  const url = new URL(req.url);
+  const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
+  const headerSummary = authHeader
+    ? `${authHeader.slice(0, 12)}…(${authHeader.length}ch)`
+    : "(none)";
+  console.error(
+    `[mcp] ${req.method} ${url.pathname} auth=${headerSummary}`,
+  );
+
   const supabase = createServiceSupabase();
   const auth = await validateBearer(req, supabase);
   if (!auth) {
+    console.error(
+      `[mcp] validateBearer rejected; returning 401. header_present=${Boolean(authHeader)}`,
+    );
     const resourceMetadataUrl = `${originOf(req)}/api/mcp/.well-known/oauth-protected-resource`;
     return new Response(
       JSON.stringify({ error: "Unauthorized" }),
@@ -26,6 +38,8 @@ async function handler(req: Request) {
       },
     );
   }
+  console.error(`[mcp] auth ok; userId=${auth.userId} tokenId=${auth.tokenId}`);
+
   const mcp = createMcpHandler(
     (server) => {
       registerTools(server, { userId: auth.userId, supabase });
@@ -37,7 +51,17 @@ async function handler(req: Request) {
       verboseLogs: false,
     },
   );
-  return mcp(req);
+  try {
+    const resp = await mcp(req);
+    console.error(`[mcp] handler responded status=${resp.status}`);
+    return resp;
+  } catch (e) {
+    console.error(`[mcp] mcp-handler threw:`, e);
+    return new Response(
+      JSON.stringify({ error: "Internal", detail: (e as Error)?.message }),
+      { status: 500, headers: { "Content-Type": "application/json" } },
+    );
+  }
 }
 
 export const GET = handler;

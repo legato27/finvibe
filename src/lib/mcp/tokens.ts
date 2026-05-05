@@ -38,11 +38,20 @@ export async function validateBearer(
   supabase: ServiceSupabase,
 ): Promise<TokenContext | null> {
   const header = req.headers.get("authorization") ?? req.headers.get("Authorization");
-  if (!header) return null;
+  if (!header) {
+    console.error(`[validateBearer] no auth header`);
+    return null;
+  }
 
   const match = /^Bearer\s+(\S+)$/.exec(header);
-  if (!match) return null;
+  if (!match) {
+    console.error(`[validateBearer] header doesn't match Bearer pattern`);
+    return null;
+  }
   const secret = match[1];
+  console.error(
+    `[validateBearer] secret_prefix=${secret.slice(0, 12)} secret_len=${secret.length}`,
+  );
 
   // Personal access token (vbf_…) — validated against mcp_tokens.
   if (secret.startsWith(TOKEN_PREFIX)) {
@@ -67,9 +76,13 @@ export async function validateBearer(
   // OAuth 2.1 access token (vbo_…) — validated against mcp_oauth_tokens.
   if (secret.startsWith("vbo_")) {
     const result = await lookupOAuthToken(supabase, secret);
-    if (!result) return null;
+    if (!result) {
+      console.error(`[validateBearer] vbo_ token not found / expired / revoked`);
+      return null;
+    }
     return { userId: result.userId, tokenId: result.tokenId };
   }
 
+  console.error(`[validateBearer] secret prefix not recognized`);
   return null;
 }
