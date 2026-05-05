@@ -30,6 +30,11 @@ async function readForm(req: Request): Promise<Record<string, string>> {
 export async function POST(req: Request) {
   const body = await readForm(req);
   const token = body.token;
+  console.error(
+    `[introspect] POST token_present=${Boolean(token)} ` +
+      `token_prefix=${token ? token.slice(0, 12) : "?"} ` +
+      `hint=${body.token_type_hint ?? "?"}`,
+  );
   if (!token) {
     return Response.json(
       { active: false },
@@ -65,6 +70,7 @@ export async function POST(req: Request) {
   }
 
   if (!row) {
+    console.error(`[introspect] no row found for token_prefix=${token.slice(0, 12)}`);
     return Response.json(
       { active: false },
       { headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } },
@@ -75,12 +81,14 @@ export async function POST(req: Request) {
   const exp = row[expiresAtKey] as string | null;
   const expSec = exp ? Math.floor(new Date(exp).getTime() / 1000) : null;
   if (expSec && expSec * 1000 <= Date.now()) {
+    console.error(`[introspect] token expired exp=${exp}`);
     return Response.json(
       { active: false },
       { headers: { "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*" } },
     );
   }
 
+  console.error(`[introspect] active token client=${row.client_id} sub=${row.user_id}`);
   return Response.json(
     {
       active: true,
