@@ -33,8 +33,12 @@ async function fetchRiskContext(holdings: HoldingSnapshot[]): Promise<unknown> {
 }
 
 export async function POST(request: NextRequest) {
+  const t0 = Date.now();
+  const elapsed = () => Date.now() - t0;
+
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
+    console.error("[portfolio/analyze/claude] missing ANTHROPIC_API_KEY");
     return NextResponse.json(
       { error: "ANTHROPIC_API_KEY is not configured on the server." },
       { status: 500 },
@@ -55,10 +59,17 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  console.log(
+    `[portfolio/analyze/claude] start model=${CLAUDE_MODEL} holdings=${body.holdings.length} total_value=${body.total_value} portfolio=${body.portfolio_name ?? "-"}`,
+  );
+
   let riskContext: unknown;
   try {
     riskContext = body.risk_context ?? (await fetchRiskContext(body.holdings));
   } catch (e: any) {
+    console.error(
+      `[portfolio/analyze/claude] risk-context failed after ${elapsed()}ms: ${e?.name ?? "Error"}: ${e?.message ?? "unknown"}`,
+    );
     return NextResponse.json(
       { error: `Could not compute risk context: ${e?.message ?? "unknown"}` },
       { status: 502 },
@@ -85,13 +96,17 @@ export async function POST(request: NextRequest) {
         max_tokens: 8192,
         messages: [{ role: "user", content: prompt }],
       }),
+      signal: AbortSignal.timeout(150_000),
     });
 
     if (!resp.ok) {
       const detail = await resp.text();
+      console.error(
+        `[portfolio/analyze/claude] anthropic non-ok status=${resp.status} after ${elapsed()}ms body=${detail.slice(0, 500)}`,
+      );
       return NextResponse.json(
         { error: `Claude API error (${resp.status}): ${detail.slice(0, 500)}` },
-        { status: 502 },
+        { status: resp.status >= 500 ? 502 : resp.status },
       );
     }
 
@@ -103,6 +118,9 @@ export async function POST(request: NextRequest) {
       .trim();
 
     if (!analysis) {
+      console.error(
+        `[portfolio/analyze/claude] empty analysis after ${elapsed()}ms data=${JSON.stringify(data).slice(0, 500)}`,
+      );
       return NextResponse.json(
         { error: "Claude returned an empty response." },
         { status: 502 },
@@ -110,6 +128,9 @@ export async function POST(request: NextRequest) {
     }
 
     const structured = extractJson<StructuredAnalysis>(analysis);
+    console.log(
+      `[portfolio/analyze/claude] ok ${elapsed()}ms model=${data?.model ?? CLAUDE_MODEL} chars=${analysis.length} structured=${structured ? "yes" : "no"}`,
+    );
 
     return NextResponse.json({
       analysis,
@@ -119,9 +140,17 @@ export async function POST(request: NextRequest) {
       prompt,
     });
   } catch (e: any) {
+    const isTimeout = e?.name === "TimeoutError" || e?.name === "AbortError";
+    console.error(
+      `[portfolio/analyze/claude] exception after ${elapsed()}ms timeout=${isTimeout} name=${e?.name} message=${e?.message}`,
+    );
     return NextResponse.json(
-      { error: `Claude call failed: ${e?.message ?? "unknown error"}` },
-      { status: 502 },
+      {
+        error: isTimeout
+          ? `Claude request timed out after ${elapsed()}ms (internal 150s cap).`
+          : `Claude call failed: ${e?.message ?? "unknown error"}`,
+      },
+      { status: isTimeout ? 504 : 502 },
     );
   }
 }
