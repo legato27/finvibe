@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertCircle, Check, Copy, Loader2, Plus } from "lucide-react";
 
 interface CreatedClient {
@@ -39,6 +39,23 @@ export function RegisterMcpClientCard() {
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<CreatedClient | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") setOrigin(window.location.origin);
+  }, []);
+
+  const ENDPOINTS = [
+    { label: "MCP server URL", value: origin ? `${origin}/api/mcp/mcp` : "/api/mcp/mcp" },
+    { label: "Authorization URL", value: origin ? `${origin}/authorize` : "/authorize" },
+    { label: "Token URL", value: origin ? `${origin}/token` : "/token" },
+    {
+      label: "Discovery URL (auto-fills the rest)",
+      value: origin
+        ? `${origin}/.well-known/oauth-authorization-server`
+        : "/.well-known/oauth-authorization-server",
+    },
+  ];
 
   const redirect_uris = redirectInput
     .split(/[\n,]/)
@@ -97,6 +114,35 @@ export function RegisterMcpClientCard() {
           pair (shown once). Repeat this for every distinct app you want to use
           with vibefin.
         </p>
+
+        {/* Connection endpoints — copy into the MCP client's config */}
+        <div className="rounded-lg border border-border/40 bg-background/30 p-3 space-y-2">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            URLs for your MCP client
+          </div>
+          {ENDPOINTS.map((e) => (
+            <div key={e.label}>
+              <div className="text-[10px] text-muted-foreground">{e.label}</div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <code className="flex-1 font-mono text-[11px] text-foreground bg-background/60 border border-border/60 rounded px-2 py-1 break-all">
+                  {e.value}
+                </code>
+                <button
+                  type="button"
+                  onClick={() => copy(e.label, e.value)}
+                  className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-border hover:border-primary/40"
+                >
+                  {copied === e.label ? (
+                    <Check className="w-3 h-3 text-emerald-400" />
+                  ) : (
+                    <Copy className="w-3 h-3" />
+                  )}
+                  {copied === e.label ? "Copied" : "Copy"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
 
         {!created && (
           <form onSubmit={submit} className="space-y-3">
