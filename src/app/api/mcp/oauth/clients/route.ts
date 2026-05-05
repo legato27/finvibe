@@ -71,6 +71,7 @@ export async function POST(req: Request) {
     redirect_uris,
     grant_types: ["authorization_code", "refresh_token"],
     token_endpoint_auth_method: "client_secret_post",
+    created_by_user_id: user.id,
   });
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

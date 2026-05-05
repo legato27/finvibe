@@ -6,16 +6,19 @@ import { AlertCircle, Loader2, Trash2 } from "lucide-react";
 interface Grant {
   client_id: string;
   client_name: string;
+  status: "active" | "registered";
+  owned_by_me: boolean;
   active_tokens: number;
   scope: string | null;
-  first_authorized_at: string;
+  registered_at: string | null;
+  first_authorized_at: string | null;
   last_used_at: string | null;
 }
 
 export function McpOauthGrantsCard() {
   const [grants, setGrants] = useState<Grant[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   async function load() {
     setError(null);
@@ -31,20 +34,25 @@ export function McpOauthGrantsCard() {
 
   useEffect(() => {
     void load();
+    function onChange() {
+      void load();
+    }
+    window.addEventListener("mcp-clients-changed", onChange);
+    return () => window.removeEventListener("mcp-clients-changed", onChange);
   }, []);
 
-  async function revoke(grant: Grant) {
+  async function revokeTokens(g: Grant) {
     if (
       !confirm(
-        `Revoke access for ${grant.client_name}?\n\nThis will sign out ${grant.active_tokens} active token${grant.active_tokens === 1 ? "" : "s"} and the app will need to re-authorize to reconnect.`,
+        `Revoke active sessions for ${g.client_name}?\n\nThis sign out ${g.active_tokens} token${g.active_tokens === 1 ? "" : "s"}. The app credentials remain — re-authorize to reconnect.`,
       )
     ) {
       return;
     }
-    setRevokingId(grant.client_id);
+    setBusyId(g.client_id);
     try {
       const res = await fetch(
-        `/api/mcp/oauth/grants/${encodeURIComponent(grant.client_id)}`,
+        `/api/mcp/oauth/grants/${encodeURIComponent(g.client_id)}`,
         { method: "DELETE" },
       );
       if (!res.ok) throw new Error((await res.json()).error || "Failed to revoke");
@@ -52,23 +60,47 @@ export function McpOauthGrantsCard() {
     } catch (e) {
       setError((e as Error).message);
     } finally {
-      setRevokingId(null);
+      setBusyId(null);
+    }
+  }
+
+  async function deleteClient(g: Grant) {
+    if (
+      !confirm(
+        `Delete ${g.client_name} entirely?\n\nThis removes the client_id/secret AND any active tokens. The app cannot reconnect without registering again.`,
+      )
+    ) {
+      return;
+    }
+    setBusyId(g.client_id);
+    try {
+      const res = await fetch(
+        `/api/mcp/oauth/clients/${encodeURIComponent(g.client_id)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error((await res.json()).error || "Failed to delete");
+      void load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusyId(null);
     }
   }
 
   return (
     <div className="card mt-4">
       <div className="card-header flex items-center justify-between">
-        <span className="card-title">Connected apps (OAuth)</span>
+        <span className="card-title">Connected apps</span>
         <span className="text-[10px] text-muted-foreground">
-          MCP clients that finished the OAuth flow
+          OAuth-registered MCP clients
         </span>
       </div>
       <div className="p-4 space-y-3">
         <p className="text-xs text-muted-foreground">
-          Apps that you authorized via the in-browser OAuth consent flow.
-          Revoking immediately invalidates every active access and refresh
-          token for that app — the app will need to re-authorize.
+          Apps you&apos;ve registered manually (below) plus any apps that have
+          completed the OAuth flow against your account. &ldquo;Registered&rdquo; means
+          credentials exist but no client has authorized yet; &ldquo;Active&rdquo; means
+          at least one access token is live.
         </p>
 
         {grants === null && !error ? (
@@ -77,42 +109,79 @@ export function McpOauthGrantsCard() {
           </div>
         ) : grants && grants.length === 0 ? (
           <div className="text-xs text-muted-foreground italic">
-            No OAuth-connected apps yet. MCP clients can connect by pointing
-            at <code className="font-mono">/api/mcp/mcp</code> with no header
-            — they&apos;ll be guided through OAuth automatically.
+            No connected apps yet. Register one below, or point an
+            MCP-capable client at <code>/api/mcp/mcp</code> with no header to
+            trigger the auto OAuth flow.
           </div>
         ) : (
           <div className="divide-y divide-border/40 border border-border/40 rounded-lg overflow-hidden">
             {(grants ?? []).map((g) => (
               <div
                 key={g.client_id}
-                className="flex items-center justify-between px-3 py-2 bg-background/30"
+                className="flex items-center justify-between gap-2 px-3 py-2 bg-background/30"
               >
-                <div className="min-w-0">
-                  <div className="text-sm text-foreground truncate">
-                    {g.client_name}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-foreground truncate">
+                      {g.client_name}
+                    </span>
+                    <span
+                      className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase tracking-wider ${
+                        g.status === "active"
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                          : "bg-muted/30 text-muted-foreground border border-border/40"
+                      }`}
+                    >
+                      {g.status}
+                    </span>
+                    {g.owned_by_me && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded text-muted-foreground border border-border/40">
+                        registered by you
+                      </span>
+                    )}
                   </div>
-                  <div className="text-[10px] text-muted-foreground font-mono">
-                    {g.client_id} · {g.active_tokens} active token
-                    {g.active_tokens === 1 ? "" : "s"} · authorized{" "}
-                    {new Date(g.first_authorized_at).toLocaleDateString()}
+                  <div className="text-[10px] text-muted-foreground font-mono truncate">
+                    {g.client_id}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {g.status === "active"
+                      ? `${g.active_tokens} active token${g.active_tokens === 1 ? "" : "s"}`
+                      : "no active sessions yet"}
+                    {g.registered_at &&
+                      ` · registered ${new Date(g.registered_at).toLocaleDateString()}`}
+                    {g.first_authorized_at &&
+                      ` · first authorized ${new Date(g.first_authorized_at).toLocaleDateString()}`}
                     {g.last_used_at
                       ? ` · last used ${new Date(g.last_used_at).toLocaleString()}`
-                      : " · never used"}
+                      : ""}
                   </div>
                 </div>
-                <button
-                  onClick={() => revoke(g)}
-                  disabled={revokingId === g.client_id}
-                  title="Revoke all tokens for this app"
-                  className="p-1.5 text-muted-foreground hover:text-red-400 disabled:opacity-50"
-                >
-                  {revokingId === g.client_id ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  {g.status === "active" && (
+                    <button
+                      onClick={() => revokeTokens(g)}
+                      disabled={busyId === g.client_id}
+                      title="Revoke active tokens (keep credentials)"
+                      className="px-2 py-1 text-[11px] rounded border border-border text-muted-foreground hover:text-amber-400 hover:border-amber-400/40 disabled:opacity-50"
+                    >
+                      Sign out
+                    </button>
                   )}
-                </button>
+                  {g.owned_by_me && (
+                    <button
+                      onClick={() => deleteClient(g)}
+                      disabled={busyId === g.client_id}
+                      title="Delete client entirely (revokes tokens too)"
+                      className="p-1.5 text-muted-foreground hover:text-red-400 disabled:opacity-50"
+                    >
+                      {busyId === g.client_id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>

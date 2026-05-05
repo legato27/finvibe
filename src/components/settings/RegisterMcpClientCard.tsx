@@ -64,6 +64,7 @@ export function RegisterMcpClientCard() {
       setCreated(await res.json());
       setName("");
       setRedirectInput("");
+      window.dispatchEvent(new CustomEvent("mcp-clients-changed"));
     } catch (e) {
       setError((e as Error).message);
     } finally {
