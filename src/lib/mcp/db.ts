@@ -13,20 +13,82 @@ function tickerOf(t: string): string {
   return t.trim().toUpperCase();
 }
 
-// Refresh price synchronously (fast — single DGX call, updates stock_catalog
-// before we return) and schedule the slower enrichments (LLM thoughts +
-// quant models) to run after the response is sent. `after()` is Vercel/Next
-// native; it keeps the function alive until the work finishes.
-async function kickoffEnrichment(ticker: string) {
-  await market.refreshPrices([ticker]).catch((err) => {
-    console.error("[mcp] refreshPrices failed", err);
-  });
+// Pull basic metadata from DGX (name, sector, industry, current price) and
+// write it directly into stock_catalog. The DGX `info` endpoint may also
+// write back, but doing it explicitly here means the catalog is populated
+// regardless of DGX's worker timing.
+async function ensureBasicEnrichment(
+  supabase: ServiceSupabase,
+  ticker: string,
+): Promise<void> {
+  try {
+    const info = (await market.info(ticker)) as Record<string, unknown> | null;
+    if (!info) return;
+    const patch: Record<string, unknown> = {};
+    if (typeof info.name === "string") patch.name = info.name;
+    if (typeof info.sector === "string") patch.sector = info.sector;
+    if (typeof info.industry === "string") patch.industry = info.industry;
+    if (typeof info.current_price === "number") {
+      patch.last_price = info.current_price;
+      patch.last_price_updated_at = new Date().toISOString();
+    }
+    if (Object.keys(patch).length === 0) return;
+    const { error } = await supabase
+      .from("stock_catalog")
+      .update(patch)
+      .eq("ticker", ticker);
+    if (error) console.error(`[mcp] stock_catalog update for ${ticker}:`, error);
+  } catch (err) {
+    console.error(`[mcp] ensureBasicEnrichment ${ticker} failed`, err);
+  }
+}
+
+// Synchronously populate name/sector/price into stock_catalog (so the
+// watchlist UI shows data immediately on next read), then schedule the
+// slower DGX-side enrichments — LLM thoughts and quant models — to run
+// after the response. `after()` is Vercel/Next native; it keeps the
+// function alive until background work finishes without blocking the
+// MCP response.
+async function kickoffEnrichment(supabase: ServiceSupabase, ticker: string) {
+  await ensureBasicEnrichment(supabase, ticker);
   after(async () => {
     await Promise.allSettled([
       market.generateThoughts(ticker),
       market.runAllModels(ticker),
     ]);
   });
+}
+
+// Find watchlist tickers that look like they haven't been enriched yet
+// (no name OR no last_price) and schedule enrichment for them. Caller is
+// expected to wrap in `after()` so this never blocks an MCP response.
+export async function backfillStaleWatchlistItems(
+  supabase: ServiceSupabase,
+  rows: Array<Record<string, unknown>>,
+): Promise<number> {
+  const stale = new Set<string>();
+  for (const row of rows ?? []) {
+    const items = (row?.watchlist_items as Array<Record<string, unknown>>) ?? [];
+    for (const item of items) {
+      const stock = (item?.stock_catalog as Record<string, unknown> | null) ?? null;
+      if (!stock) continue;
+      const ticker = stock.ticker as string | undefined;
+      if (!ticker) continue;
+      if (!stock.name || stock.last_price == null) stale.add(ticker);
+    }
+  }
+  if (!stale.size) return 0;
+  const list = [...stale];
+  await Promise.allSettled(
+    list.map((t) => ensureBasicEnrichment(supabase, t)),
+  );
+  await Promise.allSettled(
+    list.flatMap((t) => [
+      market.generateThoughts(t).catch(() => null),
+      market.runAllModels(t).catch(() => null),
+    ]),
+  );
+  return list.length;
 }
 
 // ── Profile ────────────────────────────────────────────────
@@ -128,7 +190,7 @@ export async function addToWatchlist(
     .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
   if (error) throw new Error(error.message);
 
-  await kickoffEnrichment(stock.ticker);
+  await kickoffEnrichment(supabase, stock.ticker);
 
   return {
     watchlist_id: args.watchlist_id,
@@ -337,7 +399,7 @@ export async function addHolding(
     .single();
   if (error) throw new Error(error.message);
 
-  await kickoffEnrichment(stock.ticker);
+  await kickoffEnrichment(supabase, stock.ticker);
 
   return data;
 }

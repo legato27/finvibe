@@ -38,7 +38,18 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   server.registerTool(
     "list_watchlists",
     { ...meta("list_watchlists"), inputSchema: {} },
-    async () => ok(await db.listWatchlists(ctx.userId, ctx.supabase)),
+    async () => {
+      const data = await db.listWatchlists(ctx.userId, ctx.supabase);
+      // Self-heal: if any items are missing name or price, schedule
+      // enrichment in the background so the next list call shows real data.
+      after(() =>
+        db.backfillStaleWatchlistItems(
+          ctx.supabase,
+          data as Array<Record<string, unknown>>,
+        ),
+      );
+      return ok(data);
+    },
   );
 
   server.registerTool(
@@ -246,17 +257,44 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     },
     async (args) => {
       const tickers = [...new Set(args.tickers.map((t) => t.toUpperCase()))];
-      // Refresh prices synchronously; defer thoughts + quant models so the
-      // MCP response stays snappy.
-      await market.refreshPrices(tickers).catch((err) => {
-        console.error("[mcp enrich_stock] refreshPrices failed", err);
-      });
+      // Synchronously fetch info for each (fills name/sector/price into
+      // stock_catalog) so the next read shows data; defer the slower
+      // thoughts + quant models via after().
+      const results = await Promise.allSettled(
+        tickers.map(async (t) => {
+          const info = (await market.info(t)) as Record<string, unknown> | null;
+          if (!info) return { ticker: t, ok: false };
+          const patch: Record<string, unknown> = {};
+          if (typeof info.name === "string") patch.name = info.name;
+          if (typeof info.sector === "string") patch.sector = info.sector;
+          if (typeof info.industry === "string") patch.industry = info.industry;
+          if (typeof info.current_price === "number") {
+            patch.last_price = info.current_price;
+            patch.last_price_updated_at = new Date().toISOString();
+          }
+          if (Object.keys(patch).length) {
+            await ctx.supabase
+              .from("stock_catalog")
+              .update(patch)
+              .eq("ticker", t);
+          }
+          return { ticker: t, ok: true, patched: Object.keys(patch) };
+        }),
+      );
       after(() => enrichTickers(tickers));
+      const refreshed = results.filter(
+        (r) => r.status === "fulfilled" && r.value.ok,
+      ).length;
       return ok({
-        refreshed: tickers.length,
+        refreshed,
         scheduled: tickers.length,
         tickers,
-        note: "Prices updated. Thoughts + quant models running in the background.",
+        details: results.map((r) =>
+          r.status === "fulfilled" ? r.value : { error: String(r.reason) },
+        ),
+        note:
+          "Basic metadata (name/sector/price) written. " +
+          "Thoughts + quant models running in the background.",
       });
     },
   );
