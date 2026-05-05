@@ -91,16 +91,25 @@ export function McpTokensCard() {
   return (
     <div className="card mt-4">
       <div className="card-header flex items-center justify-between">
-        <span className="card-title">MCP / Claude integration</span>
+        <span className="card-title">MCP integration</span>
         <span className="text-[10px] text-muted-foreground">
           Personal access tokens
         </span>
       </div>
       <div className="p-4 space-y-4">
         <p className="text-xs text-muted-foreground">
-          Generate a token and connect Claude Desktop, Claude Code, or any
-          other MCP-capable client to your account. Tokens are scoped to you
-          and can manage your watchlists, portfolios, holdings, and sells.
+          Generate a token and connect any MCP-compatible client &mdash; Claude
+          Desktop, Claude Code, Cursor, Cline, Continue, Windsurf, ChatGPT
+          custom GPTs, or your own &mdash; to your vibefin account. Tokens are
+          scoped to you and can manage your watchlists, portfolios, holdings,
+          and sells. See the{" "}
+          <a
+            href="/mcp"
+            className="underline text-primary hover:text-primary/80"
+          >
+            full API reference
+          </a>{" "}
+          for the list of tools.
         </p>
 
         {/* Create token */}
@@ -212,18 +221,17 @@ export function McpTokensCard() {
         <div className="space-y-2 pt-2 border-t border-border/40">
           <div className="text-xs font-medium text-foreground">How to connect</div>
           <div className="text-[11px] text-muted-foreground">
-            MCP endpoint:{" "}
+            Endpoint:{" "}
             <code className="font-mono text-foreground">{mcpUrl}</code>
           </div>
           <div className="text-[11px] text-muted-foreground">
-            Claude Code CLI:
-            <pre className="mt-1 font-mono text-[11px] text-foreground bg-background/60 border border-border/60 rounded p-2 overflow-x-auto">
-{`claude mcp add --transport http vibefin ${mcpUrl} \\
-  --header "Authorization: Bearer <your-token>"`}
-            </pre>
+            Auth header:{" "}
+            <code className="font-mono text-foreground">
+              Authorization: Bearer &lt;your-token&gt;
+            </code>
           </div>
           <div className="text-[11px] text-muted-foreground">
-            Claude Desktop (<code>claude_desktop_config.json</code>):
+            Generic JSON-style client config (Claude Desktop, Cursor, Cline, &hellip;):
             <pre className="mt-1 font-mono text-[11px] text-foreground bg-background/60 border border-border/60 rounded p-2 overflow-x-auto">
 {`{
   "mcpServers": {
@@ -234,6 +242,16 @@ export function McpTokensCard() {
   }
 }`}
             </pre>
+          </div>
+          <div className="text-[11px] text-muted-foreground">
+            See{" "}
+            <a
+              href="/mcp"
+              className="underline text-foreground hover:text-primary"
+            >
+              the API reference
+            </a>{" "}
+            for the full tool list and per-client setup snippets.
           </div>
         </div>
       </div>
