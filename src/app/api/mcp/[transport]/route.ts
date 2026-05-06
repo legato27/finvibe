@@ -125,6 +125,7 @@ async function handler(req: Request) {
 
   // Extract bearer token early before wrapping, since headers may not persist
   const bearerMatch = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
+  console.error(`[mcp] extracted bearer_prefix=${bearerMatch?.slice(0, 12) ?? "none"}`);
 
   // Build the underlying mcp-handler. registerTools needs a userId — we
   // attach the verified AuthInfo to req in withMcpAuth, so we read it back
@@ -150,6 +151,7 @@ async function handler(req: Request) {
     const supabase = createServiceSupabase();
     // Use the bearer token extracted before wrapping, since headers don't persist
     // through withMcpAuth. Verify once to get userId and AuthInfo.
+    console.error(`[mcp] perRequestHandler called with bearer=${bearerMatch?.slice(0, 12) ?? "none"}`);
     const auth = bearerMatch ? await verifyToken(innerReq, bearerMatch) : undefined;
     if (!auth) {
       console.error(`[mcp] inner handler: no AuthInfo, returning 401`);
