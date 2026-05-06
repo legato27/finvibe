@@ -189,11 +189,10 @@ async function handler(req: Request) {
 
   // Wrap with withMcpAuth — handles WWW-Authenticate header, resource
   // metadata pointer, scope checks, and 401 responses per MCP spec.
-  // IMPORTANT: resourceUrl here is the ORIGIN that resourceMetadataPath
-  // is appended to, NOT the full resource URL. The actual RFC 8707
-  // resource binding lives in the AuthInfo.resource field returned by
-  // verifyToken.
-  const wrapped = withMcpAuth(perRequestHandler, verifyToken, {
+  // Pass a dummy verifyToken that returns the pre-verified auth, since we already
+  // verified the token before wrapping (headers don't persist through withMcpAuth).
+  const dummyVerify = async (): Promise<AuthInfo | undefined> => auth;
+  const wrapped = withMcpAuth(perRequestHandler, dummyVerify, {
     required: true,
     resourceMetadataPath: "/api/mcp/.well-known/oauth-protected-resource",
     resourceUrl: originOf(req),
