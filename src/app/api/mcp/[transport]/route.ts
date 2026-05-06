@@ -115,6 +115,9 @@ async function handler(req: Request) {
       `origin=${req.headers.get("origin") ?? "?"}`,
   );
 
+  // Extract bearer token early before wrapping, since headers may not persist
+  const bearerMatch = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
+
   // Build the underlying mcp-handler. registerTools needs a userId — we
   // attach the verified AuthInfo to req in withMcpAuth, so we read it back
   // here from the standard `req.auth` extension that mcp-handler sets.
@@ -137,13 +140,9 @@ async function handler(req: Request) {
   // bound to the verified user, then have withMcpAuth gate on Bearer.
   const perRequestHandler = async (innerReq: Request): Promise<Response> => {
     const supabase = createServiceSupabase();
-    // withMcpAuth attaches the verified AuthInfo to a custom property — read
-    // from header passthrough since the typed extension isn't on standard Request.
-    // Easier: re-verify with the bearer header to get userId.
-    const headerCopy =
-      innerReq.headers.get("authorization") ?? innerReq.headers.get("Authorization");
-    const bearer = headerCopy ? /^Bearer\s+(\S+)$/.exec(headerCopy)?.[1] : undefined;
-    const auth = bearer ? await verifyToken(innerReq, bearer) : undefined;
+    // Use the bearer token extracted before wrapping, since headers don't persist
+    // through withMcpAuth. Verify once to get userId and AuthInfo.
+    const auth = bearerMatch ? await verifyToken(innerReq, bearerMatch) : undefined;
     if (!auth) {
       console.error(`[mcp] inner handler: no AuthInfo, returning 401`);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
