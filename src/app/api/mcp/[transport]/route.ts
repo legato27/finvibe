@@ -191,7 +191,10 @@ async function handler(req: Request) {
   // metadata pointer, scope checks, and 401 responses per MCP spec.
   // Pass a dummy verifyToken that returns the pre-verified auth, since we already
   // verified the token before wrapping (headers don't persist through withMcpAuth).
-  const dummyVerify = async (): Promise<AuthInfo | undefined> => auth;
+  const dummyVerify = async (_req: Request, _bearerToken?: string): Promise<AuthInfo | undefined> => {
+    console.error(`[mcp] dummyVerify called, returning pre-verified auth`);
+    return auth;
+  };
   const wrapped = withMcpAuth(perRequestHandler, dummyVerify, {
     required: true,
     resourceMetadataPath: "/api/mcp/.well-known/oauth-protected-resource",
