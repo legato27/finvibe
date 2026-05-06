@@ -30,25 +30,11 @@ never see or touch another user's data.
 
 ## Connecting
 
-### Generic (JSON-RPC over HTTP)
-
-```bash
-curl -X POST https://fin.vibelife.sg/api/mcp/mcp \
-  -H "Authorization: Bearer vbf_<your-token>" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  -d '{
-    "jsonrpc":"2.0","id":1,
-    "method":"tools/call",
-    "params":{"name":"list_watchlists","arguments":{}}
-  }'
-```
-
 ### Claude Code
 
 ```bash
 claude mcp add --transport http vibefin https://fin.vibelife.sg/api/mcp/mcp \
-  --header "Authorization: Bearer vbf_<your-token>"
+  --header "Authorization: vbf_<your-token>"
 ```
 
 ### Claude Desktop · `claude_desktop_config.json`
@@ -58,29 +44,23 @@ claude mcp add --transport http vibefin https://fin.vibelife.sg/api/mcp/mcp \
   "mcpServers": {
     "vibefin": {
       "url": "https://fin.vibelife.sg/api/mcp/mcp",
-      "headers": { "Authorization": "Bearer vbf_<your-token>" }
+      "headers": { "Authorization": "vbf_<your-token>" }
     }
   }
 }
 ```
 
-### Cursor · `~/.cursor/mcp.json`
+### Generic (JSON-RPC over HTTP)
 
-```json
-{
-  "mcpServers": {
-    "vibefin": {
-      "url": "https://fin.vibelife.sg/api/mcp/mcp",
-      "headers": { "Authorization": "Bearer vbf_<your-token>" }
-    }
-  }
-}
+```bash
+curl -X POST https://fin.vibelife.sg/api/mcp/mcp \
+  -H "Authorization: vbf_<your-token>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc":"2.0","id":1,
+    "method":"tools/list"
+  }'
 ```
-
-### Cline / Continue / Windsurf / others
-
-Any MCP client that speaks Streamable HTTP can connect — point it at the URL
-with the same `Authorization` header.
 
 ## Tools
 
