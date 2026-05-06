@@ -124,8 +124,12 @@ async function handler(req: Request) {
   );
 
   // Extract and verify token BEFORE wrapping, since withMcpAuth may not preserve headers
-  const bearerMatch = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
-  console.error(`[mcp] extracted bearer_prefix=${bearerMatch?.slice(0, 12) ?? "none"}`);
+  // Handle both "Bearer token" format and raw token (some clients send token directly)
+  let bearerMatch = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
+  if (!bearerMatch && authHeader && /^(vbf_|vbo_)/.test(authHeader)) {
+    bearerMatch = authHeader; // Token sent directly without Bearer prefix
+  }
+  console.error(`[mcp] extracted bearer_prefix=${bearerMatch?.slice(0, 12) ?? "none"} authHeader_prefix=${authHeader?.slice(0, 12) ?? "none"}`);
 
   const supabase = createServiceSupabase();
   const auth = bearerMatch ? await verifyToken(req, bearerMatch) : undefined;
