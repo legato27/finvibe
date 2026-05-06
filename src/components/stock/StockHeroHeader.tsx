@@ -36,14 +36,14 @@ export function StockHeroHeader({
     {
       label: "MoS",
       value: detail?.margin_of_safety != null
-        ? `${(detail.margin_of_safety * 100).toFixed(0)}%` : null,
+        ? `${Number(detail.margin_of_safety).toFixed(1)}%` : null,
       color: detail?.margin_of_safety != null
         ? (detail.margin_of_safety > 0 ? "text-green-400" : "text-red-400") : undefined,
     },
     {
       label: "MoS",
       value: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
-        ? `${(Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety) * 100).toFixed(0)}%` : null,
+        ? `${Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety).toFixed(1)}%` : null,
       sub: "AI",
       color: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
         ? (Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400") : undefined,

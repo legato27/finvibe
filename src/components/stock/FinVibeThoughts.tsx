@@ -176,7 +176,7 @@ export function FinVibeThoughts({
                     llmMarginOfSafety > 0 ? "text-green-400" : "text-red-400"
                   }`}
                 >
-                  {(llmMarginOfSafety * 100).toFixed(0)}%
+                  {Number(llmMarginOfSafety).toFixed(1)}%
                 </span>
               </div>
             )}
