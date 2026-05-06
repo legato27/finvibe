@@ -123,9 +123,21 @@ async function handler(req: Request) {
       `origin=${req.headers.get("origin") ?? "?"}`,
   );
 
-  // Extract bearer token early before wrapping, since headers may not persist
+  // Extract and verify token BEFORE wrapping, since withMcpAuth may not preserve headers
   const bearerMatch = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
   console.error(`[mcp] extracted bearer_prefix=${bearerMatch?.slice(0, 12) ?? "none"}`);
+
+  const supabase = createServiceSupabase();
+  const auth = bearerMatch ? await verifyToken(req, bearerMatch) : undefined;
+  if (!auth) {
+    console.error(`[mcp] pre-wrap verify failed, returning 401`);
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+  const userId = (auth.extra?.userId as string | undefined) ?? "";
+  console.error(`[mcp] pre-wrap verify OK: userId=${userId}`);
 
   // Build the underlying mcp-handler. registerTools needs a userId — we
   // attach the verified AuthInfo to req in withMcpAuth, so we read it back
@@ -148,19 +160,7 @@ async function handler(req: Request) {
   // The right structure: build a per-request handler that registers tools
   // bound to the verified user, then have withMcpAuth gate on Bearer.
   const perRequestHandler = async (innerReq: Request): Promise<Response> => {
-    const supabase = createServiceSupabase();
-    // Use the bearer token extracted before wrapping, since headers don't persist
-    // through withMcpAuth. Verify once to get userId and AuthInfo.
-    console.error(`[mcp] perRequestHandler called with bearer=${bearerMatch?.slice(0, 12) ?? "none"}`);
-    const auth = bearerMatch ? await verifyToken(innerReq, bearerMatch) : undefined;
-    if (!auth) {
-      console.error(`[mcp] inner handler: no AuthInfo, returning 401`);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    const userId = (auth.extra?.userId as string | undefined) ?? "";
+    // Token already verified above, just use the userId
     console.error(`[mcp] inner handler: userId=${userId}`);
 
     const innerMcp = createMcpHandler(
