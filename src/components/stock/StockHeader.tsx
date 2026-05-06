@@ -67,6 +67,14 @@ export function StockHeader({
                   enriching
                 </span>
               )}
+              {enrichmentStatus === "failed" && (
+                <span
+                  className="text-[10px] px-2 py-0.5 bg-red-500/10 text-red-400 rounded"
+                  title="Market data isn't available for this ticker"
+                >
+                  no data
+                </span>
+              )}
             </div>
             <p className="text-sm text-slate-400 mt-0.5">{name || ticker}</p>
           </div>

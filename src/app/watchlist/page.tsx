@@ -467,6 +467,14 @@ export default function WatchlistPage() {
                               {stock.enrichment_status === "processing" && (
                                 <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">enriching</span>
                               )}
+                              {stock.enrichment_status === "failed" && (
+                                <span
+                                  className="text-[9px] px-1.5 py-0.5 bg-red-500/10 text-red-400 rounded"
+                                  title="Market data isn't available for this ticker. Verify the symbol or remove it."
+                                >
+                                  no data
+                                </span>
+                              )}
                               {llm?.thoughts_json && (
                                 <span title="FinVibe's Thoughts available"><Brain className="w-3 h-3 text-primary/50" /></span>
                               )}

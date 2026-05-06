@@ -12,6 +12,13 @@ function tickerOf(t: string): string {
   return t.trim().toUpperCase();
 }
 
+// How long we let a row sit without a `name` from DGX before giving up
+// and marking it 'failed'. Most successful enrichments populate `name` on
+// the first /detail call; if DGX still has nothing 30 minutes after the
+// row was created, the ticker is almost certainly one DGX can't resolve
+// (delisted, exchange not covered, malformed input).
+const NO_DATA_GIVEUP_MIN = 30;
+
 // Pull DGX's full view of a ticker (stock_catalog basics + LLM sub-object)
 // and mirror it into Supabase ourselves. DGX has its own enrichment worker
 // that eventually syncs to Supabase, but timing is unreliable — this puts
@@ -22,7 +29,11 @@ function tickerOf(t: string): string {
 //   - basic data landed (name) AND LLM analysis has substantive content
 //     (thoughts_summary or llm_intrinsic_value) → done.
 //   - basic data landed but LLM analysis is still empty → processing.
-//   - DGX returned nothing usable → leave row as-is so a future sweep retries.
+//   - DGX returned nothing usable AND row is older than NO_DATA_GIVEUP_MIN
+//     → failed (so the UI can surface "no data" and the sweep stops looping).
+//   - DGX 404'd the ticker → failed immediately.
+//   - DGX returned nothing usable but row is still young → leave as-is so
+//     a future sweep retries.
 export async function ensureBasicEnrichment(
   supabase: ServiceSupabase,
   ticker: string,
@@ -32,9 +43,27 @@ export async function ensureBasicEnrichment(
     llm_fields: [] as string[],
     status: undefined as string | undefined,
   };
+  // Snapshot the current row so we can decide whether "DGX returned nothing"
+  // means "give up" or "wait a bit longer".
+  const { data: existing } = await supabase
+    .from("stock_catalog")
+    .select("name, created_at")
+    .eq("ticker", ticker)
+    .maybeSingle();
+  const isOldEnoughToGiveUp =
+    !!existing?.created_at &&
+    Date.now() - new Date(existing.created_at).getTime() >
+      NO_DATA_GIVEUP_MIN * 60_000;
+
   try {
     const detail = (await market.detail(ticker)) as Record<string, unknown> | null;
-    if (!detail) return result;
+    if (!detail) {
+      if (isOldEnoughToGiveUp && !existing?.name) {
+        await markFailed(supabase, ticker);
+        result.status = "failed";
+      }
+      return result;
+    }
 
     // 1. Build stock_catalog patch from whatever DGX has populated.
     const stockPatch: Record<string, unknown> = {};
@@ -124,6 +153,11 @@ export async function ensureBasicEnrichment(
       nextStatus = detail.enrichment_status;
     } else if (stockPatch.name) {
       nextStatus = llmHasSubstance ? "done" : "processing";
+    } else if (isOldEnoughToGiveUp && !existing?.name) {
+      // DGX responded but had nothing useful (no name, ever) and we've
+      // given it long enough — stop cycling and surface "no data" to the
+      // user rather than a perpetual "enriching" pill.
+      nextStatus = "failed";
     }
     if (nextStatus) {
       stockPatch.enrichment_status = nextStatus;
@@ -143,9 +177,25 @@ export async function ensureBasicEnrichment(
       }
     }
   } catch (err) {
+    // 404 = DGX has positively confirmed it doesn't recognise this ticker.
+    // Mark failed straight away so the UI stops showing "enriching" and
+    // the sweep stops re-kicking it forever.
+    const msg = String(err);
+    if (/\b404\b/.test(msg)) {
+      await markFailed(supabase, ticker);
+      result.status = "failed";
+    }
     console.error(`[mcp] ensureBasicEnrichment ${ticker} failed`, err);
   }
   return result;
+}
+
+async function markFailed(supabase: ServiceSupabase, ticker: string) {
+  const { error } = await supabase
+    .from("stock_catalog")
+    .update({ enrichment_status: "failed" })
+    .eq("ticker", ticker);
+  if (error) console.error(`[mcp] markFailed ${ticker}:`, error);
 }
 
 // Synchronously populate name/sector/price into stock_catalog (so the

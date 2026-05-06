@@ -127,6 +127,14 @@ export function StockHeroHeader({
             {detail?.enrichment_status === "processing" && (
               <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">enriching</span>
             )}
+            {detail?.enrichment_status === "failed" && (
+              <span
+                className="text-[10px] px-2 py-0.5 bg-red-500/10 text-red-400 rounded"
+                title="Market data isn't available for this ticker"
+              >
+                no data
+              </span>
+            )}
           </div>
 
           {/* Row 3: Key numbers */}

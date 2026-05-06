@@ -148,6 +148,14 @@ function AuthenticatedWatchlist() {
                     {stock.enrichment_status === "processing" && (
                       <span className="text-[9px] text-amber-400 animate-pulse">enriching...</span>
                     )}
+                    {stock.enrichment_status === "failed" && (
+                      <span
+                        className="text-[9px] text-red-400"
+                        title="No market data available for this ticker"
+                      >
+                        no data
+                      </span>
+                    )}
                   </div>
                   <div className="text-[10px] text-slate-500 truncate max-w-[120px]">
                     {stock.name || stock.sector || ""}
