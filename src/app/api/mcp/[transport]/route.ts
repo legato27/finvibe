@@ -43,9 +43,17 @@ async function verifyToken(
     // Read the full row to get scope / expiry / resource for AuthInfo.
     const { data } = await supabase
       .from("mcp_oauth_tokens")
-      .select("scope, access_expires_at")
+      .select("scope, access_expires_at, resource")
       .eq("id", result.tokenId)
       .maybeSingle();
+    // Validate resource binding per RFC 8707: token must be used with the resource it was issued for.
+    const storedResource = (data?.resource as string | null) ?? expectedResource;
+    if (storedResource && storedResource !== expectedResource) {
+      console.error(
+        `[verifyToken] resource mismatch: token=${storedResource} request=${expectedResource}`,
+      );
+      return undefined;
+    }
     return {
       token: bearerToken,
       clientId: result.clientId,
