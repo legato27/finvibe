@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { macroApi } from "@/lib/api";
@@ -18,6 +19,7 @@ import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import { OsintFeed } from "@/components/shared/OsintFeed";
 
 export function DashboardView() {
+  const t = useTranslations("dashboard");
   const { setVix, setBusinessCycle, setSectorRotation, setSwarm } = useAppStore();
 
   useQuery({
@@ -41,28 +43,28 @@ export function DashboardView() {
       </div>
 
       <div>
-        <h1 className="text-base sm:text-lg font-bold text-foreground">Market Dashboard</h1>
+        <h1 className="text-base sm:text-lg font-bold text-foreground">{t("marketDashboard")}</h1>
         <p className="text-xs text-muted-foreground">
-          Today&apos;s read &middot; Risk &middot; Breadth &middot; Rotation &middot; News
+          {t("subtitle")}
         </p>
       </div>
 
-      <Section title="Today's read" intro="One-line summary of the regime.">
+      <Section title={t("sectionTodayTitle")} intro={t("sectionTodayIntro")}>
         <TodayPanel />
       </Section>
 
-      <Section title="What's moving" intro="Cross-asset sparklines.">
+      <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
         <MacroTape />
       </Section>
 
-      <Section title="Markets & your watchlist" intro="Headline indices alongside what you follow.">
+      <Section title={t("sectionMarketsTitle")} intro={t("sectionMarketsIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3 sm:gap-4">
           <div className="card-3d min-h-[420px]"><MarketOverview /></div>
           <div className="card-3d min-h-[420px]"><WatchlistGlance /></div>
         </div>
       </Section>
 
-      <Section title="Risk radar" intro="VIX, GEX and crowd momentum.">
+      <Section title={t("sectionRiskTitle")} intro={t("sectionRiskIntro")}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           <div className="card-3d min-h-[340px]"><VixGauge /></div>
           <div className="card-3d min-h-[340px]"><GexCard /></div>
@@ -70,25 +72,25 @@ export function DashboardView() {
         </div>
       </Section>
 
-      <Section title="Cycle & sectors" intro="Where we are and who's leading.">
+      <Section title={t("sectionCycleTitle")} intro={t("sectionCycleIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           <div className="card-3d"><BusinessCycleWheel /></div>
           <div className="card-3d"><SectorRotationHeatmap /></div>
         </div>
       </Section>
 
-      <Section title="Breadth" intro="Is the rally broad or narrow?">
+      <Section title={t("sectionBreadthTitle")} intro={t("sectionBreadthIntro")}>
         <BreadthStrip />
       </Section>
 
-      <Section title="Crypto & news" intro="Sentiment and the stories driving it.">
+      <Section title={t("sectionCryptoTitle")} intro={t("sectionCryptoIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 sm:gap-4">
           <CryptoIndicators />
           <RealtimeNewsFeed />
         </div>
       </Section>
 
-      <Section title="On the wire" intro="Filings, regulator moves, supply-chain chatter.">
+      <Section title={t("sectionOsintTitle")} intro={t("sectionOsintIntro")}>
         <OsintFeed />
       </Section>
     </div>

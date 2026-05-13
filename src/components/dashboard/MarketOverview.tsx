@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useLocale, useTranslations } from "next-intl";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -8,6 +9,8 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketOverview() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
+  const t = useTranslations("dashboard");
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -21,7 +24,7 @@ export function MarketOverview() {
       colorTheme: "dark",
       dateRange: "1D",
       showChart: true,
-      locale: "en",
+      locale: locale === "zh" ? "zh_CN" : "en",
       largeChartUrl: `https://www.tradingview.com/chart/${AFF_PARAMS}&`,
       isTransparent: true,
       showSymbolLogo: true,
@@ -30,7 +33,7 @@ export function MarketOverview() {
       height: "100%",
       tabs: [
         {
-          title: "Indices",
+          title: t("tabIndices"),
           symbols: [
             { s: "FOREXCOM:SPXUSD", d: "S&P 500" },
             { s: "FOREXCOM:NSXUSD", d: "Nasdaq" },
@@ -40,18 +43,18 @@ export function MarketOverview() {
           ],
         },
         {
-          title: "Sectors",
+          title: t("tabSectors"),
           symbols: [
-            { s: "AMEX:XLK", d: "Technology" },
-            { s: "AMEX:XLF", d: "Financials" },
-            { s: "AMEX:XLE", d: "Energy" },
-            { s: "AMEX:XLV", d: "Health Care" },
-            { s: "AMEX:XLY", d: "Consumer Disc." },
-            { s: "AMEX:XLI", d: "Industrials" },
+            { s: "AMEX:XLK", d: t("sectorTechnology") },
+            { s: "AMEX:XLF", d: t("sectorFinancials") },
+            { s: "AMEX:XLE", d: t("sectorEnergy") },
+            { s: "AMEX:XLV", d: t("sectorHealthCare") },
+            { s: "AMEX:XLY", d: t("sectorConsumerDisc") },
+            { s: "AMEX:XLI", d: t("sectorIndustrials") },
           ],
         },
         {
-          title: "Crypto",
+          title: t("tabCrypto"),
           symbols: [
             { s: "BITSTAMP:BTCUSD", d: "Bitcoin" },
             { s: "BITSTAMP:ETHUSD", d: "Ethereum" },
@@ -60,12 +63,12 @@ export function MarketOverview() {
           ],
         },
         {
-          title: "Commodities",
+          title: t("tabCommodities"),
           symbols: [
-            { s: "TVC:GOLD", d: "Gold" },
-            { s: "TVC:SILVER", d: "Silver" },
-            { s: "TVC:USOIL", d: "Crude Oil" },
-            { s: "TVC:UKOIL", d: "Brent Oil" },
+            { s: "TVC:GOLD", d: t("commodityGold") },
+            { s: "TVC:SILVER", d: t("commoditySilver") },
+            { s: "TVC:USOIL", d: t("commodityCrudeOil") },
+            { s: "TVC:UKOIL", d: t("commodityBrentOil") },
           ],
         },
       ],
@@ -88,7 +91,7 @@ export function MarketOverview() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, []);
+  }, [locale, t]);
 
   return (
     <div className="card overflow-hidden h-full">

@@ -1,5 +1,5 @@
 "use client";
-import { TrendingUp, TrendingDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface StockMetricsProps {
   sector?: string | null;
@@ -56,6 +56,7 @@ export function StockMetrics({
   tenYrLow,
   tenYrHigh,
 }: StockMetricsProps) {
+  const t = useTranslations('stock');
   // Sector display logic
   const displaySector = isEtf ? null : sector && sector !== "-" ? sector : llmSector;
   const isSectorAi = !sector || sector === "-" || !sector.trim();
@@ -72,11 +73,11 @@ export function StockMetrics({
 
   return (
     <div className="card p-5">
-      <h2 className="text-sm font-semibold text-slate-300 mb-3">Key Metrics</h2>
+      <h2 className="text-sm font-semibold text-slate-300 mb-3">{t('keyMetrics')}</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {displaySector && (
           <MetricCard
-            label={`Sector${isSectorAi ? " (AI)" : ""}`}
+            label={isSectorAi ? t('sectorAi') : t('sector')}
             value={displaySector}
             subValue={industry || undefined}
           />
@@ -84,10 +85,12 @@ export function StockMetrics({
 
         {displayMoat && displayMoat !== "None" && (
           <MetricCard
-            label={`Moat${isMoatAi ? " (AI)" : ""}`}
+            label={isMoatAi ? t('moatAi') : t('moat')}
             value={displayMoat}
             subValue={
-              moatConfidence != null ? `${(moatConfidence * 100).toFixed(0)}% confidence` : undefined
+              moatConfidence != null
+                ? t('moatConfidence', { pct: (moatConfidence * 100).toFixed(0) })
+                : undefined
             }
             color={displayMoat === "Wide" ? "text-green-400" : "text-yellow-400"}
           />
@@ -95,15 +98,15 @@ export function StockMetrics({
 
         {intrinsicValue != null && (
           <MetricCard
-            label="Intrinsic Value (DCF)"
+            label={t('intrinsicValueDcf')}
             value={`$${intrinsicValue.toFixed(2)}`}
-            subValue={wacc != null ? `WACC: ${(wacc * 100).toFixed(1)}%` : undefined}
+            subValue={wacc != null ? t('waccLabel', { pct: (wacc * 100).toFixed(1) }) : undefined}
           />
         )}
 
         {llmIntrinsicValue != null && (
           <MetricCard
-            label="Intrinsic Value (AI)"
+            label={t('intrinsicValueAi')}
             value={`$${llmIntrinsicValue.toFixed(2)}`}
             color="text-blue-400"
           />
@@ -111,7 +114,7 @@ export function StockMetrics({
 
         {marginOfSafety != null && (
           <MetricCard
-            label="Margin of Safety (DCF)"
+            label={t('marginOfSafetyDcf')}
             value={`${(marginOfSafety * 100).toFixed(0)}%`}
             color={marginOfSafety > 0 ? "text-green-400" : "text-red-400"}
           />
@@ -119,7 +122,7 @@ export function StockMetrics({
 
         {llmMarginOfSafety != null && (
           <MetricCard
-            label="Margin of Safety (AI)"
+            label={t('marginOfSafetyAi')}
             value={`${(llmMarginOfSafety * 100).toFixed(0)}%`}
             color={llmMarginOfSafety > 0 ? "text-green-400" : "text-red-400"}
           />
@@ -130,7 +133,7 @@ export function StockMetrics({
       {rangePercent != null && tenYrLow != null && tenYrHigh != null && (
         <div className="mt-4">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">
-            10-Year Price Range
+            {t('tenYearPriceRange')}
           </div>
           <div className="flex items-center gap-2 text-[10px] text-slate-500">
             <span className="font-mono">${tenYrLow.toFixed(2)}</span>

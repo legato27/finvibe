@@ -1,6 +1,7 @@
 "use client";
 import { TrendingUp, TrendingDown, Minus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 interface StockHeaderProps {
   ticker: string;
@@ -25,6 +26,7 @@ export function StockHeader({
   quarterlyTrend,
   yearlyTrend,
 }: StockHeaderProps) {
+  const t = useTranslations('stock');
   const displayMoat = moatRating || llmMoat;
   const isAiMoat = !moatRating && !!llmMoat;
 
@@ -54,17 +56,19 @@ export function StockHeader({
                       : "bg-yellow-500/20 text-yellow-400"
                   }`}
                 >
-                  {displayMoat} Moat{isAiMoat ? " (AI)" : ""}
+                  {isAiMoat
+                    ? t('moatLabelAi', { rating: displayMoat })
+                    : t('moatLabel', { rating: displayMoat })}
                 </span>
               )}
               {enrichmentStatus === "pending" && (
                 <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">
-                  pending
+                  {t('statusPending')}
                 </span>
               )}
               {enrichmentStatus === "processing" && (
                 <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">
-                  enriching
+                  {t('statusEnriching')}
                 </span>
               )}
             </div>
@@ -96,7 +100,7 @@ export function StockHeader({
                 ) : (
                   <Minus className="w-3 h-3" />
                 )}
-                Quarterly
+                {t('quarterly')}
               </span>
             )}
             {yearlyTrend && (
@@ -116,7 +120,7 @@ export function StockHeader({
                 ) : (
                   <Minus className="w-3 h-3" />
                 )}
-                Yearly
+                {t('yearly')}
               </span>
             )}
           </div>

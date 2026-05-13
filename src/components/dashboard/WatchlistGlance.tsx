@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useWatchlists } from "@/lib/supabase/hooks";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
@@ -13,6 +14,8 @@ import type { User } from "@supabase/supabase-js";
  * - Public: shows a prompt to sign in
  */
 export function WatchlistGlance() {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
@@ -27,8 +30,8 @@ export function WatchlistGlance() {
   if (loading) {
     return (
       <div className="card h-full">
-        <div className="card-header"><span className="card-title">Watchlist</span></div>
-        <div className="text-slate-500 text-sm animate-pulse py-8 text-center">Loading...</div>
+        <div className="card-header"><span className="card-title">{t("watchlist")}</span></div>
+        <div className="text-slate-500 text-sm animate-pulse py-8 text-center">{tc("loading")}</div>
       </div>
     );
   }
@@ -41,20 +44,21 @@ export function WatchlistGlance() {
 }
 
 function PublicWatchlist() {
+  const t = useTranslations("dashboard");
   return (
     <div className="card h-full">
       <div className="card-header">
-        <span className="card-title">Watchlist</span>
+        <span className="card-title">{t("watchlist")}</span>
       </div>
       <div className="flex flex-col items-center justify-center py-12 text-slate-500">
         <Lock className="w-8 h-8 mb-3 opacity-30" />
-        <p className="text-sm font-medium text-slate-400">Your personal watchlist</p>
-        <p className="text-xs text-slate-600 mt-1 mb-4">Sign in to track stocks and build watchlists</p>
+        <p className="text-sm font-medium text-slate-400">{t("watchlistPersonal")}</p>
+        <p className="text-xs text-slate-600 mt-1 mb-4">{t("watchlistSignInPrompt")}</p>
         <Link
           href="/login"
           className="px-4 py-2 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
         >
-          Sign in to get started
+          {t("watchlistSignInCta")}
         </Link>
       </div>
     </div>
@@ -62,14 +66,15 @@ function PublicWatchlist() {
 }
 
 function AuthenticatedWatchlist() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const { data: watchlists, isLoading } = useWatchlists();
 
   if (isLoading) {
     return (
       <div className="card h-full">
-        <div className="card-header"><span className="card-title">Watchlist</span></div>
-        <div className="text-slate-500 text-sm animate-pulse py-8 text-center">Loading watchlist...</div>
+        <div className="card-header"><span className="card-title">{t("watchlist")}</span></div>
+        <div className="text-slate-500 text-sm animate-pulse py-8 text-center">{t("watchlistLoading")}</div>
       </div>
     );
   }
@@ -82,16 +87,16 @@ function AuthenticatedWatchlist() {
     return (
       <div className="card h-full">
         <div className="card-header">
-          <span className="card-title">Watchlist</span>
+          <span className="card-title">{t("watchlist")}</span>
           <Link href="/watchlist" className="text-xs text-slate-400 hover:text-primary flex items-center gap-0.5">
-            Manage <ChevronRight className="w-3 h-3" />
+            {t("manage")} <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
         <div className="flex flex-col items-center justify-center py-8 text-slate-500">
           <Eye className="w-8 h-8 mb-2 opacity-40" />
-          <p className="text-sm">No stocks in watchlist</p>
+          <p className="text-sm">{t("watchlistEmpty")}</p>
           <Link href="/watchlist" className="text-xs text-primary mt-1 hover:underline">
-            Add stocks
+            {t("addStocks")}
           </Link>
         </div>
       </div>
@@ -108,7 +113,7 @@ function AuthenticatedWatchlist() {
           href="/watchlist"
           className="text-xs text-slate-400 hover:text-primary flex items-center gap-0.5 transition-colors"
         >
-          View all <ChevronRight className="w-3 h-3" />
+          {t("viewAll")} <ChevronRight className="w-3 h-3" />
         </Link>
       </div>
 
@@ -143,10 +148,10 @@ function AuthenticatedWatchlist() {
                       </span>
                     )}
                     {stock.enrichment_status === "pending" && (
-                      <span className="text-[9px] text-amber-400 animate-pulse">pending...</span>
+                      <span className="text-[9px] text-amber-400 animate-pulse">{t("statusPending")}</span>
                     )}
                     {stock.enrichment_status === "processing" && (
-                      <span className="text-[9px] text-amber-400 animate-pulse">enriching...</span>
+                      <span className="text-[9px] text-amber-400 animate-pulse">{t("statusEnriching")}</span>
                     )}
                   </div>
                   <div className="text-[10px] text-slate-500 truncate max-w-[120px]">
@@ -178,7 +183,7 @@ function AuthenticatedWatchlist() {
       {items.length > 10 && (
         <div className="pt-2 border-t border-border/30 mt-1 flex-shrink-0">
           <Link href="/watchlist" className="text-xs text-slate-500 hover:text-primary transition-colors">
-            +{items.length - 10} more stocks
+            {t("moreStocks", { count: items.length - 10 })}
           </Link>
         </div>
       )}

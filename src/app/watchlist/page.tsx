@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
 import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus } from "lucide-react";
@@ -19,6 +20,9 @@ function AddToPortfolioModal({
   currentPrice: number | null;
   onClose: () => void;
 }) {
+  const tw = useTranslations("watchlist");
+  const tp = useTranslations("portfolio");
+  const tc = useTranslations("common");
   const { data: portfolios } = usePortfolios();
   const createPortfolio = useCreatePortfolio();
   const addHolding = useAddHolding();
@@ -42,20 +46,20 @@ function AddToPortfolioModal({
     setError(null);
     const sharesNum = parseFloat(shares);
     const costNum = parseFloat(costBasis);
-    if (!sharesNum || sharesNum <= 0) { setError("Enter a valid number of shares"); return; }
-    if (!costNum || costNum < 0) { setError("Enter a valid cost basis"); return; }
+    if (!sharesNum || sharesNum <= 0) { setError(tp("errEnterShares")); return; }
+    if (!costNum || costNum < 0) { setError(tp("errEnterCost")); return; }
 
     setSubmitting(true);
     try {
       let portfolioId = effectivePortfolioId;
 
       if (creatingNew) {
-        if (!newPortfolioName.trim()) { setError("Enter a portfolio name"); setSubmitting(false); return; }
+        if (!newPortfolioName.trim()) { setError(tp("errEnterPortfolioName")); setSubmitting(false); return; }
         const newP = await createPortfolio.mutateAsync({ name: newPortfolioName.trim() });
         portfolioId = newP.id;
       }
 
-      if (!portfolioId) { setError("No portfolio selected"); setSubmitting(false); return; }
+      if (!portfolioId) { setError(tp("errNoPortfolioSelected")); setSubmitting(false); return; }
 
       await addHolding.mutateAsync({
         ticker,
@@ -69,7 +73,7 @@ function AddToPortfolioModal({
       setSuccess(true);
       setTimeout(onClose, 1200);
     } catch (e: any) {
-      setError(e?.message || "Failed to add holding");
+      setError(e?.message || tp("errAddFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -80,7 +84,7 @@ function AddToPortfolioModal({
       <div className="card w-full max-w-md mx-4 p-0 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="card-header border-b border-border/40">
           <div>
-            <span className="card-title">Add to Portfolio</span>
+            <span className="card-title">{tw("addToPortfolioTitle")}</span>
             <div className="text-xs text-muted-foreground mt-0.5">
               <span className="font-mono text-primary">{ticker}</span>
               {stockName && <span> &mdash; {stockName}</span>}
@@ -92,7 +96,7 @@ function AddToPortfolioModal({
         <div className="p-4 space-y-4">
           {/* Portfolio selection */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Portfolio</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{tp("selectPortfolio")}</label>
             {!creatingNew ? (
               <div className="space-y-2">
                 <select
@@ -101,14 +105,14 @@ function AddToPortfolioModal({
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   {portfolios?.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}{p.is_default ? " (default)" : ""}</option>
+                    <option key={p.id} value={p.id}>{p.name}{p.is_default ? tp("defaultSuffix") : ""}</option>
                   ))}
                 </select>
                 <button
                   onClick={() => setCreatingNew(true)}
                   className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
                 >
-                  <FolderPlus className="w-3.5 h-3.5" /> Create new portfolio
+                  <FolderPlus className="w-3.5 h-3.5" /> {tp("createNewPortfolio")}
                 </button>
               </div>
             ) : (
@@ -117,7 +121,7 @@ function AddToPortfolioModal({
                   type="text"
                   value={newPortfolioName}
                   onChange={(e) => setNewPortfolioName(e.target.value)}
-                  placeholder="New portfolio name..."
+                  placeholder={tp("newPortfolioNamePh")}
                   className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   autoFocus
                 />
@@ -125,7 +129,7 @@ function AddToPortfolioModal({
                   onClick={() => setCreatingNew(false)}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Use existing portfolio instead
+                  {tp("useExistingInstead")}
                 </button>
               </div>
             )}
@@ -134,7 +138,7 @@ function AddToPortfolioModal({
           {/* Investment details */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Shares</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{tp("sharesLabel")}</label>
               <input
                 type="number"
                 step="any"
@@ -146,7 +150,7 @@ function AddToPortfolioModal({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Cost / Share</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{tp("costPerShareLabel")}</label>
               <input
                 type="number"
                 step="any"
@@ -161,7 +165,7 @@ function AddToPortfolioModal({
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Acquired Date</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{tp("acquiredDate")}</label>
               <input
                 type="date"
                 value={acquiredDate}
@@ -170,12 +174,12 @@ function AddToPortfolioModal({
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Broker</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{tp("broker")}</label>
               <input
                 list="modal-broker-list"
                 value={broker}
                 onChange={(e) => setBroker(e.target.value)}
-                placeholder="e.g. Tiger, IBKR"
+                placeholder={tp("brokerExamples")}
                 className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
               />
               <datalist id="modal-broker-list">
@@ -187,24 +191,24 @@ function AddToPortfolioModal({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Notes <span className="text-muted-foreground/50">(optional)</span></label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{tp("notesLabel")} <span className="text-muted-foreground/50">({tc("optional")})</span></label>
             <input
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="e.g. DCA, earnings play…"
+              placeholder={tp("notesExamples")}
               className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             />
           </div>
 
           {error && <div className="text-xs text-red-400">{error}</div>}
-          {success && <div className="text-xs text-green-400">Added to portfolio!</div>}
+          {success && <div className="text-xs text-green-400">{tp("addedToPortfolio")}</div>}
 
           <button
             onClick={handleSubmit}
             disabled={submitting || success}
             className="w-full py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
           >
-            {submitting ? "Adding..." : success ? "Added!" : "Add to Portfolio"}
+            {submitting ? tp("adding") : success ? tp("added") : tw("addToPortfolio")}
           </button>
         </div>
       </div>
@@ -213,6 +217,8 @@ function AddToPortfolioModal({
 }
 
 export default function WatchlistPage() {
+  const t = useTranslations("watchlist");
+  const tc = useTranslations("common");
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: watchlists, isLoading } = useWatchlists();
@@ -282,8 +288,8 @@ export default function WatchlistPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-lg font-bold">Watchlists</h1>
-        <div className="text-muted-foreground animate-pulse">Loading watchlists...</div>
+        <h1 className="text-lg font-bold">{t("title")}</h1>
+        <div className="text-muted-foreground animate-pulse">{t("loading")}</div>
       </div>
     );
   }
@@ -291,7 +297,7 @@ export default function WatchlistPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Watchlists</h1>
+        <h1 className="text-lg font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">
           {activeTickers.length > 0 && (
             <button
@@ -300,17 +306,17 @@ export default function WatchlistPage() {
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${
                 refreshError ? "text-red-400 hover:text-red-300" : "text-muted-foreground hover:text-foreground"
               }`}
-              title={refreshError ? "Refresh failed — click to retry" : "Refresh prices now"}
+              title={refreshError ? t("refreshFailedTitle") : t("refreshNowTitle")}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Updating..." : refreshError ? "Retry" : "Refresh"}
+              {refreshing ? tc("updating") : refreshError ? tc("retry") : tc("refresh")}
             </button>
           )}
           <button
             onClick={() => setShowNewList(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" /> New Watchlist
+            <Plus className="w-3.5 h-3.5" /> {t("newWatchlist")}
           </button>
         </div>
       </div>
@@ -322,7 +328,7 @@ export default function WatchlistPage() {
             type="text"
             value={newListName}
             onChange={(e) => setNewListName(e.target.value)}
-            placeholder="Watchlist name..."
+            placeholder={t("namePlaceholder")}
             className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             autoFocus
           />
@@ -336,7 +342,7 @@ export default function WatchlistPage() {
             }}
             className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg"
           >
-            Create
+            {tc("create")}
           </button>
           <button onClick={() => setShowNewList(false)} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
@@ -366,7 +372,7 @@ export default function WatchlistPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm(`Delete "${wl.name}"?`)) deleteWatchlist.mutate(wl.id);
+                    if (confirm(t("deletePrompt", { name: wl.name }))) deleteWatchlist.mutate(wl.id);
                   }}
                   className="text-muted-foreground/50 hover:text-red-500"
                 >
@@ -387,7 +393,7 @@ export default function WatchlistPage() {
                   {activeTickers.length > 0 && (
                     <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      Live
+                      {tc("live")}
                     </span>
                   )}
                 </div>
@@ -396,14 +402,14 @@ export default function WatchlistPage() {
                     <StockSearch
                       onSelect={handleAddStock}
                       onClose={() => setShowSearch(false)}
-                      placeholder="Search by ticker or name..."
+                      placeholder={t("searchByTickerOrName")}
                     />
                   ) : (
                     <button
                       onClick={() => setShowSearch(true)}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Stock
+                      <Plus className="w-3.5 h-3.5" /> {t("addStock")}
                     </button>
                   )}
                 </div>
@@ -412,7 +418,7 @@ export default function WatchlistPage() {
               {activeWatchlist.watchlist_items?.length === 0 ? (
                 <div className="py-12 text-center text-muted-foreground text-sm">
                   <Search className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                  No stocks yet. Click &quot;Add Stock&quot; to search and add.
+                  {t("noStocksYet")}
                 </div>
               ) : (
                 <div className="divide-y divide-border/30">
@@ -462,13 +468,13 @@ export default function WatchlistPage() {
                                 </span>
                               )}
                               {stock.enrichment_status === "pending" && (
-                                <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">pending</span>
+                                <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">{t("pending")}</span>
                               )}
                               {stock.enrichment_status === "processing" && (
-                                <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">enriching</span>
+                                <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">{t("enriching")}</span>
                               )}
                               {llm?.thoughts_json && (
-                                <span title="FinVibe's Thoughts available"><Brain className="w-3 h-3 text-primary/50" /></span>
+                                <span title={t("thoughtsAvailable")}><Brain className="w-3 h-3 text-primary/50" /></span>
                               )}
                             </div>
                             <div className="text-xs text-muted-foreground truncate max-w-[130px] sm:max-w-[250px]">
@@ -500,13 +506,13 @@ export default function WatchlistPage() {
                           )}
                           {stock.intrinsic_value != null && stock.last_price != null && (
                             <div className="text-right hidden sm:block">
-                              <div className="text-[10px] text-muted-foreground/60">Fair Value</div>
+                              <div className="text-[10px] text-muted-foreground/60">{t("fairValue")}</div>
                               <span className="font-mono text-xs text-muted-foreground">${stock.intrinsic_value.toFixed(2)}</span>
                             </div>
                           )}
                           {stock.margin_of_safety != null && (
                             <div className="text-right hidden sm:block">
-                              <div className="text-[10px] text-muted-foreground/60">MoS</div>
+                              <div className="text-[10px] text-muted-foreground/60">{t("mos")}</div>
                               <span className={`font-mono text-xs flex items-center gap-0.5 ${
                                 stock.margin_of_safety > 0 ? "text-green-400" : "text-red-400"
                               }`}>
@@ -518,7 +524,7 @@ export default function WatchlistPage() {
                           {/* AI Intrinsic Value */}
                           {llm?.llm_intrinsic_value != null && (
                             <div className="text-right hidden lg:block">
-                              <div className="text-[10px] text-blue-400/70">Intrinsic (AI)</div>
+                              <div className="text-[10px] text-blue-400/70">{t("intrinsicAi")}</div>
                               <span className="font-mono text-xs text-blue-400">
                                 ${Number(llm.llm_intrinsic_value).toFixed(2)}
                               </span>
@@ -527,7 +533,7 @@ export default function WatchlistPage() {
                           {/* AI MoS */}
                           {llm?.llm_margin_of_safety != null && (
                             <div className="text-right hidden lg:block">
-                              <div className="text-[10px] text-blue-400/70">MoS (AI)</div>
+                              <div className="text-[10px] text-blue-400/70">{t("mosAi")}</div>
                               <span className={`font-mono text-xs ${
                                 Number(llm.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400"
                               }`}>
@@ -537,7 +543,7 @@ export default function WatchlistPage() {
                           )}
                           {stock.quarterly_trend && (
                             <div className="text-right hidden sm:block">
-                              <div className="text-[10px] text-muted-foreground/60">Trend</div>
+                              <div className="text-[10px] text-muted-foreground/60">{t("trend")}</div>
                               <span className={`text-xs ${
                                 stock.quarterly_trend === "up" ? "text-green-400" : stock.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
                               }`}>
@@ -551,7 +557,7 @@ export default function WatchlistPage() {
                               setPortfolioModal({ ticker: stock.ticker, name: stock.name || null, price: stock.last_price ?? null });
                             }}
                             className="p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
-                            title="Add to portfolio"
+                            title={t("addToPortfolioTitle")}
                           >
                             <Briefcase className="w-4 h-4" />
                           </button>
@@ -572,7 +578,7 @@ export default function WatchlistPage() {
               )}
             </>
           ) : (
-            <div className="py-12 text-center text-muted-foreground">Create a watchlist to get started</div>
+            <div className="py-12 text-center text-muted-foreground">{t("createToStart")}</div>
           )}
         </div>
       </div>

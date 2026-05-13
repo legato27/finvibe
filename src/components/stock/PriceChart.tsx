@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import { Download, Pencil, X, Loader2 } from "lucide-react";
 
@@ -31,12 +32,12 @@ interface CandleRow {
 // ── Constants ────────────────────────────────────────────────
 
 const PERIODS: [Period, string][] = [
-  ["1mo", "1M"], ["3mo", "3M"], ["6mo", "6M"],
-  ["1y", "1Y"], ["2y", "2Y"], ["5y", "5Y"], ["10y", "MAX"],
+  ["1mo", "period1mo"], ["3mo", "period3mo"], ["6mo", "period6mo"],
+  ["1y", "period1y"], ["2y", "period2y"], ["5y", "period5y"], ["10y", "periodMax"],
 ];
 
 const INTERVALS: [Interval, string][] = [
-  ["1d", "D"], ["1wk", "W"], ["1mo", "M"],
+  ["1d", "intervalDay"], ["1wk", "intervalWeek"], ["1mo", "intervalMonth"],
 ];
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -61,6 +62,7 @@ function fmtVol(v: number): string {
 // ── Component ────────────────────────────────────────────────
 
 export function PriceChart({ ticker }: { ticker: string }) {
+  const t = useTranslations('stock');
   // ── DOM + chart refs ──────────────────────────────────────
   const containerRef  = useRef<HTMLDivElement>(null);
   const chartRef      = useRef<any>(null);
@@ -335,7 +337,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
       {/* ── Top bar ───────────────────────────────────────── */}
       <div className="flex items-center justify-between px-1 pb-1">
         <div className="flex items-center gap-3">
-          <span className="card-title text-sm">Price Chart</span>
+          <span className="card-title text-sm">{t('priceChart')}</span>
           {periodChg !== null && (
             <span className={`text-sm font-mono font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
               {isPositive ? "+" : ""}{periodChg.toFixed(2)}%
@@ -343,7 +345,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
           )}
           {drawMode && (
             <span className="text-xs text-amber-400 animate-pulse">
-              ✏ click to draw H-line
+              {t('drawHint')}
             </span>
           )}
         </div>
@@ -351,21 +353,21 @@ export function PriceChart({ ticker }: { ticker: string }) {
         <div className="flex items-center gap-1">
           <button
             onClick={() => setDrawMode((m) => !m)}
-            title="Draw horizontal line"
+            title={t('drawHLineTitle')}
             className={`p-1 rounded transition-colors ${drawMode ? "text-amber-400 bg-amber-400/10" : "text-slate-500 hover:text-primary"}`}
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={clearDrawings}
-            title="Clear all drawings"
+            title={t('clearDrawingsTitle')}
             className="p-1 rounded text-slate-500 hover:text-red-400 transition-colors"
           >
             <X className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={saveChart}
-            title="Save chart as PNG"
+            title={t('savePngTitle')}
             className="p-1 rounded text-slate-500 hover:text-primary transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
@@ -391,7 +393,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
             )}
           </>
         ) : (
-          <span>Hover to inspect</span>
+          <span>{t('hoverToInspect')}</span>
         )}
       </div>
 
@@ -423,7 +425,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
                   ? "bg-primary text-background font-bold"
                   : "text-slate-400 hover:text-slate-100"}`}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -439,7 +441,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
                   ? "bg-primary text-background font-bold"
                   : "text-slate-400 hover:text-slate-100"}`}
             >
-              {label}
+              {t(label)}
             </button>
           ))}
         </div>
@@ -455,7 +457,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
                   ? "bg-primary text-background font-bold"
                   : "text-slate-400 hover:text-slate-100"}`}
             >
-              {m === "candle" ? "Candle" : "Line"}
+              {m === "candle" ? t('candle') : t('line')}
             </button>
           ))}
         </div>
@@ -488,7 +490,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
         <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#3b82f6]"/>MA20</span>
         <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#f97316]"/>MA50</span>
         <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#a855f7]"/>MA200</span>
-        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#f59e0b] border-dashed"/>H-Lines (saved)</span>
+        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#f59e0b] border-dashed"/>{t('hLinesSaved')}</span>
       </div>
     </div>
   );

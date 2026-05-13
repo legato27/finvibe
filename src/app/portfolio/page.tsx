@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import {
@@ -35,6 +36,7 @@ function TickerInput({
   value: string;
   onChange: (ticker: string, name: string, currency?: string) => void;
 }) {
+  const t = useTranslations("portfolio");
   const [query, setQuery] = useState(value);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -72,7 +74,7 @@ function TickerInput({
             setOpen(true);
           }}
           onFocus={() => query.length >= 1 && setOpen(true)}
-          placeholder="Search ticker..."
+          placeholder={t("searchTicker")}
           className="flex-1 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-muted-foreground/60 w-full min-w-0"
           required
         />
@@ -121,6 +123,8 @@ function TickerInput({
 }
 
 export default function PortfolioPage() {
+  const t = useTranslations("portfolio");
+  const tc = useTranslations("common");
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
@@ -249,9 +253,9 @@ export default function PortfolioPage() {
   if (portfoliosLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-lg font-bold">Portfolio</h1>
+        <h1 className="text-lg font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
-          <Loader2 className="w-4 h-4 animate-spin" /> Loading portfolios...
+          <Loader2 className="w-4 h-4 animate-spin" /> {t("loading")}
         </div>
       </div>
     );
@@ -260,31 +264,31 @@ export default function PortfolioPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">Portfolio</h1>
+        <h1 className="text-lg font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">
           {activePortfolio && positions.length ? (
             <button
               onClick={handleRefreshPrices}
               disabled={refreshing}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground rounded-lg hover:text-foreground transition-colors disabled:opacity-50"
-              title="Refresh prices now"
+              title={t("refreshNowTitle")}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
-              {refreshing ? "Updating..." : "Refresh"}
+              {refreshing ? tc("updating") : tc("refresh")}
             </button>
           ) : null}
           <button
             onClick={() => setShowNewPortfolio(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent text-muted-foreground rounded-lg hover:text-foreground transition-colors"
           >
-            <Plus className="w-3.5 h-3.5" /> New Portfolio
+            <Plus className="w-3.5 h-3.5" /> {t("newPortfolio")}
           </button>
           {activePortfolio && (
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
             >
-              <Plus className="w-3.5 h-3.5" /> Add Investment
+              <Plus className="w-3.5 h-3.5" /> {t("addInvestment")}
             </button>
           )}
         </div>
@@ -297,7 +301,7 @@ export default function PortfolioPage() {
             type="text"
             value={newPortfolioName}
             onChange={(e) => setNewPortfolioName(e.target.value)}
-            placeholder="Portfolio name..."
+            placeholder={t("namePlaceholder")}
             className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
             autoFocus
           />
@@ -311,7 +315,7 @@ export default function PortfolioPage() {
             }}
             className="px-3 py-1.5 text-xs bg-primary text-primary-foreground rounded-lg"
           >
-            Create
+            {tc("create")}
           </button>
           <button onClick={() => setShowNewPortfolio(false)} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
@@ -340,7 +344,7 @@ export default function PortfolioPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (confirm(`Delete "${p.name}"?`)) deletePortfolio.mutate(p.id);
+                    if (confirm(t("deletePrompt", { name: p.name }))) deletePortfolio.mutate(p.id);
                   }}
                   className="text-muted-foreground/30 hover:text-red-500"
                 >
@@ -351,7 +355,7 @@ export default function PortfolioPage() {
           ))}
           {(!portfolios || portfolios.length === 0) && (
             <div className="px-3 py-4 text-center text-muted-foreground text-xs">
-              No portfolios yet
+              {t("noPortfoliosYet")}
             </div>
           )}
         </div>
@@ -362,7 +366,7 @@ export default function PortfolioPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="card p-3">
               <div className="stat-label flex items-center justify-between">
-                <span>Total Value</span>
+                <span>{t("totalValue")}</span>
                 <span className="text-[9px] text-muted-foreground/70 font-mono">{defaultCurrency}</span>
               </div>
               <div className="stat-value text-lg">
@@ -370,13 +374,13 @@ export default function PortfolioPage() {
               </div>
             </div>
             <div className="card p-3">
-              <div className="stat-label">Total Cost</div>
+              <div className="stat-label">{t("totalCost")}</div>
               <div className="stat-value text-lg">
                 {formatCurrency(totalCost, defaultCurrency, { decimals: 0 })}
               </div>
             </div>
             <div className="card p-3">
-              <div className="stat-label">Gain / Loss</div>
+              <div className="stat-label">{t("gainLoss")}</div>
               <div className={`text-lg font-bold font-mono flex items-center gap-1 ${
                 totalGainLoss >= 0 ? "text-green-500" : "text-red-500"
               }`}>
@@ -388,10 +392,10 @@ export default function PortfolioPage() {
               </div>
             </div>
             <div className="card p-3">
-              <div className="stat-label">Positions</div>
+              <div className="stat-label">{t("positions")}</div>
               <div className="stat-value text-lg">{positionCount}</div>
               {lotCount > positionCount && (
-                <div className="text-[10px] text-muted-foreground">{lotCount} lot{lotCount !== 1 ? "s" : ""}</div>
+                <div className="text-[10px] text-muted-foreground">{t("lots", { count: lotCount })}</div>
               )}
             </div>
           </div>
@@ -400,7 +404,7 @@ export default function PortfolioPage() {
           {showForm && (
             <div className="card p-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-foreground">Add Investment to {activePortfolio?.name}</span>
+                <span className="text-sm font-semibold text-foreground">{t("addInvestmentTo", { name: activePortfolio?.name ?? "" })}</span>
                 <button onClick={() => setShowForm(false)} className="text-muted-foreground hover:text-foreground">
                   <X className="w-4 h-4" />
                 </button>
@@ -424,7 +428,7 @@ export default function PortfolioPage() {
                     step="any"
                     value={form.shares}
                     onChange={(e) => setForm({ ...form, shares: e.target.value })}
-                    placeholder="Shares"
+                    placeholder={t("sharesPh")}
                     className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     required
                   />
@@ -435,7 +439,7 @@ export default function PortfolioPage() {
                       step="any"
                       value={form.cost_basis}
                       onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
-                      placeholder="Cost/share"
+                      placeholder={t("costPerShare")}
                       className="flex-1 min-w-0 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                       required
                     />
@@ -443,7 +447,7 @@ export default function PortfolioPage() {
                       value={form.currency}
                       onChange={(e) => setForm({ ...form, currency: e.target.value as Currency })}
                       className="px-2 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-                      title="Currency"
+                      title={t("currencyTitle")}
                     >
                       {SUPPORTED_CURRENCIES.map((c) => (
                         <option key={c} value={c}>{c}</option>
@@ -463,7 +467,7 @@ export default function PortfolioPage() {
                     list="broker-list"
                     value={form.broker}
                     onChange={(e) => setForm({ ...form, broker: e.target.value })}
-                    placeholder="Broker (optional)"
+                    placeholder={t("brokerPh")}
                     className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <datalist id="broker-list">
@@ -475,17 +479,17 @@ export default function PortfolioPage() {
                   <input
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    placeholder="Notes (optional)"
+                    placeholder={t("notesPh")}
                     className="sm:col-span-2 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                   />
                   <button type="submit" className="px-4 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
-                    Add
+                    {tc("add")}
                   </button>
                 </div>
               </form>
               {form.name && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Selected: <span className="font-mono text-primary">{form.ticker}</span> — {form.name}
+                  {t("selectedPrefix")} <span className="font-mono text-primary">{form.ticker}</span> — {form.name}
                 </div>
               )}
             </div>

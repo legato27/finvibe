@@ -1,7 +1,8 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useLocale, useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
-import { Calendar, TrendingUp, DollarSign, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { Calendar, DollarSign, AlertCircle, Loader2 } from "lucide-react";
 
 function daysUntil(dateStr: string | null | undefined): number | null {
   if (!dateStr) return null;
@@ -9,12 +10,13 @@ function daysUntil(dateStr: string | null | undefined): number | null {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 }
 
-function formatDate(dateStr: string | null | undefined) {
+function formatDate(dateStr: string | null | undefined, locale: string) {
   if (!dateStr) return null;
-  return new Date(dateStr).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  return new Date(dateStr).toLocaleDateString(locale, { month: "short", day: "numeric", year: "numeric" });
 }
 
 function CountdownBadge({ days }: { days: number }) {
+  const t = useTranslations("stock.events");
   const urgent = days <= 14;
   const soon = days <= 30;
   return (
@@ -23,12 +25,14 @@ function CountdownBadge({ days }: { days: number }) {
       soon   ? "bg-yellow-500/20 text-yellow-400" :
                "bg-muted text-muted-foreground"
     }`}>
-      {days === 0 ? "Today" : days < 0 ? `${Math.abs(days)}d ago` : `in ${days}d`}
+      {days === 0 ? t("today") : days < 0 ? t("daysAgo", { n: Math.abs(days) }) : t("inDays", { n: days })}
     </span>
   );
 }
 
 export function StockEvents({ ticker }: { ticker: string }) {
+  const t = useTranslations("stock.events");
+  const locale = useLocale();
   const { data, isLoading, error } = useQuery({
     queryKey: ["stock-events", ticker],
     queryFn: () => stocksApi.events(ticker),
@@ -48,7 +52,7 @@ export function StockEvents({ ticker }: { ticker: string }) {
     return (
       <div className="card p-6 text-center text-muted-foreground text-sm">
         <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-40" />
-        Could not load events for {ticker}
+        {t("loadError", { ticker })}
       </div>
     );
   }
@@ -67,17 +71,17 @@ export function StockEvents({ ticker }: { ticker: string }) {
       <div className="card p-4">
         <div className="flex items-center gap-2 mb-3">
           <Calendar className="w-4 h-4 text-primary" />
-          <span className="text-sm font-semibold">Earnings</span>
+          <span className="text-sm font-semibold">{t("earnings")}</span>
         </div>
         {hasEarnings ? (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-xs text-muted-foreground mb-0.5">Next Earnings Date</div>
+                <div className="text-xs text-muted-foreground mb-0.5">{t("nextEarningsDate")}</div>
                 <div className="text-sm font-mono font-semibold">
-                  {formatDate(data.earnings_date)}
+                  {formatDate(data.earnings_date, locale)}
                   {data.earnings_date_end && data.earnings_date_end !== data.earnings_date && (
-                    <span className="text-muted-foreground font-normal"> – {formatDate(data.earnings_date_end)}</span>
+                    <span className="text-muted-foreground font-normal"> – {formatDate(data.earnings_date_end, locale)}</span>
                   )}
                 </div>
               </div>
@@ -86,26 +90,26 @@ export function StockEvents({ ticker }: { ticker: string }) {
             <div className="grid grid-cols-3 gap-3 pt-2 border-t border-border/20">
               {data?.eps_estimate != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">EPS Est.</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("epsEst")}</div>
                   <div className="text-sm font-mono">${data.eps_estimate.toFixed(2)}</div>
                 </div>
               )}
               {data?.eps_trailing != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">EPS TTM</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("epsTtm")}</div>
                   <div className="text-sm font-mono">${data.eps_trailing.toFixed(2)}</div>
                 </div>
               )}
               {data?.pe_forward != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Fwd P/E</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("fwdPE")}</div>
                   <div className="text-sm font-mono">{data.pe_forward.toFixed(1)}x</div>
                 </div>
               )}
             </div>
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">No upcoming earnings date available</div>
+          <div className="text-sm text-muted-foreground">{t("noEarnings")}</div>
         )}
       </div>
 
@@ -113,20 +117,20 @@ export function StockEvents({ ticker }: { ticker: string }) {
       <div className="card p-4">
         <div className="flex items-center gap-2 mb-3">
           <DollarSign className="w-4 h-4 text-green-400" />
-          <span className="text-sm font-semibold">Dividends</span>
+          <span className="text-sm font-semibold">{t("dividends")}</span>
         </div>
         {hasDividend ? (
           <div className="space-y-3">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {data?.dividend_rate != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Annual Rate</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("annualRate")}</div>
                   <div className="text-sm font-mono font-semibold text-green-400">${data.dividend_rate.toFixed(2)}</div>
                 </div>
               )}
               {data?.dividend_yield != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Yield</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("yield")}</div>
                   <div className="text-sm font-mono font-semibold text-green-400">
                     {(data.dividend_yield * 100).toFixed(2)}%
                   </div>
@@ -134,13 +138,13 @@ export function StockEvents({ ticker }: { ticker: string }) {
               )}
               {data?.five_year_avg_dividend_yield != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">5yr Avg Yield</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("fiveYrAvgYield")}</div>
                   <div className="text-sm font-mono">{data.five_year_avg_dividend_yield.toFixed(2)}%</div>
                 </div>
               )}
               {data?.payout_ratio != null && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Payout Ratio</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("payoutRatio")}</div>
                   <div className="text-sm font-mono">{(data.payout_ratio * 100).toFixed(0)}%</div>
                 </div>
               )}
@@ -150,8 +154,8 @@ export function StockEvents({ ticker }: { ticker: string }) {
                 {hasExDiv && (
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Ex-Dividend Date</div>
-                      <div className="text-sm font-mono">{formatDate(data.ex_dividend_date)}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("exDividendDate")}</div>
+                      <div className="text-sm font-mono">{formatDate(data.ex_dividend_date, locale)}</div>
                     </div>
                     {exDivDays != null && <CountdownBadge days={exDivDays} />}
                   </div>
@@ -159,8 +163,8 @@ export function StockEvents({ ticker }: { ticker: string }) {
                 {data?.dividend_date && (
                   <div className="flex items-center justify-between">
                     <div>
-                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Payment Date</div>
-                      <div className="text-sm font-mono">{formatDate(data.dividend_date)}</div>
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("paymentDate")}</div>
+                      <div className="text-sm font-mono">{formatDate(data.dividend_date, locale)}</div>
                     </div>
                     {divDays != null && <CountdownBadge days={divDays} />}
                   </div>
@@ -169,7 +173,7 @@ export function StockEvents({ ticker }: { ticker: string }) {
             )}
           </div>
         ) : (
-          <div className="text-sm text-muted-foreground">No dividend information available</div>
+          <div className="text-sm text-muted-foreground">{t("noDividend")}</div>
         )}
       </div>
     </div>

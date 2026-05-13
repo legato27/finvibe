@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Brain, RefreshCw, ChevronDown, ChevronUp, Shield, Target, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { MarketDirectionCard } from "./MarketDirectionCard";
 import { stocksApi } from "@/lib/api";
 
@@ -47,6 +48,7 @@ export function FinVibeThoughts({
   llmIntrinsicValue,
   llmMarginOfSafety,
 }: FinVibeThoughtsProps) {
+  const t = useTranslations('stock');
   const [localGenerating, setLocalGenerating] = useState(false);
 
   // Stop polling once thoughts arrive
@@ -75,7 +77,7 @@ export function FinVibeThoughts({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Brain className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground/80">FinVibe&apos;s Thoughts</h2>
+            <h2 className="text-sm font-semibold text-foreground/80">{t('finvibeThoughts')}</h2>
           </div>
           <button
             onClick={handleGenerate}
@@ -83,15 +85,12 @@ export function FinVibeThoughts({
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${generating ? "animate-spin" : ""}`} />
-            {generating ? "Generating..." : "Generate Analysis"}
+            {generating ? t('generating') : t('generateAnalysis')}
           </button>
         </div>
         <div className="py-8 text-center text-muted-foreground text-sm">
           <Brain className={`w-10 h-10 mx-auto mb-2 ${generating ? "opacity-60 animate-pulse" : "opacity-30"}`} />
-          {generating
-            ? "AI analysis in progress — this takes about 60–90 seconds…"
-            : <>No analysis available yet. Click &quot;Generate Analysis&quot; to create one.</>
-          }
+          {generating ? t('analysisInProgress') : t('noAnalysisYet')}
         </div>
       </div>
     );
@@ -106,10 +105,10 @@ export function FinVibeThoughts({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground/80">FinVibe&apos;s Thoughts</h2>
+          <h2 className="text-sm font-semibold text-foreground/80">{t('finvibeThoughts')}</h2>
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground/60">
-              Updated {new Date(generatedAt).toLocaleDateString()}
+              {t('updatedDate', { date: new Date(generatedAt).toLocaleDateString() })}
             </span>
           )}
         </div>
@@ -119,7 +118,7 @@ export function FinVibeThoughts({
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent text-muted-foreground rounded-lg hover:bg-accent transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-3 h-3 ${generating ? "animate-spin" : ""}`} />
-          {generating ? "Generating..." : "Refresh"}
+          {generating ? t('generating') : t('refresh')}
         </button>
       </div>
 
@@ -155,14 +154,14 @@ export function FinVibeThoughts({
                 {verdict}
               </span>
               <span className="text-xs text-muted-foreground ml-2">
-                Conviction: {conviction}
+                {t('convictionLabel', { level: conviction })}
               </span>
             </div>
           </div>
           <div className="flex items-center gap-4">
             {llmIntrinsicValue != null && (
               <div className="text-right">
-                <div className="text-[10px] text-muted-foreground">Intrinsic (AI)</div>
+                <div className="text-[10px] text-muted-foreground">{t('intrinsicAi')}</div>
                 <span className="font-mono text-sm text-blue-400">
                   ${llmIntrinsicValue.toFixed(2)}
                 </span>
@@ -170,7 +169,7 @@ export function FinVibeThoughts({
             )}
             {llmMarginOfSafety != null && (
               <div className="text-right">
-                <div className="text-[10px] text-muted-foreground">MoS (AI)</div>
+                <div className="text-[10px] text-muted-foreground">{t('mosAi')}</div>
                 <span
                   className={`font-mono text-sm ${
                     llmMarginOfSafety > 0 ? "text-green-400" : "text-red-400"
@@ -188,21 +187,21 @@ export function FinVibeThoughts({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         {thoughts.short_term && (
           <MarketDirectionCard
-            horizon={thoughts.short_term.horizon || "1 Month"}
+            horizon={thoughts.short_term.horizon || t('horizon1m')}
             direction={thoughts.short_term.direction || "neutral"}
             priceAction={thoughts.short_term.price_action || ""}
           />
         )}
         {thoughts.mid_term && (
           <MarketDirectionCard
-            horizon={thoughts.mid_term.horizon || "6 Months"}
+            horizon={thoughts.mid_term.horizon || t('horizon6m')}
             direction={thoughts.mid_term.direction || "neutral"}
             priceAction={thoughts.mid_term.price_action || ""}
           />
         )}
         {thoughts.long_term && (
           <MarketDirectionCard
-            horizon={thoughts.long_term.horizon || "12+ Months"}
+            horizon={thoughts.long_term.horizon || t('horizon12mPlus')}
             direction={thoughts.long_term.direction || "neutral"}
             priceAction={thoughts.long_term.price_action || ""}
           />
@@ -214,10 +213,10 @@ export function FinVibeThoughts({
         {thoughts.bull_case && (
           <div className="border border-green-500/20 bg-green-500/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-green-400 uppercase tracking-wider">Bull Case</span>
+              <span className="text-xs font-semibold text-green-400 uppercase tracking-wider">{t('bullCase')}</span>
               {thoughts.bull_case.price_target_12m != null && (
                 <span className="font-mono text-xs text-green-400">
-                  PT: ${Number(thoughts.bull_case.price_target_12m).toFixed(2)}
+                  {t('priceTargetShort', { value: Number(thoughts.bull_case.price_target_12m).toFixed(2) })}
                 </span>
               )}
             </div>
@@ -227,10 +226,10 @@ export function FinVibeThoughts({
         {thoughts.bear_case && (
           <div className="border border-red-500/20 bg-red-500/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">Bear Case</span>
+              <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">{t('bearCase')}</span>
               {thoughts.bear_case.price_target_12m != null && (
                 <span className="font-mono text-xs text-red-400">
-                  PT: ${Number(thoughts.bear_case.price_target_12m).toFixed(2)}
+                  {t('priceTargetShort', { value: Number(thoughts.bear_case.price_target_12m).toFixed(2) })}
                 </span>
               )}
             </div>
@@ -243,16 +242,21 @@ export function FinVibeThoughts({
       {thoughts.competitive_advantages && typeof thoughts.competitive_advantages === "object" && (
         <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">
           <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-3">
-            Competitive Advantages
+            {t('competitiveAdvantages')}
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-            {["pricing_power", "brand_strength", "switching_costs", "network_effects"].map((key) => {
+            {([
+              { key: "pricing_power", label: t('pricingPower') },
+              { key: "brand_strength", label: t('brandStrength') },
+              { key: "switching_costs", label: t('switchingCosts') },
+              { key: "network_effects", label: t('networkEffects') },
+            ]).map(({ key, label }) => {
               const val = thoughts.competitive_advantages[key];
               if (val == null || typeof val !== "number") return null;
               return (
                 <div key={key} className="text-center">
-                  <div className="text-[10px] text-muted-foreground capitalize mb-1">
-                    {key.replace(/_/g, " ")}
+                  <div className="text-[10px] text-muted-foreground mb-1">
+                    {label}
                   </div>
                   <div className="flex items-center justify-center gap-0.5">
                     {Array.from({ length: 10 }, (_, i) => (
@@ -279,14 +283,14 @@ export function FinVibeThoughts({
 
       {/* Expandable Analysis Sections */}
       <div>
-        <Section title="Moat Analysis" content={thoughts.moat_analysis} defaultOpen />
-        <Section title="Business Model" content={thoughts.business_model} />
-        <Section title="Revenue Streams" content={thoughts.revenue_streams} />
-        <Section title="Profitability" content={thoughts.profitability} />
-        <Section title="Balance Sheet" content={thoughts.balance_sheet} />
-        <Section title="Free Cash Flow" content={thoughts.fcf_analysis} />
-        <Section title="Management Quality" content={thoughts.management_quality} />
-        <Section title="Valuation Snapshot" content={thoughts.valuation_snapshot} />
+        <Section title={t('moatAnalysis')} content={thoughts.moat_analysis} defaultOpen />
+        <Section title={t('businessModel')} content={thoughts.business_model} />
+        <Section title={t('revenueStreams')} content={thoughts.revenue_streams} />
+        <Section title={t('profitability')} content={thoughts.profitability} />
+        <Section title={t('balanceSheet')} content={thoughts.balance_sheet} />
+        <Section title={t('fcfAnalysis')} content={thoughts.fcf_analysis} />
+        <Section title={t('managementQuality')} content={thoughts.management_quality} />
+        <Section title={t('valuationSnapshot')} content={thoughts.valuation_snapshot} />
       </div>
     </div>
   );

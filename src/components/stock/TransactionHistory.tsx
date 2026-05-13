@@ -1,8 +1,9 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Pencil, Trash2, Check, X, Plus, Building2, StickyNote,
-  CalendarDays, AlertTriangle, DollarSign, TrendingUp, TrendingDown,
+  CalendarDays, DollarSign, TrendingUp, TrendingDown,
 } from "lucide-react";
 import {
   useUpdateHolding, useDeleteHolding, useAddHolding, useSellLot, useStockSales,
@@ -27,6 +28,7 @@ interface EditRowProps {
 }
 
 function EditRow({ lot, onDone }: EditRowProps) {
+  const t = useTranslations("stock");
   const update = useUpdateHolding();
   const [fields, setFields] = useState({
     shares: String(lot.shares),
@@ -86,7 +88,7 @@ function EditRow({ lot, onDone }: EditRowProps) {
           list="broker-list-edit"
           value={fields.broker}
           onChange={(e) => setFields({ ...fields, broker: e.target.value })}
-          placeholder="Broker"
+          placeholder={t("brokerPlaceholderEdit")}
           className={inputCls}
         />
         <datalist id="broker-list-edit">
@@ -97,7 +99,7 @@ function EditRow({ lot, onDone }: EditRowProps) {
         <input
           value={fields.notes}
           onChange={(e) => setFields({ ...fields, notes: e.target.value })}
-          placeholder="Notes"
+          placeholder={t("notesPlaceholderEdit")}
           className={inputCls}
         />
       </td>
@@ -130,6 +132,7 @@ interface AddLotRowProps {
 }
 
 function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
+  const t = useTranslations("stock");
   const add = useAddHolding();
   const [fields, setFields] = useState({
     shares: "",
@@ -169,7 +172,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
           step="any"
           value={fields.shares}
           onChange={(e) => setFields({ ...fields, shares: e.target.value })}
-          placeholder="Shares"
+          placeholder={t("sharesPlaceholder")}
           className={inputCls}
           required
         />
@@ -182,7 +185,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
             step="any"
             value={fields.cost_basis}
             onChange={(e) => setFields({ ...fields, cost_basis: e.target.value })}
-            placeholder="Cost/sh"
+            placeholder={t("costShPlaceholder")}
             className={`${inputCls} pl-6`}
             required
           />
@@ -198,7 +201,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
           list="broker-list-add"
           value={fields.broker}
           onChange={(e) => setFields({ ...fields, broker: e.target.value })}
-          placeholder="Broker"
+          placeholder={t("brokerPlaceholderAdd")}
           className={inputCls}
         />
         <datalist id="broker-list-add">
@@ -209,7 +212,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
         <input
           value={fields.notes}
           onChange={(e) => setFields({ ...fields, notes: e.target.value })}
-          placeholder="Notes"
+          placeholder={t("notesPlaceholderAdd")}
           className={inputCls}
         />
       </td>
@@ -241,6 +244,7 @@ interface SellRowProps {
 }
 
 function SellRow({ lot, onDone }: SellRowProps) {
+  const t = useTranslations("stock");
   const sell = useSellLot();
   const [fields, setFields] = useState({
     shares_sold: String(lot.shares),
@@ -287,11 +291,11 @@ function SellRow({ lot, onDone }: SellRowProps) {
           max={lot.shares}
           value={fields.shares_sold}
           onChange={(e) => setFields({ ...fields, shares_sold: e.target.value })}
-          placeholder={`Max ${lot.shares}`}
+          placeholder={t("maxShares", { n: lot.shares })}
           className={inputCls}
         />
         <div className="text-[9px] text-muted-foreground mt-0.5">
-          Lot: {lot.shares % 1 === 0 ? lot.shares : lot.shares.toFixed(4)}
+          {t("lotPrefix")} {lot.shares % 1 === 0 ? lot.shares : lot.shares.toFixed(4)}
         </div>
       </td>
       <td className="px-3 py-2">
@@ -302,12 +306,12 @@ function SellRow({ lot, onDone }: SellRowProps) {
             step="any"
             value={fields.sale_price}
             onChange={(e) => setFields({ ...fields, sale_price: e.target.value })}
-            placeholder="Sale price"
+            placeholder={t("salePrice")}
             className={`${inputCls} pl-6`}
           />
         </div>
         <div className="text-[9px] text-muted-foreground mt-0.5">
-          Cost: ${lot.cost_basis.toFixed(2)}
+          {t("costPrefix")}: ${lot.cost_basis.toFixed(2)}
         </div>
       </td>
       <td className="px-3 py-2 text-right font-mono text-sm">
@@ -325,7 +329,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
           list="broker-list-sell"
           value={fields.broker}
           onChange={(e) => setFields({ ...fields, broker: e.target.value })}
-          placeholder="Broker"
+          placeholder={t("brokerPlaceholderSell")}
           className={inputCls}
         />
         <datalist id="broker-list-sell">
@@ -336,7 +340,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
         <input
           value={fields.notes}
           onChange={(e) => setFields({ ...fields, notes: e.target.value })}
-          placeholder="Sale notes"
+          placeholder={t("saleNotes")}
           className={inputCls}
         />
       </td>
@@ -346,7 +350,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
             onClick={submit}
             disabled={sell.isPending || !valid}
             className="p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors disabled:opacity-40"
-            title="Confirm sell"
+            title={t("confirmSellTitle")}
           >
             <Check className="w-3.5 h-3.5" />
           </button>
@@ -364,16 +368,18 @@ function SellRow({ lot, onDone }: SellRowProps) {
 
 // ── Confirm delete ────────────────────────────────────────────
 function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  const t = useTranslations("stock");
   return (
     <div className="flex items-center gap-1.5">
-      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 min-h-[36px]">Yes</button>
-      <button onClick={onCancel} className="text-xs px-3 py-1.5 bg-accent rounded text-muted-foreground hover:bg-accent/70 min-h-[36px]">No</button>
+      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 min-h-[36px]">{t("yes")}</button>
+      <button onClick={onCancel} className="text-xs px-3 py-1.5 bg-accent rounded text-muted-foreground hover:bg-accent/70 min-h-[36px]">{t("no")}</button>
     </div>
   );
 }
 
 // ── Sold history (realized P&L) ───────────────────────────────
 function SoldHistory({ sales }: { sales: StockSale[] }) {
+  const t = useTranslations("stock");
   const totalRealized = sales.reduce((s, x) => s + x.realized_pnl, 0);
   const totalShares = sales.reduce((s, x) => s + x.shares_sold, 0);
   const totalProceeds = sales.reduce((s, x) => s + x.shares_sold * x.sale_price, 0);
@@ -384,7 +390,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
         <div className="flex items-center gap-2">
           <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Sold ({sales.length})
+            {t("soldCount", { n: sales.length })}
           </span>
         </div>
         <div className={`text-xs font-mono font-semibold flex items-center gap-1 ${

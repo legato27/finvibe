@@ -1,5 +1,6 @@
 "use client";
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import ReactMarkdownRaw from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -66,6 +67,7 @@ export function PortfolioAnalysisPanel({
   totalValue: number;
   totalCost: number;
 }) {
+  const t = useTranslations("dashboard");
   const { data: analyses, isLoading } = usePortfolioAnalyses(portfolioId);
   const save = useSavePortfolioAnalysis();
   const del = useDeletePortfolioAnalysis();
@@ -112,7 +114,7 @@ export function PortfolioAnalysisPanel({
       const msg =
         e?.response?.data?.error ||
         e?.message ||
-        "Analysis failed — please try again.";
+        t("analysisFailed");
       setError(msg);
     } finally {
       setRunning(null);
@@ -124,9 +126,9 @@ export function PortfolioAnalysisPanel({
       <div className="card-header flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-primary" />
-          <span className="card-title">AI Portfolio Risk Analysis</span>
+          <span className="card-title">{t("aiPortfolioTitle")}</span>
           <span className="text-[10px] text-muted-foreground">
-            Bridgewater All-Weather · grounded on local quant data
+            {t("aiPortfolioSubtitle")}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -134,7 +136,7 @@ export function PortfolioAnalysisPanel({
             onClick={() => run("claude")}
             disabled={!canRun || !!running}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Run analysis via Anthropic Claude"
+            title={t("runViaClaude")}
           >
             {running === "claude" ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -147,7 +149,7 @@ export function PortfolioAnalysisPanel({
             onClick={() => run("gemma")}
             disabled={!canRun || !!running}
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-accent text-foreground rounded-lg hover:bg-accent/70 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Run analysis via local Gemma (vLLM)"
+            title={t("runViaGemma")}
           >
             {running === "gemma" ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -162,7 +164,7 @@ export function PortfolioAnalysisPanel({
       <div className="p-4 space-y-3">
         {!canRun && (
           <div className="text-xs text-muted-foreground">
-            Add at least one investment with a live price to run a risk analysis.
+            {t("needPositionsForAnalysis")}
           </div>
         )}
 
@@ -176,8 +178,7 @@ export function PortfolioAnalysisPanel({
         {running && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            Running {running === "claude" ? "Claude" : "Gemma"} risk analysis —
-            this can take up to a minute…
+            {t("runningAnalysis", { provider: running === "claude" ? "Claude" : "Gemma" })}
           </div>
         )}
 
@@ -190,19 +191,19 @@ export function PortfolioAnalysisPanel({
               setExpandedId(expandedId === latest.id ? -1 : latest.id)
             }
             onDelete={() => {
-              if (confirm("Delete this analysis?")) del.mutate(latest.id);
+              if (confirm(t("confirmDelete"))) del.mutate(latest.id);
             }}
           />
         ) : !isLoading && !running ? (
           <div className="text-xs text-muted-foreground">
-            No analyses yet — click Claude or Gemma above to generate one.
+            {t("noAnalysesYet")}
           </div>
         ) : null}
 
         {analyses && analyses.length > 1 && (
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground pb-2">
-              History
+              {t("history")}
             </div>
             <div className="space-y-2">
               {analyses.slice(1).map((a) => (
@@ -214,7 +215,7 @@ export function PortfolioAnalysisPanel({
                     setExpandedId(expandedId === a.id ? null : a.id)
                   }
                   onDelete={() => {
-                    if (confirm("Delete this analysis?")) del.mutate(a.id);
+                    if (confirm(t("confirmDelete"))) del.mutate(a.id);
                   }}
                 />
               ))}
@@ -239,10 +240,11 @@ function AnalysisBlock({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const dt = useMemo(() => new Date(analysis.created_at), [analysis.created_at]);
   const snapshot = analysis.holdings_snapshot || [];
   const providerLabel =
-    analysis.provider === "claude" ? "Claude" : "Gemma (local)";
+    analysis.provider === "claude" ? "Claude" : t("gemmaLocal");
 
   const providerTint =
     analysis.provider === "claude"
@@ -281,7 +283,7 @@ function AnalysisBlock({
           </span>
           {isLatest && (
             <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/15 text-green-400 border border-green-500/30 flex-shrink-0">
-              LATEST
+              {t("latest")}
             </span>
           )}
           <span className="flex items-center gap-1 text-[10px] text-muted-foreground flex-shrink-0">
@@ -291,14 +293,14 @@ function AnalysisBlock({
           {analysis.total_value != null && (
             <span className="text-[10px] text-muted-foreground truncate">
               · ${Math.round(analysis.total_value).toLocaleString()} ·{" "}
-              {snapshot.length} position{snapshot.length === 1 ? "" : "s"}
+              {t("positionsCount", { count: snapshot.length })}
             </span>
           )}
         </button>
         <button
           onClick={onDelete}
           className="text-muted-foreground/40 hover:text-red-500 transition-colors flex-shrink-0"
-          title="Delete analysis"
+          title={t("deleteAnalysis")}
         >
           <Trash2 className="w-3.5 h-3.5" />
         </button>
@@ -310,18 +312,18 @@ function AnalysisBlock({
             <details className="group">
               <summary className="flex items-center gap-2 cursor-pointer list-none text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors select-none">
                 <ChevronDown className="w-3 h-3 group-open:rotate-0 -rotate-90 transition-transform" />
-                Positions snapshot at analysis time
+                {t("positionsSnapshot")}
               </summary>
               <div className="mt-2 overflow-x-auto rounded-lg border border-border/30">
                 <table className="w-full text-[11px] tabular-nums">
                   <thead>
                     <tr className="text-[9px] uppercase tracking-wider text-muted-foreground bg-accent/30">
-                      <th className="text-left px-2.5 py-1.5">Ticker</th>
-                      <th className="text-left px-2.5 py-1.5 hidden md:table-cell">Sector</th>
-                      <th className="text-right px-2.5 py-1.5">Shares</th>
-                      <th className="text-right px-2.5 py-1.5">Price</th>
-                      <th className="text-right px-2.5 py-1.5">Value</th>
-                      <th className="text-right px-2.5 py-1.5">Weight</th>
+                      <th className="text-left px-2.5 py-1.5">{t("colTicker")}</th>
+                      <th className="text-left px-2.5 py-1.5 hidden md:table-cell">{t("colSector")}</th>
+                      <th className="text-right px-2.5 py-1.5">{t("colShares")}</th>
+                      <th className="text-right px-2.5 py-1.5">{t("colPrice")}</th>
+                      <th className="text-right px-2.5 py-1.5">{t("colValue")}</th>
+                      <th className="text-right px-2.5 py-1.5">{t("colWeight")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/20">
@@ -363,8 +365,8 @@ function AnalysisBlock({
 
           {analysis.model && (
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-border/20 text-[10px] text-muted-foreground/70">
-              <span className="font-mono">model: {analysis.model}</span>
-              <span>{analysis.analysis.length.toLocaleString()} chars</span>
+              <span className="font-mono">{t("modelLabel")}: {analysis.model}</span>
+              <span>{t("charsCount", { count: analysis.analysis.length })}</span>
             </div>
           )}
         </div>
@@ -402,6 +404,7 @@ function StructuredMemo({
   riskContext?: Record<string, unknown>;
   raw: string;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="space-y-5">
       {structured.summary_headline && (
@@ -411,7 +414,7 @@ function StructuredMemo({
       )}
 
       {structured.risk_dashboard?.length > 0 && (
-        <Section icon={<ShieldAlert className="w-3.5 h-3.5" />} title="Risk Dashboard">
+        <Section icon={<ShieldAlert className="w-3.5 h-3.5" />} title={t("sectionRiskDashboard")}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {structured.risk_dashboard.map((row, i) => (
               <div

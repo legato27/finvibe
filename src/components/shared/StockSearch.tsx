@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import { Search, Plus, TrendingUp, TrendingDown, Building2 } from "lucide-react";
@@ -41,9 +42,11 @@ interface StockSearchProps {
 export function StockSearch({
   onSelect,
   onClose,
-  placeholder = "Search stocks...",
+  placeholder,
   defaultMarket = "ALL",
 }: StockSearchProps) {
+  const t = useTranslations("watchlist");
+  const ph = placeholder ?? t("searchStocksDefault");
   const [query, setQuery] = useState("");
   const [market, setMarket] = useState<MarketCode>(defaultMarket);
   const [focused, setFocused] = useState(true);
@@ -93,7 +96,7 @@ export function StockSearch({
           value={market}
           onChange={(e) => setMarket(e.target.value as MarketCode)}
           className="px-2 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
-          title="Market"
+          title={t("marketTitle")}
         >
           {MARKET_OPTIONS.map((m) => (
             <option key={m.code} value={m.code}>
@@ -111,7 +114,7 @@ export function StockSearch({
             value={query}
             onChange={(e) => setQuery(e.target.value.toUpperCase())}
             onFocus={() => setFocused(true)}
-            placeholder={placeholder}
+            placeholder={ph}
             className="flex-1 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-slate-600"
             autoFocus
           />
@@ -124,16 +127,16 @@ export function StockSearch({
       {focused && query.length >= 1 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
           {isLoading && (
-            <div className="px-4 py-3 text-xs text-slate-500 animate-pulse">Searching...</div>
+            <div className="px-4 py-3 text-xs text-slate-500 animate-pulse">{t("searching")}</div>
           )}
           {!isLoading && stocks.length === 0 && query.length >= 2 && (
             <div className="px-4 py-3 text-xs text-slate-500">
-              No results for &quot;{query}&quot;
+              {t("noResultsFor", { query })}
               <button
                 onClick={() => onSelect(query, query, { ticker: query, name: query })}
                 className="ml-2 text-primary hover:underline"
               >
-                Add {query} anyway
+                {t("addAnyway", { query })}
               </button>
             </div>
           )}

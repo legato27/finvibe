@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   BookOpen, Clock, Check, X, Loader2, Trash2, AlertTriangle,
-  TrendingUp, TrendingDown, DollarSign, Shield, Calendar,
 } from "lucide-react";
 import {
   useOptionsTrades,
@@ -24,16 +24,19 @@ function CloseTradeModal({
   onConfirm: (data: { close_price?: number; underlying_price_at_close?: number; status: "closed" | "expired" | "assigned"; outcome_notes?: string }) => void;
   isClosing: boolean;
 }) {
+  const t = useTranslations("trades");
   const [closeType, setCloseType] = useState<"closed" | "expired" | "assigned">("closed");
   const [closePrice, setClosePrice] = useState("");
   const [underlyingPrice, setUnderlyingPrice] = useState("");
   const [notes, setNotes] = useState("");
 
+  const symbol = `${trade.ticker} $${trade.strike_price} ${trade.strategy === "cash_secured_put" ? "P" : "C"}`;
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="card p-5 max-w-md w-full space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-bold">Close Trade — {trade.ticker} ${trade.strike_price} {trade.strategy === "cash_secured_put" ? "P" : "C"}</h3>
+          <h3 className="text-sm font-bold">{t("closeTitle", { symbol })}</h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
           </button>
@@ -41,19 +44,19 @@ function CloseTradeModal({
 
         {/* Close Type */}
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">How was it closed?</label>
+          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">{t("howClosed")}</label>
           <div className="flex gap-2">
-            {(["closed", "expired", "assigned"] as const).map((t) => (
+            {(["closed", "expired", "assigned"] as const).map((tp) => (
               <button
-                key={t}
-                onClick={() => setCloseType(t)}
+                key={tp}
+                onClick={() => setCloseType(tp)}
                 className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                  closeType === t
+                  closeType === tp
                     ? "bg-primary/20 text-primary border-primary/30"
                     : "bg-accent/30 text-muted-foreground border-border/30 hover:bg-accent/50"
                 }`}
               >
-                {t === "closed" ? "Bought Back" : t === "expired" ? "Expired Worthless" : "Assigned"}
+                {tp === "closed" ? t("boughtBack") : tp === "expired" ? t("expiredWorthless") : t("assigned")}
               </button>
             ))}
           </div>
@@ -62,7 +65,7 @@ function CloseTradeModal({
         {/* Close Price (for buy-back) */}
         {closeType === "closed" && (
           <div>
-            <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Buy-back Premium (per share)</label>
+            <label className="text-[10px] text-muted-foreground uppercase mb-1 block">{t("buybackPremium")}</label>
             <input
               type="number"
               step="0.01"
@@ -77,7 +80,7 @@ function CloseTradeModal({
         {/* Underlying Price at Close */}
         {closeType === "assigned" && (
           <div>
-            <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Stock Price at Assignment</label>
+            <label className="text-[10px] text-muted-foreground uppercase mb-1 block">{t("stockPriceAtAssignment")}</label>
             <input
               type="number"
               step="0.01"
@@ -91,11 +94,11 @@ function CloseTradeModal({
 
         {/* Notes */}
         <div>
-          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">Outcome Notes (for fine-tuning)</label>
+          <label className="text-[10px] text-muted-foreground uppercase mb-1 block">{t("outcomeNotes")}</label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="What happened? Was the thesis correct?"
+            placeholder={t("outcomeNotesPh")}
             rows={2}
             className="w-full px-3 py-2 rounded-lg bg-accent/30 border border-border/30 text-xs focus:outline-none focus:border-primary/50 resize-none"
           />
@@ -103,15 +106,15 @@ function CloseTradeModal({
 
         {/* Preview */}
         <div className="bg-accent/20 rounded-lg p-3 text-xs">
-          <span className="text-muted-foreground">Premium received: </span>
+          <span className="text-muted-foreground">{t("premiumReceived")} </span>
           <span className="font-mono text-green-400">${(trade.premium * trade.contracts * 100).toFixed(2)}</span>
           {closeType === "closed" && closePrice && (
             <>
               <br />
-              <span className="text-muted-foreground">Buy-back cost: </span>
+              <span className="text-muted-foreground">{t("buybackCost")} </span>
               <span className="font-mono text-red-400">${(parseFloat(closePrice) * trade.contracts * 100).toFixed(2)}</span>
               <br />
-              <span className="text-muted-foreground">Net P&L: </span>
+              <span className="text-muted-foreground">{t("netPnl")} </span>
               <span className={`font-mono ${(trade.premium - parseFloat(closePrice)) >= 0 ? "text-green-400" : "text-red-400"}`}>
                 ${((trade.premium - parseFloat(closePrice)) * trade.contracts * 100).toFixed(2)}
               </span>
@@ -120,8 +123,8 @@ function CloseTradeModal({
           {closeType === "expired" && (
             <>
               <br />
-              <span className="text-muted-foreground">Net P&L: </span>
-              <span className="font-mono text-green-400">${(trade.premium * trade.contracts * 100).toFixed(2)} (max profit)</span>
+              <span className="text-muted-foreground">{t("netPnl")} </span>
+              <span className="font-mono text-green-400">${(trade.premium * trade.contracts * 100).toFixed(2)} {t("maxProfit")}</span>
             </>
           )}
         </div>
@@ -137,7 +140,7 @@ function CloseTradeModal({
           className="w-full px-4 py-2.5 rounded-lg text-xs font-semibold bg-primary/20 text-primary hover:bg-primary/30 border border-primary/30 disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {isClosing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
-          {isClosing ? "Closing..." : "Confirm Close"}
+          {isClosing ? t("closing") : t("confirmClose")}
         </button>
       </div>
     </div>
@@ -155,6 +158,7 @@ function TradeRow({
   onClose: (trade: OptionsTrade) => void;
   onDelete: (id: number) => void;
 }) {
+  const t = useTranslations("trades");
   const isOpen = trade.status === "open";
   const isCSP = trade.strategy === "cash_secured_put";
   const daysToExpiry = isOpen
@@ -162,6 +166,13 @@ function TradeRow({
     : 0;
   const isExpiring = isOpen && daysToExpiry <= 7;
   const isExpired = isOpen && daysToExpiry <= 0;
+
+  const statusLabel =
+    trade.status === "open" ? t("open")
+    : trade.status === "closed" ? t("closed")
+    : trade.status === "expired" ? t("expired")
+    : trade.status === "assigned" ? t("assigned")
+    : trade.status;
 
   return (
     <div className={`border rounded-lg p-3 ${
@@ -184,7 +195,7 @@ function TradeRow({
               isExpiring ? "bg-amber-500/15 text-amber-400" :
               "bg-green-500/15 text-green-400"
             }`}>
-              {isExpired ? "EXPIRED" : isExpiring ? `${daysToExpiry}d left` : `${daysToExpiry}d`}
+              {isExpired ? t("expired_status") : isExpiring ? t("daysLeft", { days: daysToExpiry }) : t("days", { days: daysToExpiry })}
             </span>
           )}
           <span className={`text-[10px] px-2 py-0.5 rounded uppercase ${
@@ -193,26 +204,28 @@ function TradeRow({
             trade.status === "assigned" ? "bg-amber-500/15 text-amber-400" :
             "bg-muted text-muted-foreground"
           }`}>
-            {trade.status}
+            {statusLabel}
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2 text-center">
         <div>
-          <div className="text-[9px] text-muted-foreground">Premium</div>
+          <div className="text-[9px] text-muted-foreground">{t("premium")}</div>
           <div className="font-mono text-xs text-green-400">${trade.premium.toFixed(2)}</div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground">{trade.contracts}x Contract{trade.contracts > 1 ? "s" : ""}</div>
+          <div className="text-[9px] text-muted-foreground">
+            {trade.contracts > 1 ? t("contractsLabelPlural", { n: trade.contracts }) : t("contractsLabel", { n: trade.contracts })}
+          </div>
           <div className="font-mono text-xs">${(trade.premium * trade.contracts * 100).toFixed(0)}</div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground">Expiry</div>
-          <div className="font-mono text-xs">{new Date(trade.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</div>
+          <div className="text-[9px] text-muted-foreground">{t("expiry")}</div>
+          <div className="font-mono text-xs">{new Date(trade.expiry_date).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground">P&L</div>
+          <div className="text-[9px] text-muted-foreground">{t("pnl")}</div>
           {trade.realized_pnl != null ? (
             <div className={`font-mono text-xs font-bold ${trade.realized_pnl >= 0 ? "text-green-400" : "text-red-400"}`}>
               {trade.realized_pnl >= 0 ? "+" : ""}${trade.realized_pnl.toFixed(0)}
@@ -229,16 +242,16 @@ function TradeRow({
       {/* Entry price context */}
       {trade.underlying_price_at_entry != null && (
         <div className="mt-2 text-[9px] text-muted-foreground">
-          Entry: <span className="font-mono">${trade.underlying_price_at_entry.toFixed(2)}</span>
+          {t("entryPrice")}: <span className="font-mono">${trade.underlying_price_at_entry.toFixed(2)}</span>
           <span className="mx-1">·</span>
-          Opened: {new Date(trade.entry_date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+          {t("opened")} {new Date(trade.entry_date).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
         </div>
       )}
 
       {/* LLM Confidence */}
       {trade.llm_confidence != null && (
         <div className="mt-2 flex items-center gap-2">
-          <div className="text-[9px] text-muted-foreground">AI Confidence:</div>
+          <div className="text-[9px] text-muted-foreground">{t("aiConfidenceLabel")}</div>
           <div className="flex-1 bg-accent/30 rounded-full h-1.5">
             <div
               className={`h-1.5 rounded-full ${
@@ -254,7 +267,7 @@ function TradeRow({
       {/* Annualized Return */}
       {trade.annualized_return != null && (
         <div className="mt-1 text-[9px] text-muted-foreground">
-          Annualized: <span className={`font-mono ${trade.annualized_return >= 0 ? "text-green-400" : "text-red-400"}`}>
+          {t("annualizedLabel")} <span className={`font-mono ${trade.annualized_return >= 0 ? "text-green-400" : "text-red-400"}`}>
             {(trade.annualized_return * 100).toFixed(1)}%
           </span>
         </div>
@@ -263,7 +276,7 @@ function TradeRow({
       {/* Outcome Notes */}
       {trade.outcome_notes && (
         <div className="mt-2 text-[9px] text-muted-foreground bg-accent/20 rounded px-2 py-1">
-          <span className="font-semibold">Notes:</span> {trade.outcome_notes}
+          <span className="font-semibold">{t("notesPrefix")}</span> {trade.outcome_notes}
         </div>
       )}
 
@@ -275,7 +288,7 @@ function TradeRow({
             className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-[10px] font-semibold bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
           >
             <Check className="w-3 h-3" />
-            Close Trade
+            {t("closeTrade")}
           </button>
         )}
         <button
@@ -296,25 +309,25 @@ interface TradeJournalProps {
 }
 
 export function TradeJournal({ ticker }: TradeJournalProps) {
+  const t = useTranslations("trades");
   const [closingTrade, setClosingTrade] = useState<OptionsTrade | null>(null);
   const { data: trades = [], isLoading } = useOptionsTrades(ticker);
   const closeTrade = useCloseOptionsTrade();
   const deleteTrade = useDeleteOptionsTrade();
 
-  const openTrades = trades.filter((t) => t.status === "open");
-  const closedTrades = trades.filter((t) => t.status !== "open");
+  const openTrades = trades.filter((tr) => tr.status === "open");
+  const closedTrades = trades.filter((tr) => tr.status !== "open");
 
   // Stats
-  const totalPnl = closedTrades.reduce((sum, t) => sum + (t.realized_pnl || 0), 0);
-  const totalPremium = trades.reduce((sum, t) => sum + t.premium * t.contracts * 100, 0);
+  const totalPnl = closedTrades.reduce((sum, tr) => sum + (tr.realized_pnl || 0), 0);
   const winRate = closedTrades.length > 0
-    ? (closedTrades.filter((t) => t.was_profitable).length / closedTrades.length * 100).toFixed(0)
+    ? (closedTrades.filter((tr) => tr.was_profitable).length / closedTrades.length * 100).toFixed(0)
     : null;
   const avgReturn = closedTrades.length > 0
-    ? (closedTrades.reduce((sum, t) => sum + (t.return_on_capital || 0), 0) / closedTrades.length * 100).toFixed(1)
+    ? (closedTrades.reduce((sum, tr) => sum + (tr.return_on_capital || 0), 0) / closedTrades.length * 100).toFixed(1)
     : null;
   const avgAnnualized = closedTrades.length > 0
-    ? (closedTrades.reduce((sum, t) => sum + (t.annualized_return || 0), 0) / closedTrades.length * 100).toFixed(1)
+    ? (closedTrades.reduce((sum, tr) => sum + (tr.annualized_return || 0), 0) / closedTrades.length * 100).toFixed(1)
     : null;
 
   async function handleCloseTrade(data: { close_price?: number; underlying_price_at_close?: number; status: "closed" | "expired" | "assigned"; outcome_notes?: string }) {
@@ -333,9 +346,9 @@ export function TradeJournal({ ticker }: TradeJournalProps) {
       <div className="card p-5">
         <div className="flex items-center gap-2 mb-4">
           <BookOpen className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground/80">Trade Journal — {ticker}</h2>
+          <h2 className="text-sm font-semibold text-foreground/80">{t("journalTicker", { ticker })}</h2>
           <span className="text-[10px] text-muted-foreground/60 ml-auto">
-            {trades.length} total trade{trades.length !== 1 ? "s" : ""}
+            {t("totalTrades", { n: trades.length })}
           </span>
         </div>
 
@@ -343,29 +356,29 @@ export function TradeJournal({ ticker }: TradeJournalProps) {
         {trades.length > 0 && (
           <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Open</div>
+              <div className="text-[9px] text-muted-foreground">{t("open")}</div>
               <div className="font-mono text-sm font-bold text-blue-400">{openTrades.length}</div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Closed</div>
+              <div className="text-[9px] text-muted-foreground">{t("closed")}</div>
               <div className="font-mono text-sm font-bold text-foreground">{closedTrades.length}</div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Total P&L</div>
+              <div className="text-[9px] text-muted-foreground">{t("totalPnl")}</div>
               <div className={`font-mono text-sm font-bold ${totalPnl >= 0 ? "text-green-400" : "text-red-400"}`}>
                 {totalPnl >= 0 ? "+" : ""}${totalPnl.toFixed(0)}
               </div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Win Rate</div>
+              <div className="text-[9px] text-muted-foreground">{t("winRate")}</div>
               <div className="font-mono text-sm font-bold">{winRate ? `${winRate}%` : "—"}</div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Avg Return</div>
+              <div className="text-[9px] text-muted-foreground">{t("avgReturn")}</div>
               <div className="font-mono text-sm font-bold">{avgReturn ? `${avgReturn}%` : "—"}</div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Avg Ann.</div>
+              <div className="text-[9px] text-muted-foreground">{t("avgAnnualized")}</div>
               <div className="font-mono text-sm font-bold">{avgAnnualized ? `${avgAnnualized}%` : "—"}</div>
             </div>
           </div>
@@ -383,11 +396,8 @@ export function TradeJournal({ ticker }: TradeJournalProps) {
       {!isLoading && trades.length === 0 && (
         <div className="card p-10 text-center text-muted-foreground">
           <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">No trades recorded for {ticker}</p>
-          <p className="text-xs mt-1.5 max-w-sm mx-auto">
-            Go to the <span className="text-primary font-medium">Options</span> tab to view AI-generated
-            strategy recommendations and add trades to your journal.
-          </p>
+          <p className="text-sm font-medium">{t("noTradesForTicker", { ticker })}</p>
+          <p className="text-xs mt-1.5 max-w-sm mx-auto">{t("noTradesHintShort")}</p>
         </div>
       )}
 
@@ -397,15 +407,15 @@ export function TradeJournal({ ticker }: TradeJournalProps) {
           <div className="flex items-center gap-2 px-1">
             <Clock className="w-3.5 h-3.5 text-blue-400" />
             <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-              Open Positions ({openTrades.length})
+              {t("openPositionsCount", { n: openTrades.length })}
             </span>
-            {openTrades.some((t) => {
-              const dte = Math.max(0, Math.round((new Date(t.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
+            {openTrades.some((tr) => {
+              const dte = Math.max(0, Math.round((new Date(tr.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
               return dte <= 7;
             }) && (
               <span className="text-[9px] bg-amber-500/15 text-amber-400 px-2 py-0.5 rounded-full animate-pulse">
                 <AlertTriangle className="w-2.5 h-2.5 inline mr-0.5" />
-                Expiring soon
+                {t("expiringSoonShort")}
               </span>
             )}
           </div>
@@ -426,7 +436,7 @@ export function TradeJournal({ ticker }: TradeJournalProps) {
           <div className="flex items-center gap-2 px-1">
             <Check className="w-3.5 h-3.5 text-green-400" />
             <span className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-              Closed Trades ({closedTrades.length})
+              {t("closedTradesCount", { n: closedTrades.length })}
             </span>
           </div>
           {closedTrades.map((trade) => (

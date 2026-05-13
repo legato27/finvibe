@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
 import { InfoTip } from "@/components/shared/InfoTip";
@@ -26,6 +27,7 @@ const IMPACT_COLOR: Record<string, string> = {
 };
 
 export function TodayPanel() {
+  const t = useTranslations("dashboard");
   const { data: today, isLoading } = useQuery({
     queryKey: ["today_panel"],
     queryFn: macroApi.dashboard,
@@ -36,7 +38,7 @@ export function TodayPanel() {
   if (isLoading || !today || today.error) {
     return (
       <div className="card flex items-center justify-center py-8">
-        <div className="text-slate-500 text-sm animate-pulse">Building today&apos;s view...</div>
+        <div className="text-slate-500 text-sm animate-pulse">{t("buildingTodayView")}</div>
       </div>
     );
   }
@@ -53,7 +55,7 @@ export function TodayPanel() {
           <Shield className={`w-6 h-6 ${rs.color}`} />
           <div>
             <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium">
-              Today &middot; {today.date}
+              {t("today")} &middot; {today.date}
             </div>
             <div className={`text-xl font-black ${rs.color}`}>
               {today.regime}
@@ -62,7 +64,7 @@ export function TodayPanel() {
         </div>
         <div className="text-right">
           <div className="text-[10px] text-slate-500 flex items-center gap-0.5 justify-end">
-            Risk Score <InfoTip size={10} tip="Composite of VIX level, term structure, market breadth, dealer GEX, and swarm signal. Ranges -100 (max fear) to +100 (max greed). Drives the regime label and positioning guidance." />
+            {t("riskScore")} <InfoTip size={10} tip={t("riskScoreTip")} />
           </div>
           <div className={`text-3xl font-black font-mono ${rs.color}`}>
             {score > 0 ? "+" : ""}{score.toFixed(0)}
@@ -80,9 +82,9 @@ export function TodayPanel() {
         />
       </div>
       <div className="flex justify-between text-[9px] text-slate-600 font-mono -mt-1">
-        <span>Risk-Off</span>
-        <span>Neutral</span>
-        <span>Risk-On</span>
+        <span>{t("riskOff")}</span>
+        <span>{t("neutral")}</span>
+        <span>{t("riskOn")}</span>
       </div>
 
       {/* ── Score breakdown ── */}
@@ -110,8 +112,8 @@ export function TodayPanel() {
         {/* Positioning */}
         <div>
           <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2 flex items-center gap-1">
-            <Zap className="w-3 h-3" /> Positioning
-            <InfoTip size={10} tip="Suggested asset allocation tilts based on current regime. Overweight = increase exposure. Underweight = reduce exposure. These are regime signals, not investment advice." />
+            <Zap className="w-3 h-3" /> {t("positioning")}
+            <InfoTip size={10} tip={t("positioningTip")} />
           </div>
           <div className="space-y-1">
             {(today.positioning || []).map((p: any) => {
@@ -133,8 +135,8 @@ export function TodayPanel() {
         {/* Key signals */}
         <div>
           <div className="text-[10px] text-slate-500 uppercase tracking-wider font-medium mb-2 flex items-center gap-1">
-            <AlertTriangle className="w-3 h-3" /> Key Signals
-            <InfoTip size={10} tip="The individual signals driving today's regime assessment, ranked by weight. These are the data points that matter most for risk management right now." />
+            <AlertTriangle className="w-3 h-3" /> {t("keySignals")}
+            <InfoTip size={10} tip={t("keySignalsTip")} />
           </div>
           <div className="space-y-1.5">
             {(today.signals || []).map((s: any, i: number) => (
@@ -148,7 +150,7 @@ export function TodayPanel() {
                     {s.signal}
                   </span>
                   {s.weight === "high" && (
-                    <span className="text-[9px] ml-1 text-amber-400">HIGH</span>
+                    <span className="text-[9px] ml-1 text-amber-400">{t("high")}</span>
                   )}
                 </div>
               </div>

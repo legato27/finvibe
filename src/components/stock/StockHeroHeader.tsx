@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface Props {
   ticker: string;
@@ -16,44 +17,45 @@ interface Props {
 export function StockHeroHeader({
   ticker, backHref, detail, stockInfo, currentPrice, verdict, conviction, llm,
 }: Props) {
+  const t = useTranslations('stock');
   const llmData = llm || detail?.llm || {};
 
   const stats = [
-    { label: "Mkt Cap", value: stockInfo?.market_cap ? `$${(stockInfo.market_cap / 1e9).toFixed(1)}B` : null },
-    { label: "P/E", value: stockInfo?.pe_ratio ? stockInfo.pe_ratio.toFixed(1) : null },
+    { label: t('mktCap'), value: stockInfo?.market_cap ? `$${(stockInfo.market_cap / 1e9).toFixed(1)}B` : null },
+    { label: t('pe'), value: stockInfo?.pe_ratio ? stockInfo.pe_ratio.toFixed(1) : null },
     {
-      label: "Intrinsic",
+      label: t('intrinsic'),
       value: detail?.intrinsic_value ? `$${detail.intrinsic_value.toFixed(2)}` : null,
-      sub: "DCF",
+      sub: t('dcf'),
     },
     {
-      label: "Intrinsic",
+      label: t('intrinsic'),
       value: (llmData.intrinsic_value ?? llmData.llm_intrinsic_value) != null
         ? `$${Number(llmData.intrinsic_value ?? llmData.llm_intrinsic_value).toFixed(2)}` : null,
-      sub: "AI",
+      sub: t('ai'),
       color: "text-blue-400",
     },
     {
-      label: "MoS",
+      label: t('mos'),
       value: detail?.margin_of_safety != null
         ? `${Number(detail.margin_of_safety).toFixed(1)}%` : null,
       color: detail?.margin_of_safety != null
         ? (detail.margin_of_safety > 0 ? "text-green-400" : "text-red-400") : undefined,
     },
     {
-      label: "MoS",
+      label: t('mos'),
       value: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
         ? `${Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety).toFixed(1)}%` : null,
-      sub: "AI",
+      sub: t('ai'),
       color: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
         ? (Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400") : undefined,
     },
     {
-      label: "52W Range",
+      label: t('fiftyTwoWeekRangeShort'),
       value: stockInfo?.fifty_two_week_low && stockInfo?.fifty_two_week_high
         ? `$${stockInfo.fifty_two_week_low.toFixed(0)}–$${stockInfo.fifty_two_week_high.toFixed(0)}` : null,
     },
-    { label: "Beta", value: stockInfo?.beta ? stockInfo.beta.toFixed(2) : null },
+    { label: t('betaShort'), value: stockInfo?.beta ? stockInfo.beta.toFixed(2) : null },
   ].filter(({ value }) => value !== null);
 
   return (
@@ -72,14 +74,14 @@ export function StockHeroHeader({
               <span className={`text-[10px] px-2 py-0.5 rounded ${
                 detail.moat_rating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
               }`}>
-                {detail.moat_rating} Moat
+                {t('moatLabel', { rating: detail.moat_rating })}
               </span>
             )}
             {!detail?.moat_rating && llmData.moat && llmData.moat !== "None" && (
               <span className={`text-[10px] px-2 py-0.5 rounded ${
                 llmData.moat === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
               }`}>
-                {llmData.moat} Moat (AI)
+                {t('moatLabelAi', { rating: llmData.moat })}
               </span>
             )}
             {detail?.asset_type && detail.asset_type !== "stock" && (
@@ -107,7 +109,7 @@ export function StockHeroHeader({
                 detail.quarterly_trend === "up" ? "text-green-400" : detail.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
               }`}>
                 {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                <span className="text-xs text-muted-foreground">Q</span>
+                <span className="text-xs text-muted-foreground">{t('quarterlyShort')}</span>
               </span>
             )}
 
@@ -117,15 +119,15 @@ export function StockHeroHeader({
                 verdict === "avoid" ? "bg-red-500/15 text-red-400 border border-red-500/30" :
                 "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
               }`}>
-                {verdict} · {conviction || "medium"}
+                {verdict} · {conviction || t('convictionMedium')}
               </span>
             )}
 
             {detail?.enrichment_status === "pending" && (
-              <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">pending</span>
+              <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">{t('statusPending')}</span>
             )}
             {detail?.enrichment_status === "processing" && (
-              <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">enriching</span>
+              <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">{t('statusEnriching')}</span>
             )}
           </div>
 

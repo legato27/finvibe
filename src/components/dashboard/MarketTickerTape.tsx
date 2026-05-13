@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
+import { useLocale } from "next-intl";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -8,6 +9,7 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketTickerTape() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -34,7 +36,7 @@ export function MarketTickerTape() {
       isTransparent: true,
       displayMode: "adaptive",
       colorTheme: "dark",
-      locale: "en",
+      locale: locale === "zh" ? "zh_CN" : "en",
     });
 
     const wrapper = document.createElement("div");
@@ -52,7 +54,7 @@ export function MarketTickerTape() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, []);
+  }, [locale]);
 
   return (
     <div

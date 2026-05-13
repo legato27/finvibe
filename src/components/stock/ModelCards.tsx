@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { modelsApi, stocksApi } from "@/lib/api";
 import {
@@ -10,122 +11,32 @@ import {
 
 type ModelGroup = "forecast" | "risk" | "fundamentals";
 
+// Model type keys used by both MODEL_META icons and translation lookups.
+type ModelTypeKey =
+  | "ensemble" | "kronos" | "lstm_forecast" | "xgboost" | "lightgbm"
+  | "factor_model" | "price_predictor" | "monte_carlo" | "garch"
+  | "mean_reversion" | "altman_zscore" | "piotroski_fscore";
+
 const MODEL_META: Record<
-  string,
-  { label: string; desc: string; long: string; icon: React.ReactNode; group: ModelGroup }
+  ModelTypeKey,
+  { icon: React.ReactNode; group: ModelGroup }
 > = {
-  ensemble: {
-    label: "Ensemble",
-    desc: "Regime-weighted blend of all models",
-    long:
-      "The final blended prediction. We weight the other models by current market conditions — in calm markets we trust momentum models more, in turbulent markets we trust fundamentals more. The percentage is the expected 3-month return. A forecast, not a guarantee.",
-    icon: <Brain className="w-4 h-4" />,
-    group: "forecast",
-  },
-  kronos: {
-    label: "Kronos",
-    desc: "Transformer foundation model trained on 45+ exchanges",
-    long:
-      "An open-source Transformer foundation model (Kronos-base, 102M parameters) pre-trained on candlesticks from 45+ global exchanges. Reads the last ~400 days of OHLCV and autoregressively generates the next 63 days. Confidence bands come from 20 stochastic samples — wider bands mean the model sees multiple plausible futures.",
-    icon: <Brain className="w-4 h-4" />,
-    group: "forecast",
-  },
-  lstm_forecast: {
-    label: "LSTM Forecast",
-    desc: "Neural net with uncertainty estimate",
-    long:
-      "A recurrent neural network that reads the last 60 days of price and volume to predict the next 63. Uses attention to focus on the most important bars. Our confidence interval comes from running the network 50× with random neurons turned off — tighter interval = higher conviction.",
-    icon: <Brain className="w-4 h-4" />,
-    group: "forecast",
-  },
-  xgboost: {
-    label: "XGBoost",
-    desc: "Pattern recognition on 40+ indicators",
-    long:
-      "Tree-based machine learning that reads 40+ technical indicators (RSI, MACD, Bollinger Bands, moving averages, volatility, volume) and learns non-linear patterns from ~10 years of history. Outputs a 3-month return forecast. Only sees price and volume — blind to earnings and news.",
-    icon: <Zap className="w-4 h-4" />,
-    group: "forecast",
-  },
-  lightgbm: {
-    label: "LightGBM",
-    desc: "Fast boosting, handles missing data",
-    long:
-      "Same idea as XGBoost with a faster algorithm and better handling of missing data. Confirms or contradicts XGBoost — if both agree, the technical signal is robust. If they disagree, the pattern is ambiguous.",
-    icon: <Zap className="w-4 h-4" />,
-    group: "forecast",
-  },
-  factor_model: {
-    label: "Factor Model",
-    desc: "Fama-French 5 + Momentum + Quality",
-    long:
-      "Decomposes the stock's return into 7 well-studied drivers: market, size, value, profitability, investment, momentum, and quality. Tells you why the forecast is what it is — e.g. 'mostly a momentum bet' vs. 'pure market exposure'.",
-    icon: <BarChart3 className="w-4 h-4" />,
-    group: "forecast",
-  },
-  price_predictor: {
-    label: "Price Predictor",
-    desc: "Linear regression on technical indicators",
-    long:
-      "A simple linear regression baseline (Ridge/Lasso) on technical indicators. Acts as a sanity check — if the sophisticated models drift far from this simple one, the fancy forecast may be noise.",
-    icon: <Target className="w-4 h-4" />,
-    group: "forecast",
-  },
-  monte_carlo: {
-    label: "Monte Carlo",
-    desc: "10K simulated paths, probability of profit",
-    long:
-      "Simulates 10,000 possible price paths using the stock's historical drift and volatility. The number is the probability of closing higher than today in 3 months. Above 55% = favorable odds, 45–55% = coin flip, below 45% = unfavorable.",
-    icon: <Waves className="w-4 h-4" />,
-    group: "risk",
-  },
-  garch: {
-    label: "GARCH(1,1)",
-    desc: "Volatility forecast, not direction",
-    long:
-      "Does not predict direction. Answers: 'How turbulent will this stock be?' Reads annualized volatility: <25% calm, 25–40% normal, >40% turbulent. Persistence tells you how long a vol spike sticks — near 1.0 means turbulence feeds on itself.",
-    icon: <Activity className="w-4 h-4" />,
-    group: "risk",
-  },
-  mean_reversion: {
-    label: "Mean Reversion",
-    desc: "How stretched is the price vs. its mean",
-    long:
-      "Fits an Ornstein-Uhlenbeck process and measures how far price has drifted from its long-run average, in standard-deviation units. z < -2 → statistically cheap (likely to revert up). z > +2 → statistically rich (likely to revert down). |z| < 1 → near equilibrium. Breaks down on strongly trending stocks.",
-    icon: <Activity className="w-4 h-4" />,
-    group: "risk",
-  },
-  altman_zscore: {
-    label: "Altman Z-Score",
-    desc: "Bankruptcy warning from balance sheet",
-    long:
-      "A classic 5-ratio test on the balance sheet and income statement. SAFE (Z > 2.99) = healthy. GREY (1.81–2.99) = caution. DISTRESS (Z < 1.81) = elevated bankruptcy risk. Designed for manufacturers — banks and pure-tech can misclassify.",
-    icon: <ShieldCheck className="w-4 h-4" />,
-    group: "fundamentals",
-  },
-  piotroski_fscore: {
-    label: "Piotroski F",
-    desc: "9-point fundamental quality check",
-    long:
-      "Nine yes/no checks on profitability, leverage, liquidity, and operational efficiency (each pass = 1 point). 8–9 STRONG (improving fundamentals), 4–7 NEUTRAL, 0–3 WEAK (deteriorating). A trailing indicator — tells you about past health, not future price.",
-    icon: <ShieldAlert className="w-4 h-4" />,
-    group: "fundamentals",
-  },
+  ensemble: { icon: <Brain className="w-4 h-4" />, group: "forecast" },
+  kronos: { icon: <Brain className="w-4 h-4" />, group: "forecast" },
+  lstm_forecast: { icon: <Brain className="w-4 h-4" />, group: "forecast" },
+  xgboost: { icon: <Zap className="w-4 h-4" />, group: "forecast" },
+  lightgbm: { icon: <Zap className="w-4 h-4" />, group: "forecast" },
+  factor_model: { icon: <BarChart3 className="w-4 h-4" />, group: "forecast" },
+  price_predictor: { icon: <Target className="w-4 h-4" />, group: "forecast" },
+  monte_carlo: { icon: <Waves className="w-4 h-4" />, group: "risk" },
+  garch: { icon: <Activity className="w-4 h-4" />, group: "risk" },
+  mean_reversion: { icon: <Activity className="w-4 h-4" />, group: "risk" },
+  altman_zscore: { icon: <ShieldCheck className="w-4 h-4" />, group: "fundamentals" },
+  piotroski_fscore: { icon: <ShieldAlert className="w-4 h-4" />, group: "fundamentals" },
 };
 
 const GROUP_ORDER: ModelGroup[] = ["forecast", "risk", "fundamentals"];
-const GROUP_LABEL: Record<ModelGroup, string> = {
-  forecast: "Forecasts",
-  risk: "Risk & Volatility",
-  fundamentals: "Fundamentals",
-};
-const GROUP_BLURB: Record<ModelGroup, string> = {
-  forecast: "What we expect price to do over the next 3 months.",
-  risk: "How turbulent or stretched the stock looks right now.",
-  fundamentals: "Quality of the underlying business.",
-};
 
-// Light/dark-theme color pairs. Tailwind's -400 shades are designed for dark backgrounds;
-// on the cream light theme they wash out to near-illegible.
 const COLOR = {
   good: "text-green-700 dark:text-green-400",
   bad:  "text-red-700 dark:text-red-400",
@@ -133,7 +44,7 @@ const COLOR = {
   neutral: "text-muted-foreground",
 } as const;
 
-function extractSignal(model: any): { value: string; label: string; color: string } {
+function extractSignal(model: any, t: (k: string, v?: any) => string): { value: string; label: string; color: string } {
   const pred = model.prediction_json || {};
   const type = model.model_type;
 
@@ -171,7 +82,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
     const color = (vol || 0) > 0.4 ? COLOR.bad : (vol || 0) > 0.25 ? COLOR.warn : COLOR.good;
     return {
       value: vol != null ? `${(vol * 100).toFixed(0)}%` : "—",
-      label: persistence != null ? `Persistence: ${persistence.toFixed(2)}` : "Vol",
+      label: persistence != null ? t("persistence", { value: persistence.toFixed(2) }) : t("volLabel"),
       color,
     };
   }
@@ -182,7 +93,7 @@ function extractSignal(model: any): { value: string; label: string; color: strin
     const color = (probProfit || 0) > 0.55 ? COLOR.good : (probProfit || 0) < 0.45 ? COLOR.bad : COLOR.warn;
     return {
       value: probProfit != null ? `${(probProfit * 100).toFixed(0)}%` : "—",
-      label: "Prob. profit",
+      label: t("probProfit"),
       color,
     };
   }
@@ -191,22 +102,22 @@ function extractSignal(model: any): { value: string; label: string; color: strin
   const ret = pred.predicted_3m_return ?? pred.predicted_return ?? pred.forecast_return;
   if (ret != null) {
     const color = ret > 0.03 ? COLOR.good : ret < -0.03 ? COLOR.bad : COLOR.warn;
-    return { value: `${(ret * 100).toFixed(1)}%`, label: "3M return", color };
+    return { value: `${(ret * 100).toFixed(1)}%`, label: t("threeMReturn"), color };
   }
 
   return { value: "—", label: "", color: COLOR.neutral };
 }
 
-function timeAgo(iso: string | null): string {
+function timeAgo(iso: string | null, t: (k: string, v?: any) => string): string {
   if (!iso) return "";
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return t("timeAgo.justNow");
+  if (mins < 60) return t("timeAgo.mins", { n: mins });
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
+  if (hrs < 24) return t("timeAgo.hours", { n: hrs });
   const days = Math.floor(hrs / 24);
-  return `${days}d ago`;
+  return t("timeAgo.days", { n: days });
 }
 
 /** Inline SVG sparkline of a forecast curve with optional p10/p90 band. */
@@ -258,7 +169,7 @@ function ForecastSparkline({ pred, currentPrice }: { pred: any; currentPrice?: n
 }
 
 /** Pick out the most useful scalar fields from `prediction_json` for the expanded detail row. */
-function detailRows(model: any): Array<[string, string]> {
+function detailRows(model: any, t: (k: string, v?: any) => string): Array<[string, string]> {
   const pred = model.prediction_json || {};
   const fmt = (v: unknown): string => {
     if (v == null) return "—";
@@ -272,69 +183,74 @@ function detailRows(model: any): Array<[string, string]> {
   const pct = (v: unknown): string => (typeof v === "number" ? `${(v * 100).toFixed(1)}%` : "—");
 
   const rows: Array<[string, string]> = [];
-  const t = model.model_type;
+  const tt = model.model_type;
 
-  if (pred.current_price != null) rows.push(["Current price", fmt(pred.current_price)]);
-  if (pred.predicted_price_3m != null) rows.push(["Predicted price (3M)", fmt(pred.predicted_price_3m)]);
+  if (pred.current_price != null) rows.push([t("detail.currentPrice"), fmt(pred.current_price)]);
+  if (pred.predicted_price_3m != null) rows.push([t("detail.predictedPrice3m"), fmt(pred.predicted_price_3m)]);
 
-  if (t === "ensemble" && pred.regime) rows.push(["Market regime", String(pred.regime)]);
-  if (t === "kronos" || t === "lstm_forecast") {
-    if (pred.architecture) rows.push(["Architecture", String(pred.architecture)]);
-    if (pred.mc_samples != null) rows.push(["Sample paths", fmt(pred.mc_samples)]);
+  if (tt === "ensemble" && pred.regime) rows.push([t("detail.marketRegime"), String(pred.regime)]);
+  if (tt === "kronos" || tt === "lstm_forecast") {
+    if (pred.architecture) rows.push([t("detail.architecture"), String(pred.architecture)]);
+    if (pred.mc_samples != null) rows.push([t("detail.samplePaths"), fmt(pred.mc_samples)]);
   }
-  if (t === "xgboost" || t === "lightgbm" || t === "price_predictor") {
-    if (pred.r_squared != null) rows.push(["R²", fmt(pred.r_squared)]);
-    if (pred.n_features != null) rows.push(["Features", fmt(pred.n_features)]);
+  if (tt === "xgboost" || tt === "lightgbm" || tt === "price_predictor") {
+    if (pred.r_squared != null) rows.push([t("detail.rSquared"), fmt(pred.r_squared)]);
+    if (pred.n_features != null) rows.push([t("detail.features"), fmt(pred.n_features)]);
   }
-  if (t === "factor_model" && pred.factor_exposures) {
+  if (tt === "factor_model" && pred.factor_exposures) {
     Object.entries(pred.factor_exposures).slice(0, 5).forEach(([k, v]) => rows.push([k, fmt(v)]));
   }
-  if (t === "monte_carlo") {
+  if (tt === "monte_carlo") {
     const d = pred.distribution || pred;
-    if (d.expected_return != null) rows.push(["Expected return", pct(d.expected_return)]);
-    if (d.p05 != null) rows.push(["5th percentile", fmt(d.p05)]);
-    if (d.p50 != null) rows.push(["Median", fmt(d.p50)]);
-    if (d.p95 != null) rows.push(["95th percentile", fmt(d.p95)]);
+    if (d.expected_return != null) rows.push([t("detail.expectedReturn"), pct(d.expected_return)]);
+    if (d.p05 != null) rows.push([t("detail.p05"), fmt(d.p05)]);
+    if (d.p50 != null) rows.push([t("detail.median"), fmt(d.p50)]);
+    if (d.p95 != null) rows.push([t("detail.p95"), fmt(d.p95)]);
   }
-  if (t === "garch") {
-    if (pred.persistence != null) rows.push(["Persistence", fmt(pred.persistence)]);
-    if (pred.long_run_vol != null) rows.push(["Long-run vol", pct(pred.long_run_vol)]);
+  if (tt === "garch") {
+    if (pred.persistence != null) rows.push([t("detail.persistence"), fmt(pred.persistence)]);
+    if (pred.long_run_vol != null) rows.push([t("detail.longRunVol"), pct(pred.long_run_vol)]);
   }
-  if (t === "mean_reversion") {
-    if (pred.half_life != null) rows.push(["Half-life (days)", fmt(pred.half_life)]);
-    if (pred.long_run_mean != null) rows.push(["Long-run mean", fmt(pred.long_run_mean)]);
+  if (tt === "mean_reversion") {
+    if (pred.half_life != null) rows.push([t("detail.halfLife"), fmt(pred.half_life)]);
+    if (pred.long_run_mean != null) rows.push([t("detail.longRunMean"), fmt(pred.long_run_mean)]);
   }
-  if (t === "altman_zscore" && pred.ratios) {
+  if (tt === "altman_zscore" && pred.ratios) {
     Object.entries(pred.ratios).slice(0, 5).forEach(([k, v]) => rows.push([k, fmt(v)]));
   }
-  if (t === "piotroski_fscore" && pred.checks) {
+  if (tt === "piotroski_fscore" && pred.checks) {
     const passed = Object.entries(pred.checks).filter(([, v]) => v).map(([k]) => k);
-    rows.push(["Passed", `${passed.length}/9`]);
+    rows.push([t("detail.passed"), `${passed.length}/9`]);
   }
 
-  if (pred.data_years != null) rows.push(["Data history (yr)", fmt(pred.data_years)]);
-  if (pred.device) rows.push(["Compute", String(pred.device)]);
+  if (pred.data_years != null) rows.push([t("detail.dataYears"), fmt(pred.data_years)]);
+  if (pred.device) rows.push([t("detail.compute"), String(pred.device)]);
 
   return rows;
 }
 
 function ModelCard({
   model,
-  meta,
+  modelTypeKey,
   isEnsemble,
   expanded,
   onToggle,
 }: {
   model: any;
-  meta: { label: string; desc: string; long: string; icon: React.ReactNode };
+  modelTypeKey: ModelTypeKey | null;
   isEnsemble: boolean;
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const signal = extractSignal(model);
+  const t = useTranslations("models");
+  const icon = modelTypeKey ? MODEL_META[modelTypeKey].icon : <BarChart3 className="w-4 h-4" />;
+  const label = modelTypeKey ? t(`meta.${modelTypeKey}.label`) : model.model_type;
+  const desc = modelTypeKey ? t(`meta.${modelTypeKey}.desc`) : "";
+  const long = modelTypeKey ? t(`meta.${modelTypeKey}.long`) : "";
+  const signal = extractSignal(model, t);
   const pred = model.prediction_json || {};
   const hasForecastCurve = Array.isArray(pred?.forecast?.mean) && pred.forecast.mean.length > 1;
-  const rows = useMemo(() => detailRows(model), [model]);
+  const rows = useMemo(() => detailRows(model, t), [model, t]);
 
   return (
     <div
@@ -355,9 +271,9 @@ function ModelCard({
       } ${expanded ? "md:col-span-2 lg:col-span-2" : ""}`}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{meta.icon}</span>
+        <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{icon}</span>
         <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-foreground"}`}>
-          {meta.label}
+          {label}
         </span>
         <ChevronDown
           className={`ml-auto w-3.5 h-3.5 text-muted-foreground transition-transform ${
@@ -373,15 +289,15 @@ function ModelCard({
           {signal.label}
         </div>
       )}
-      <div className="text-[11px] text-muted-foreground mt-1.5 leading-snug">{meta.desc}</div>
+      <div className="text-[11px] text-muted-foreground mt-1.5 leading-snug">{desc}</div>
 
       {expanded && (
         <div className="mt-3 pt-3 border-t border-border/60 space-y-3">
           {hasForecastCurve && (
             <div>
               <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                <span>63-day forecast</span>
-                {pred.forecast?.p10 && pred.forecast?.p90 && <span>p10–p90 band</span>}
+                <span>{t("forecastCurve")}</span>
+                {pred.forecast?.p10 && pred.forecast?.p90 && <span>{t("p10p90Band")}</span>}
               </div>
               <ForecastSparkline pred={pred} currentPrice={pred.current_price} />
             </div>
@@ -398,10 +314,10 @@ function ModelCard({
             </dl>
           )}
 
-          <p className="text-[11px] leading-relaxed text-muted-foreground">{meta.long}</p>
+          <p className="text-[11px] leading-relaxed text-muted-foreground">{long}</p>
 
           {model.run_at && (
-            <div className="text-[10px] text-muted-foreground/80">Last run {timeAgo(model.run_at)}</div>
+            <div className="text-[10px] text-muted-foreground/80">{t("lastRunShort", { ago: timeAgo(model.run_at, t) })}</div>
           )}
         </div>
       )}
@@ -410,6 +326,7 @@ function ModelCard({
 }
 
 export function ModelCards({ ticker }: { ticker: string }) {
+  const t = useTranslations("models");
   const qc = useQueryClient();
   const [taskId, setTaskId] = useState<string | null>(null);
   const [runError, setRunError] = useState<string | null>(null);
@@ -451,7 +368,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
       qc.invalidateQueries({ queryKey: ["model-results", ticker] });
       qc.invalidateQueries({ queryKey: ["model-last-run", ticker] });
       if (taskStatus.status === "FAILURE") {
-        setRunError("Model run failed");
+        setRunError(t("runFailed"));
       } else {
         setGeneratingThoughts(true);
       }
@@ -503,7 +420,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
       if (typeof detail === "object" && detail?.message) {
         setRunError(detail.message);
       } else {
-        setRunError(typeof detail === "string" ? detail : "Failed to start models");
+        setRunError(typeof detail === "string" ? detail : t("failedStart"));
       }
       qc.invalidateQueries({ queryKey: ["model-last-run", ticker] });
     }
@@ -515,7 +432,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
     const out: Record<ModelGroup, any[]> = { forecast: [], risk: [], fundamentals: [] };
     if (!results?.length) return out;
     for (const m of results) {
-      const meta = MODEL_META[m.model_type];
+      const meta = MODEL_META[m.model_type as ModelTypeKey];
       if (!meta) continue;
       out[meta.group].push(m);
     }
@@ -548,19 +465,19 @@ export function ModelCards({ ticker }: { ticker: string }) {
           {lastRunInfo?.last_run && (
             <>
               <Clock className="w-3 h-3" />
-              <span>Last run {timeAgo(lastRunInfo.last_run)}</span>
+              <span>{t("lastRun", { ago: timeAgo(lastRunInfo.last_run, t) })}</span>
             </>
           )}
           {isRunning && (
             <span className="flex items-center gap-1.5 text-primary">
               <Loader2 className="w-3 h-3 animate-spin" />
-              Running models...
+              {t("running")}
             </span>
           )}
           {generatingThoughts && !isRunning && (
             <span className="flex items-center gap-1.5 text-primary">
               <Brain className="w-3 h-3 animate-pulse" />
-              Generating FinVibe&apos;s Thoughts...
+              {t("generatingThoughts")}
             </span>
           )}
           {runError && (
@@ -576,9 +493,9 @@ export function ModelCards({ ticker }: { ticker: string }) {
               : "bg-muted text-muted-foreground/70 cursor-not-allowed"
           }`}
           title={
-            isRunning ? "Models are running..." :
-            !lastRunInfo?.can_run ? `Next run available ${lastRunInfo?.next_available ? timeAgo(lastRunInfo.next_available) : "tomorrow"}` :
-            "Run all quant models"
+            isRunning ? t("modelsRunningTitle") :
+            !lastRunInfo?.can_run ? t("nextAvailable", { when: lastRunInfo?.next_available ? timeAgo(lastRunInfo.next_available, t) : t("tomorrow") }) :
+            t("runAllTitle")
           }
         >
           {isRunning ? (
@@ -586,14 +503,14 @@ export function ModelCards({ ticker }: { ticker: string }) {
           ) : (
             <Play className="w-3.5 h-3.5" />
           )}
-          {isRunning ? "Running..." : "Run Models"}
+          {isRunning ? t("runningShort") : t("runAll")}
         </button>
       </div>
 
       {/* Grouped model cards */}
       {totalRendered === 0 ? (
         <div className="card p-8 text-center text-muted-foreground text-sm">
-          No quant model results yet. Click &quot;Run Models&quot; to generate predictions.
+          {t("empty")}
         </div>
       ) : (
         <div className="space-y-5">
@@ -603,22 +520,18 @@ export function ModelCards({ ticker }: { ticker: string }) {
             return (
               <section key={g}>
                 <div className="flex items-baseline justify-between mb-2 pb-1.5 border-b border-border">
-                  <h3 className="text-sm font-semibold text-foreground">{GROUP_LABEL[g]}</h3>
-                  <p className="text-[11px] text-muted-foreground">{GROUP_BLURB[g]}</p>
+                  <h3 className="text-sm font-semibold text-foreground">{t(`group.${g}`)}</h3>
+                  <p className="text-[11px] text-muted-foreground">{t(`blurb.${g}`)}</p>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 items-start">
                   {items.map((model: any) => {
-                    const meta = MODEL_META[model.model_type] || {
-                      label: model.model_type,
-                      desc: "",
-                      long: "",
-                      icon: <BarChart3 className="w-4 h-4" />,
-                    };
+                    const key = model.model_type as ModelTypeKey;
+                    const known = key in MODEL_META;
                     return (
                       <ModelCard
                         key={model.model_type}
                         model={model}
-                        meta={meta}
+                        modelTypeKey={known ? key : null}
                         isEnsemble={model.model_type === "ensemble"}
                         expanded={expanded.has(model.model_type)}
                         onToggle={() => toggleExpanded(model.model_type)}

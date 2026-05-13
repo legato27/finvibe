@@ -1,9 +1,10 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
-  DollarSign, BookOpen, Clock, Check, X, Loader2, Trash2,
-  AlertTriangle, TrendingUp, TrendingDown, Filter, ArrowUpDown,
+  DollarSign, BookOpen, Check, X, Loader2, Trash2,
+  AlertTriangle, Filter, ArrowUpDown,
 } from "lucide-react";
 import {
   useOptionsTrades,
@@ -30,18 +31,20 @@ function CloseTradeModal({
   }) => void;
   isClosing: boolean;
 }) {
+  const t = useTranslations("trades");
   const [closeType, setCloseType] = useState<"closed" | "expired" | "assigned">("closed");
   const [closePrice, setClosePrice] = useState("");
   const [underlyingPrice, setUnderlyingPrice] = useState("");
   const [notes, setNotes] = useState("");
+
+  const symbol = `${trade.ticker} $${trade.strike_price}${trade.strategy === "cash_secured_put" ? "P" : "C"}`;
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="card p-5 max-w-md w-full space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold">
-            Close Trade — {trade.ticker} ${trade.strike_price}{" "}
-            {trade.strategy === "cash_secured_put" ? "P" : "C"}
+            {t("closeTitle", { symbol })}
           </h3>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             <X className="w-4 h-4" />
@@ -50,20 +53,20 @@ function CloseTradeModal({
 
         <div>
           <label className="text-[10px] text-muted-foreground uppercase mb-1 block">
-            How was it closed?
+            {t("howClosed")}
           </label>
           <div className="flex gap-2">
-            {(["closed", "expired", "assigned"] as const).map((t) => (
+            {(["closed", "expired", "assigned"] as const).map((tp) => (
               <button
-                key={t}
-                onClick={() => setCloseType(t)}
+                key={tp}
+                onClick={() => setCloseType(tp)}
                 className={`flex-1 px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                  closeType === t
+                  closeType === tp
                     ? "bg-primary/20 text-primary border-primary/30"
                     : "bg-accent/30 text-muted-foreground border-border/30 hover:bg-accent/50"
                 }`}
               >
-                {t === "closed" ? "Bought Back" : t === "expired" ? "Expired Worthless" : "Assigned"}
+                {tp === "closed" ? t("boughtBack") : tp === "expired" ? t("expiredWorthless") : t("assigned")}
               </button>
             ))}
           </div>
@@ -72,7 +75,7 @@ function CloseTradeModal({
         {closeType === "closed" && (
           <div>
             <label className="text-[10px] text-muted-foreground uppercase mb-1 block">
-              Buy-back Premium (per share)
+              {t("buybackPremium")}
             </label>
             <input
               type="number"
@@ -88,7 +91,7 @@ function CloseTradeModal({
         {closeType === "assigned" && (
           <div>
             <label className="text-[10px] text-muted-foreground uppercase mb-1 block">
-              Stock Price at Assignment
+              {t("stockPriceAtAssignment")}
             </label>
             <input
               type="number"
@@ -103,31 +106,31 @@ function CloseTradeModal({
 
         <div>
           <label className="text-[10px] text-muted-foreground uppercase mb-1 block">
-            Outcome Notes (for fine-tuning)
+            {t("outcomeNotes")}
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="What happened? Was the thesis correct?"
+            placeholder={t("outcomeNotesPh")}
             rows={2}
             className="w-full px-3 py-2 rounded-lg bg-accent/30 border border-border/30 text-xs focus:outline-none focus:border-primary/50 resize-none"
           />
         </div>
 
         <div className="bg-accent/20 rounded-lg p-3 text-xs">
-          <span className="text-muted-foreground">Premium received: </span>
+          <span className="text-muted-foreground">{t("premiumReceived")} </span>
           <span className="font-mono text-green-400">
             ${(trade.premium * trade.contracts * 100).toFixed(2)}
           </span>
           {closeType === "closed" && closePrice && (
             <>
               <br />
-              <span className="text-muted-foreground">Buy-back cost: </span>
+              <span className="text-muted-foreground">{t("buybackCost")} </span>
               <span className="font-mono text-red-400">
                 ${(parseFloat(closePrice) * trade.contracts * 100).toFixed(2)}
               </span>
               <br />
-              <span className="text-muted-foreground">Net P&L: </span>
+              <span className="text-muted-foreground">{t("netPnl")} </span>
               <span
                 className={`font-mono ${
                   trade.premium - parseFloat(closePrice) >= 0 ? "text-green-400" : "text-red-400"
@@ -140,9 +143,9 @@ function CloseTradeModal({
           {closeType === "expired" && (
             <>
               <br />
-              <span className="text-muted-foreground">Net P&L: </span>
+              <span className="text-muted-foreground">{t("netPnl")} </span>
               <span className="font-mono text-green-400">
-                ${(trade.premium * trade.contracts * 100).toFixed(2)} (max profit)
+                ${(trade.premium * trade.contracts * 100).toFixed(2)} {t("maxProfit")}
               </span>
             </>
           )}
@@ -171,7 +174,7 @@ function CloseTradeModal({
           ) : (
             <Check className="w-3.5 h-3.5" />
           )}
-          {isClosing ? "Closing..." : "Confirm Close"}
+          {isClosing ? t("closing") : t("confirmClose")}
         </button>
       </div>
     </div>
@@ -189,6 +192,7 @@ function TradeRow({
   onClose: (trade: OptionsTrade) => void;
   onDelete: (id: number) => void;
 }) {
+  const t = useTranslations("trades");
   const isOpen = trade.status === "open";
   const isCSP = trade.strategy === "cash_secured_put";
   const daysToExpiry = isOpen
@@ -201,6 +205,17 @@ function TradeRow({
     : 0;
   const isExpiring = isOpen && daysToExpiry <= 7;
   const isExpired = isOpen && daysToExpiry <= 0;
+
+  const statusLabel =
+    trade.status === "open"
+      ? t("open")
+      : trade.status === "closed"
+      ? t("closed")
+      : trade.status === "expired"
+      ? t("expired")
+      : trade.status === "assigned"
+      ? t("assigned")
+      : trade.status;
 
   return (
     <div
@@ -242,7 +257,11 @@ function TradeRow({
                   : "bg-green-500/15 text-green-400"
               }`}
             >
-              {isExpired ? "EXPIRED" : isExpiring ? `${daysToExpiry}d left` : `${daysToExpiry}d`}
+              {isExpired
+                ? t("expired_status")
+                : isExpiring
+                ? t("daysLeft", { days: daysToExpiry })
+                : t("days", { days: daysToExpiry })}
             </span>
           )}
           <span
@@ -256,14 +275,14 @@ function TradeRow({
                 : "bg-muted text-muted-foreground"
             }`}
           >
-            {trade.status}
+            {statusLabel}
           </span>
         </div>
       </div>
 
       <div className="grid grid-cols-5 gap-2 text-center">
         <div>
-          <div className="text-[9px] text-muted-foreground">Entry Price</div>
+          <div className="text-[9px] text-muted-foreground">{t("entryPrice")}</div>
           <div className="font-mono text-xs">
             {trade.underlying_price_at_entry
               ? `$${trade.underlying_price_at_entry.toFixed(2)}`
@@ -271,21 +290,23 @@ function TradeRow({
           </div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground">Premium</div>
+          <div className="text-[9px] text-muted-foreground">{t("premium")}</div>
           <div className="font-mono text-xs text-green-400">${trade.premium.toFixed(2)}</div>
         </div>
         <div>
           <div className="text-[9px] text-muted-foreground">
-            {trade.contracts}x Contract{trade.contracts > 1 ? "s" : ""}
+            {trade.contracts > 1
+              ? t("contractsLabelPlural", { n: trade.contracts })
+              : t("contractsLabel", { n: trade.contracts })}
           </div>
           <div className="font-mono text-xs">
             ${(trade.premium * trade.contracts * 100).toFixed(0)}
           </div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground">Expiry</div>
+          <div className="text-[9px] text-muted-foreground">{t("expiry")}</div>
           <div className="font-mono text-xs">
-            {new Date(trade.expiry_date).toLocaleDateString("en-US", {
+            {new Date(trade.expiry_date).toLocaleDateString(undefined, {
               month: "short",
               day: "numeric",
               year: "2-digit",
@@ -293,7 +314,7 @@ function TradeRow({
           </div>
         </div>
         <div>
-          <div className="text-[9px] text-muted-foreground">P&L</div>
+          <div className="text-[9px] text-muted-foreground">{t("pnl")}</div>
           {trade.realized_pnl != null ? (
             <div
               className={`font-mono text-xs font-bold ${
@@ -316,8 +337,8 @@ function TradeRow({
       {/* Entry date + AI confidence */}
       <div className="flex items-center gap-4 mt-2">
         <div className="text-[9px] text-muted-foreground">
-          Opened:{" "}
-          {new Date(trade.entry_date).toLocaleDateString("en-US", {
+          {t("opened")}{" "}
+          {new Date(trade.entry_date).toLocaleDateString(undefined, {
             month: "short",
             day: "numeric",
             year: "numeric",
@@ -325,7 +346,7 @@ function TradeRow({
         </div>
         {trade.llm_confidence != null && (
           <div className="flex items-center gap-2 flex-1">
-            <div className="text-[9px] text-muted-foreground">AI:</div>
+            <div className="text-[9px] text-muted-foreground">{t("ai")}</div>
             <div className="flex-1 bg-accent/30 rounded-full h-1.5 max-w-[100px]">
               <div
                 className={`h-1.5 rounded-full ${
@@ -345,7 +366,7 @@ function TradeRow({
         )}
         {trade.annualized_return != null && (
           <div className="text-[9px] text-muted-foreground">
-            Ann:{" "}
+            {t("ann")}{" "}
             <span
               className={`font-mono ${
                 trade.annualized_return >= 0 ? "text-green-400" : "text-red-400"
@@ -360,7 +381,7 @@ function TradeRow({
       {/* Outcome Notes */}
       {trade.outcome_notes && (
         <div className="mt-2 text-[9px] text-muted-foreground bg-accent/20 rounded px-2 py-1">
-          <span className="font-semibold">Notes:</span> {trade.outcome_notes}
+          <span className="font-semibold">{t("notesPrefix")}</span> {trade.outcome_notes}
         </div>
       )}
 
@@ -372,14 +393,14 @@ function TradeRow({
             className="flex-1 flex items-center justify-center gap-1 px-3 py-1.5 text-[10px] font-semibold bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
           >
             <Check className="w-3 h-3" />
-            Close Trade
+            {t("closeTrade")}
           </button>
         )}
         <Link
           href={`/stock/${trade.ticker}`}
           className="flex items-center justify-center gap-1 px-3 py-1.5 text-[10px] text-muted-foreground hover:text-foreground hover:bg-accent/50 rounded-lg transition-colors"
         >
-          View Stock
+          {t("viewStock")}
         </Link>
         <button
           onClick={() => onDelete(trade.id)}
@@ -401,6 +422,7 @@ type SortField = "date" | "ticker" | "pnl" | "expiry";
 // ── Main Page ───────────────────────────────────────────────
 
 export default function TradesPage() {
+  const t = useTranslations("trades");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [strategyFilter, setStrategyFilter] = useState<StrategyFilter>("all");
   const [sortField, setSortField] = useState<SortField>("date");
@@ -413,9 +435,9 @@ export default function TradesPage() {
   const deleteTrade = useDeleteOptionsTrade();
 
   // Apply filters
-  let filtered = allTrades.filter((t) => {
-    if (statusFilter !== "all" && t.status !== statusFilter) return false;
-    if (strategyFilter !== "all" && t.strategy !== strategyFilter) return false;
+  let filtered = allTrades.filter((tr) => {
+    if (statusFilter !== "all" && tr.status !== statusFilter) return false;
+    if (strategyFilter !== "all" && tr.strategy !== strategyFilter) return false;
     return true;
   });
 
@@ -439,25 +461,25 @@ export default function TradesPage() {
     return sortAsc ? -cmp : cmp;
   });
 
-  const openTrades = allTrades.filter((t) => t.status === "open");
-  const closedTrades = allTrades.filter((t) => t.status !== "open");
+  const openTrades = allTrades.filter((tr) => tr.status === "open");
+  const closedTrades = allTrades.filter((tr) => tr.status !== "open");
 
   // Stats
-  const totalPnl = closedTrades.reduce((sum, t) => sum + (t.realized_pnl || 0), 0);
+  const totalPnl = closedTrades.reduce((sum, tr) => sum + (tr.realized_pnl || 0), 0);
   const totalPremiumCollected = allTrades.reduce(
-    (sum, t) => sum + t.premium * t.contracts * 100,
+    (sum, tr) => sum + tr.premium * tr.contracts * 100,
     0
   );
   const winRate =
     closedTrades.length > 0
-      ? ((closedTrades.filter((t) => t.was_profitable).length / closedTrades.length) * 100).toFixed(
+      ? ((closedTrades.filter((tr) => tr.was_profitable).length / closedTrades.length) * 100).toFixed(
           0
         )
       : null;
   const avgReturn =
     closedTrades.length > 0
       ? (
-          (closedTrades.reduce((sum, t) => sum + (t.return_on_capital || 0), 0) /
+          (closedTrades.reduce((sum, tr) => sum + (tr.return_on_capital || 0), 0) /
             closedTrades.length) *
           100
         ).toFixed(1)
@@ -465,18 +487,18 @@ export default function TradesPage() {
   const avgAnnualized =
     closedTrades.length > 0
       ? (
-          (closedTrades.reduce((sum, t) => sum + (t.annualized_return || 0), 0) /
+          (closedTrades.reduce((sum, tr) => sum + (tr.annualized_return || 0), 0) /
             closedTrades.length) *
           100
         ).toFixed(1)
       : null;
 
   // Unique tickers
-  const tickers = [...new Set(allTrades.map((t) => t.ticker))];
-  const expiringCount = openTrades.filter((t) => {
+  const tickers = [...new Set(allTrades.map((tr) => tr.ticker))];
+  const expiringCount = openTrades.filter((tr) => {
     const dte = Math.max(
       0,
-      Math.round((new Date(t.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      Math.round((new Date(tr.expiry_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     );
     return dte <= 7;
   }).length;
@@ -512,16 +534,19 @@ export default function TradesPage() {
         <div className="flex items-center gap-3 mb-4">
           <DollarSign className="w-5 h-5 text-primary" />
           <div>
-            <h1 className="text-lg font-bold">Trade Journal</h1>
+            <h1 className="text-lg font-bold">{t("journal")}</h1>
             <p className="text-xs text-muted-foreground">
-              Options trades across all tickers · {allTrades.length} total ·{" "}
-              {tickers.length} ticker{tickers.length !== 1 ? "s" : ""}
+              {t("subtitle", {
+                total: allTrades.length,
+                tickers: tickers.length,
+                plural: tickers.length !== 1 ? "s" : "",
+              })}
             </p>
           </div>
           {expiringCount > 0 && (
             <span className="ml-auto text-[10px] bg-amber-500/15 text-amber-400 px-2.5 py-1 rounded-full animate-pulse flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
-              {expiringCount} expiring soon
+              {t("expiringSoon", { count: expiringCount })}
             </span>
           )}
         </div>
@@ -530,17 +555,17 @@ export default function TradesPage() {
         {allTrades.length > 0 && (
           <div className="grid grid-cols-3 md:grid-cols-7 gap-3">
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Open</div>
+              <div className="text-[9px] text-muted-foreground">{t("open")}</div>
               <div className="font-mono text-sm font-bold text-blue-400">
                 {openTrades.length}
               </div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Closed</div>
+              <div className="text-[9px] text-muted-foreground">{t("closed")}</div>
               <div className="font-mono text-sm font-bold">{closedTrades.length}</div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Total P&L</div>
+              <div className="text-[9px] text-muted-foreground">{t("totalPnl")}</div>
               <div
                 className={`font-mono text-sm font-bold ${
                   totalPnl >= 0 ? "text-green-400" : "text-red-400"
@@ -550,23 +575,23 @@ export default function TradesPage() {
               </div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Premium</div>
+              <div className="text-[9px] text-muted-foreground">{t("premium")}</div>
               <div className="font-mono text-sm font-bold text-green-400">
                 ${totalPremiumCollected.toFixed(0)}
               </div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Win Rate</div>
+              <div className="text-[9px] text-muted-foreground">{t("winRate")}</div>
               <div className="font-mono text-sm font-bold">{winRate ? `${winRate}%` : "—"}</div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Avg Return</div>
+              <div className="text-[9px] text-muted-foreground">{t("avgReturn")}</div>
               <div className="font-mono text-sm font-bold">
                 {avgReturn ? `${avgReturn}%` : "—"}
               </div>
             </div>
             <div className="text-center bg-accent/20 rounded-lg p-2.5">
-              <div className="text-[9px] text-muted-foreground">Avg Ann.</div>
+              <div className="text-[9px] text-muted-foreground">{t("avgAnnualized")}</div>
               <div className="font-mono text-sm font-bold">
                 {avgAnnualized ? `${avgAnnualized}%` : "—"}
               </div>
@@ -581,7 +606,7 @@ export default function TradesPage() {
           {/* Status Filter */}
           <div className="flex items-center gap-1.5">
             <Filter className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground uppercase">Status:</span>
+            <span className="text-[10px] text-muted-foreground uppercase">{t("filterStatus")}</span>
             <div className="flex gap-1">
               {(["all", "open", "closed", "expired", "assigned"] as StatusFilter[]).map((s) => (
                 <button
@@ -593,7 +618,7 @@ export default function TradesPage() {
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                   }`}
                 >
-                  {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
+                  {t(s)}
                 </button>
               ))}
             </div>
@@ -603,11 +628,11 @@ export default function TradesPage() {
 
           {/* Strategy Filter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] text-muted-foreground uppercase">Strategy:</span>
+            <span className="text-[10px] text-muted-foreground uppercase">{t("filterStrategy")}</span>
             <div className="flex gap-1">
               {(
                 [
-                  { value: "all", label: "All" },
+                  { value: "all", label: t("all") },
                   { value: "cash_secured_put", label: "CSP" },
                   { value: "covered_call", label: "CC" },
                 ] as { value: StrategyFilter; label: string }[]
@@ -632,14 +657,14 @@ export default function TradesPage() {
           {/* Sort */}
           <div className="flex items-center gap-1.5">
             <ArrowUpDown className="w-3.5 h-3.5 text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground uppercase">Sort:</span>
+            <span className="text-[10px] text-muted-foreground uppercase">{t("sortLabel")}</span>
             <div className="flex gap-1">
               {(
                 [
-                  { value: "date", label: "Date" },
-                  { value: "ticker", label: "Ticker" },
-                  { value: "expiry", label: "Expiry" },
-                  { value: "pnl", label: "P&L" },
+                  { value: "date", label: t("sortDate") },
+                  { value: "ticker", label: t("sortTicker") },
+                  { value: "expiry", label: t("sortExpiry") },
+                  { value: "pnl", label: t("sortPnl") },
                 ] as { value: SortField; label: string }[]
               ).map((s) => (
                 <button
@@ -673,13 +698,8 @@ export default function TradesPage() {
       {!isLoading && allTrades.length === 0 && (
         <div className="card p-12 text-center text-muted-foreground">
           <BookOpen className="w-14 h-14 mx-auto mb-3 opacity-30" />
-          <p className="text-base font-medium">No trades yet</p>
-          <p className="text-xs mt-2 max-w-md mx-auto">
-            Go to any stock&apos;s{" "}
-            <span className="text-primary font-medium">Options</span> tab to view
-            AI-generated Cash Secured Put and Covered Call recommendations, then click
-            &quot;Add to Trade Journal&quot; to start tracking.
-          </p>
+          <p className="text-base font-medium">{t("noTrades")}</p>
+          <p className="text-xs mt-2 max-w-md mx-auto">{t("emptyHint")}</p>
         </div>
       )}
 
@@ -687,7 +707,7 @@ export default function TradesPage() {
       {!isLoading && allTrades.length > 0 && filtered.length === 0 && (
         <div className="card p-8 text-center text-muted-foreground">
           <Filter className="w-8 h-8 mx-auto mb-2 opacity-30" />
-          <p className="text-sm">No trades match the current filters.</p>
+          <p className="text-sm">{t("noMatchFilters")}</p>
         </div>
       )}
 
@@ -695,7 +715,7 @@ export default function TradesPage() {
       {!isLoading && filtered.length > 0 && (
         <div className="space-y-3">
           <div className="text-[10px] text-muted-foreground px-1">
-            Showing {filtered.length} of {allTrades.length} trades
+            {t("showingOf", { shown: filtered.length, total: allTrades.length })}
           </div>
           {filtered.map((trade) => (
             <TradeRow

@@ -1,5 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { scannerApi } from "@/lib/api";
 import {
   TrendingUp,
@@ -98,16 +99,19 @@ function MacdBadge({ signal }: { signal: string }) {
 }
 
 function VolBadge({ trend }: { trend: string }) {
+  const t = useTranslations("technical");
   const color = trend === "spike" ? "text-amber-400 bg-amber-500/10" : trend === "above_avg" ? "text-slate-300 bg-slate-800" : "text-slate-500 bg-slate-800/50";
-  return <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${color}`}>Vol {trend.replace(/_/g, " ")}</span>;
+  return <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${color}`}>{t("volPrefix")} {trend.replace(/_/g, " ")}</span>;
 }
 
 function BbBadge({ position, squeeze }: { position: string; squeeze: boolean }) {
+  const t = useTranslations("technical");
   const color = squeeze ? "text-amber-400 bg-amber-500/10" : "text-slate-500 bg-slate-800/50";
-  return <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${color}`}>BB {squeeze ? "SQUEEZE" : position.replace(/_/g, " ")}</span>;
+  return <span className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${color}`}>BB {squeeze ? t("bbSqueeze") : position.replace(/_/g, " ")}</span>;
 }
 
 function TimeframeCard({ tf, isTop }: { tf: TimeframeAnalysis; isTop: boolean }) {
+  const t = useTranslations("technical");
   const trend = tf.trend;
   const pattern = tf.pattern;
   const ind = tf.indicators;
@@ -124,7 +128,7 @@ function TimeframeCard({ tf, isTop }: { tf: TimeframeAnalysis; isTop: boolean })
           <span className="text-sm font-mono font-bold text-slate-200">{tf.timeframe}</span>
           {isTop && (
             <span className="text-[8px] px-1.5 py-0.5 bg-primary/25 text-primary rounded-full font-bold tracking-wider uppercase">
-              Top
+              {t("top")}
             </span>
           )}
         </div>
@@ -132,7 +136,7 @@ function TimeframeCard({ tf, isTop }: { tf: TimeframeAnalysis; isTop: boolean })
           <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full ${tCfg.bg} ${tCfg.border} border`}>
             <TrendIcon className={`w-3.5 h-3.5 ${tCfg.color}`} />
             <span className={`text-[11px] font-semibold ${tCfg.color} capitalize`}>
-              {trend.direction}{trend.strength === "strong" ? "" : ` (${trend.strength})`}
+              {t(`trend.${trend.direction}`)}{trend.strength === "strong" ? "" : ` (${t(`strength.${trend.strength}`)})`}
             </span>
           </div>
         )}
@@ -192,7 +196,7 @@ function TimeframeCard({ tf, isTop }: { tf: TimeframeAnalysis; isTop: boolean })
         );
       })() : (
         <div className="rounded-lg border border-border/30 bg-slate-900/20 p-3">
-          <p className="text-[11px] text-slate-600 italic text-center">No active pattern</p>
+          <p className="text-[11px] text-slate-600 italic text-center">{t("noPattern")}</p>
         </div>
       )}
 
@@ -212,6 +216,7 @@ function TimeframeCard({ tf, isTop }: { tf: TimeframeAnalysis; isTop: boolean })
 /* ── Main Component ── */
 
 export function TechnicalAnalysis({ ticker }: { ticker: string }) {
+  const t = useTranslations("technical");
   const { data, isLoading, error } = useQuery<PatternData>({
     queryKey: ["patterns", ticker],
     queryFn: () => scannerApi.patterns(ticker),
@@ -227,13 +232,13 @@ export function TechnicalAnalysis({ ticker }: { ticker: string }) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-primary" />
-          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wide">Technical Analysis</h2>
+          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-wide">{t("title")}</h2>
         </div>
         {overallCfg && data?.overall_trend && (
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full border ${overallCfg.bg} ${overallCfg.border}`}>
             <OverallIcon className={`w-4 h-4 ${overallCfg.color}`} />
             <span className={`text-xs font-bold ${overallCfg.color} capitalize`}>
-              {data.overall_trend}
+              {t(`trend.${data.overall_trend as "uptrend" | "downtrend" | "ranging"}`)}
             </span>
           </div>
         )}
@@ -248,14 +253,14 @@ export function TechnicalAnalysis({ ticker }: { ticker: string }) {
       {isLoading && (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="w-5 h-5 animate-spin text-slate-500" />
-          <span className="ml-2 text-sm text-slate-500">Analyzing current price action...</span>
+          <span className="ml-2 text-sm text-slate-500">{t("analyzing")}</span>
         </div>
       )}
 
       {error && (
         <div className="flex items-center gap-2 py-4 text-sm text-red-400">
           <AlertTriangle className="w-4 h-4" />
-          Failed to load analysis
+          {t("loadFailed")}
         </div>
       )}
 
