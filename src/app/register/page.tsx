@@ -4,8 +4,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export default function RegisterPage() {
+  const t = useTranslations("auth");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -14,6 +16,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
+  void router;
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -46,8 +49,8 @@ export default function RegisterPage() {
             <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={240} height={96} priority />
           </div>
           <div className="p-4 rounded-lg bg-green-950/50 border border-green-800 text-green-400 text-sm">
-            Check your email to confirm your account, then{" "}
-            <Link href="/login" className="underline">sign in</Link>.
+            {t("checkEmail")}{" "}
+            <Link href="/login" className="underline">{t("signInLink")}</Link>.
           </div>
         </div>
       </div>
@@ -61,7 +64,7 @@ export default function RegisterPage() {
           <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={240} height={96} priority />
         </div>
 
-        <h2 className="text-center text-sm text-slate-400 mb-6">Create your account</h2>
+        <h2 className="text-center text-sm text-slate-400 mb-6">{t("signUpTitle")}</h2>
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-red-950/50 border border-red-800 text-red-400 text-xs">
@@ -71,17 +74,17 @@ export default function RegisterPage() {
 
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Display name</label>
+            <label className="block text-xs text-slate-400 mb-1">{t("fullName")}</label>
             <input
               type="text"
               value={displayName}
               onChange={(e) => setDisplayName(e.target.value)}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Your name"
+              placeholder={t("fullName")}
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Email</label>
+            <label className="block text-xs text-slate-400 mb-1">{t("email")}</label>
             <input
               type="email"
               value={email}
@@ -92,13 +95,13 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-xs text-slate-400 mb-1">Password</label>
+            <label className="block text-xs text-slate-400 mb-1">{t("password")}</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="Min 6 characters"
+              placeholder="••••••••"
               minLength={6}
               required
             />
@@ -108,13 +111,13 @@ export default function RegisterPage() {
             disabled={loading}
             className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
           >
-            {loading ? "Creating account..." : "Create account"}
+            {loading ? `${t("signUpButton")}…` : t("signUpButton")}
           </button>
         </form>
 
         <p className="text-center text-xs text-slate-500 mt-6">
-          Already have an account?{" "}
-          <Link href="/login" className="text-primary hover:underline">Sign in</Link>
+          {t("hasAccount")}{" "}
+          <Link href="/login" className="text-primary hover:underline">{t("signInLink")}</Link>
         </p>
       </div>
     </div>

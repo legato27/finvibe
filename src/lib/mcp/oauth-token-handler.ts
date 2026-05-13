@@ -290,6 +290,7 @@ async function issueTokens(
     scope: args.scope,
     access_expires_at,
     refresh_expires_at,
+    resource: args.resource,
   });
   if (error) return err("server_error", error.message, 500);
 

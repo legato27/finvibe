@@ -3,8 +3,10 @@ import Link from "next/link";
 import { LandingHero } from "@/components/dashboard/LandingHero";
 import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 import { Gauge, Activity, Layers, TrendingUp, Radio, Shield, ArrowRight, CheckCircle2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function MarketingLanding() {
+  const t = useTranslations("landingExtended");
   return (
     <div className="space-y-12 sm:space-y-20 pb-8">
       {/* Live ticker — shows the product is live */}
@@ -18,10 +20,10 @@ export function MarketingLanding() {
       {/* ── How it works ───────────────────────────────── */}
       <section className="space-y-6">
         <header className="text-center space-y-2">
-          <span className="section-eyebrow">How it works</span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Three reads, one coffee.</h2>
+          <span className="section-eyebrow">{t("howItWorksEyebrow")}</span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">{t("howItWorksTitle")}</h2>
           <p className="section-intro mx-auto">
-            Open VibeFin in the morning and you&apos;ll know the regime, the risk, and what&apos;s worth watching — in under a minute.
+            {t("howItWorksIntro")}
           </p>
         </header>
 
@@ -30,20 +32,20 @@ export function MarketingLanding() {
             {
               step: "01",
               icon: Gauge,
-              title: "Read the regime",
-              desc: "Green, yellow, orange or red. A plain-English call on whether to lean in or step back, backed by macro + vol + breadth.",
+              title: t("step1Title"),
+              desc: t("step1Desc"),
             },
             {
               step: "02",
               icon: Shield,
-              title: "Check the risk",
-              desc: "VIX for pricing fear, GEX for dealer positioning, and a swarm indicator for crowd momentum — all in one glance.",
+              title: t("step2Title"),
+              desc: t("step2Desc"),
             },
             {
               step: "03",
               icon: Radio,
-              title: "Follow what matters",
-              desc: "Your watchlist, sector leaders, live news and OSINT signals — no scrolling twelve tabs to find the why.",
+              title: t("step3Title"),
+              desc: t("step3Desc"),
             },
           ].map(({ step, icon: Icon, title, desc }) => (
             <div
@@ -64,23 +66,23 @@ export function MarketingLanding() {
       {/* ── Feature strip ───────────────────────────────── */}
       <section className="space-y-6">
         <header className="text-center space-y-2">
-          <span className="section-eyebrow">What&apos;s inside</span>
-          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">Every signal worth watching.</h2>
+          <span className="section-eyebrow">{t("whatsInsideEyebrow")}</span>
+          <h2 className="text-2xl sm:text-3xl font-bold text-foreground">{t("whatsInsideTitle")}</h2>
           <p className="section-intro mx-auto">
-            Institutional-grade data, rewritten for humans. No Bloomberg terminal required.
+            {t("whatsInsideIntro")}
           </p>
         </header>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[
-            { icon: Gauge, title: "Risk regime", desc: "Daily green/yellow/red score across macro, vol and breadth." },
-            { icon: Activity, title: "Live breadth", desc: "Advancers, decliners, new highs — is the rally real?" },
-            { icon: Layers, title: "Sector rotation", desc: "Who's leading, who's lagging, and where money is flowing." },
-            { icon: TrendingUp, title: "Options flow", desc: "GEX, put/call, and dealer positioning at a glance." },
-            { icon: Shield, title: "VIX & term", desc: "Fear pricing plus the forward curve shape." },
-            { icon: Radio, title: "Live news", desc: "Real-time headlines tagged and ranked by market impact." },
-            { icon: Activity, title: "Crypto pulse", desc: "Fear & greed, BTC dominance, ETH/BTC — the risk-on read." },
-            { icon: Layers, title: "OSINT feed", desc: "Filings, regulator moves, and supply-chain chatter." },
+            { icon: Gauge, title: t("featRiskRegimeTitle"), desc: t("featRiskRegimeDesc") },
+            { icon: Activity, title: t("featLiveBreadthTitle"), desc: t("featLiveBreadthDesc") },
+            { icon: Layers, title: t("featSectorRotationTitle"), desc: t("featSectorRotationDesc") },
+            { icon: TrendingUp, title: t("featOptionsFlowTitle"), desc: t("featOptionsFlowDesc") },
+            { icon: Shield, title: t("featVixTermTitle"), desc: t("featVixTermDesc") },
+            { icon: Radio, title: t("featLiveNewsTitle"), desc: t("featLiveNewsDesc") },
+            { icon: Activity, title: t("featCryptoPulseTitle"), desc: t("featCryptoPulseDesc") },
+            { icon: Layers, title: t("featOsintFeedTitle"), desc: t("featOsintFeedDesc") },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="card-3d p-4 rounded-xl border border-border bg-card">
               <Icon className="w-5 h-5 text-primary mb-3" />
@@ -95,23 +97,22 @@ export function MarketingLanding() {
       <section className="rounded-2xl border border-border bg-gradient-to-br from-card via-card to-background p-6 sm:p-10">
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1.2fr] gap-8 items-center">
           <div>
-            <span className="section-eyebrow">Built for</span>
+            <span className="section-eyebrow">{t("builtForEyebrow")}</span>
             <h2 className="text-2xl sm:text-3xl font-bold text-foreground mt-3 leading-tight">
-              Self-directed investors who want signal, not noise.
+              {t("builtForTitle")}
             </h2>
             <p className="text-sm text-muted-foreground mt-3 leading-relaxed">
-              If you manage your own portfolio and spend the first twenty minutes of every day stitching together CNBC,
-              Twitter, Bloomberg snippets and five chart tabs — VibeFin collapses that into one view.
+              {t("builtForDesc")}
             </p>
           </div>
 
           <ul className="space-y-3">
             {[
-              "Understand the market regime without parsing 20 charts",
-              "Spot risk building up before it shows up in your P&L",
-              "Track your watchlist against the macro picture side-by-side",
-              "Get the why behind the moves — live news + OSINT",
-              "Mobile-friendly: the same read on your phone at the café",
+              t("benefit1"),
+              t("benefit2"),
+              t("benefit3"),
+              t("benefit4"),
+              t("benefit5"),
             ].map((item) => (
               <li key={item} className="flex items-start gap-3">
                 <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))] flex-shrink-0 mt-0.5" />
@@ -127,23 +128,23 @@ export function MarketingLanding() {
         <div className="hero-glow opacity-60" aria-hidden />
         <div className="relative">
           <h2 className="text-2xl sm:text-4xl font-bold text-foreground leading-tight">
-            Your daily market vibe check.
+            {t("finalCtaTitle")}
           </h2>
           <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-xl mx-auto">
-            Free to start. No credit card. Sign up in 30 seconds and see today&apos;s read.
+            {t("finalCtaSubtitle")}
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link
               href="/register"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg shadow-primary/30"
             >
-              Create free account <ArrowRight className="w-4 h-4" />
+              {t("createFreeAccount")} <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               href="/login"
               className="inline-flex items-center gap-2 px-6 py-3 rounded-lg border border-border bg-card/70 backdrop-blur text-foreground text-sm font-semibold hover:bg-accent transition-colors"
             >
-              Sign in
+              {t("signIn")}
             </Link>
           </div>
         </div>

@@ -3,8 +3,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { ArrowRight, Sparkles, TrendingUp, Activity, Gauge, Layers } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function LandingHero() {
+  const t = useTranslations("landingExtended");
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -23,19 +25,18 @@ export function LandingHero() {
         <div className="relative z-10 flex flex-col justify-center">
           <span className="section-eyebrow self-start mb-4">
             <Sparkles className="w-3 h-3" />
-            Your Daily Market Vibe Check
+            {t("heroEyebrow")}
           </span>
 
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-[1.1]">
-            Understand the market
+            {t("heroHeadline1")}
             <span className="block bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--success))] to-[hsl(var(--primary))] bg-clip-text text-transparent">
-              at a glance.
+              {t("heroHeadline2")}
             </span>
           </h1>
 
           <p className="mt-4 text-sm sm:text-base text-muted-foreground max-w-xl leading-relaxed">
-            VibeFin turns noisy macro signals, volatility, options flow and breadth into a simple daily read —
-            so you know whether to lean in, stay cautious, or sit this one out.
+            {t("heroSubtitle")}
           </p>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -44,31 +45,31 @@ export function LandingHero() {
                 href="/watchlist"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg shadow-primary/20"
               >
-                Open my watchlist <ArrowRight className="w-4 h-4" />
+                {t("openWatchlist")} <ArrowRight className="w-4 h-4" />
               </Link>
             ) : (
               <Link
                 href="/register"
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg shadow-primary/20"
               >
-                Get started — it&apos;s free <ArrowRight className="w-4 h-4" />
+                {t("getStartedFree")} <ArrowRight className="w-4 h-4" />
               </Link>
             )}
             <a
               href="#market-pulse"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-border bg-card/50 text-foreground text-sm font-medium hover:bg-accent transition-colors"
             >
-              See today&apos;s read
+              {t("seeTodaysRead")}
             </a>
           </div>
 
           {/* Feature pills */}
           <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2">
             {[
-              { icon: Gauge, label: "Risk regime" },
-              { icon: Activity, label: "Live breadth" },
-              { icon: Layers, label: "Sector rotation" },
-              { icon: TrendingUp, label: "Options flow" },
+              { icon: Gauge, label: t("pillRiskRegime") },
+              { icon: Activity, label: t("pillLiveBreadth") },
+              { icon: Layers, label: t("pillSectorRotation") },
+              { icon: TrendingUp, label: t("pillOptionsFlow") },
             ].map(({ icon: Icon, label }) => (
               <div
                 key={label}

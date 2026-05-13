@@ -6,12 +6,14 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, DollarSign, Settings } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
+import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
+import { useTranslations } from "next-intl";
 import type { User } from "@supabase/supabase-js";
 
 const themeOptions = [
-  { value: "light" as const, icon: Sun, label: "Light" },
-  { value: "dark" as const, icon: Moon, label: "Dark" },
-  { value: "auto" as const, icon: Monitor, label: "Auto" },
+  { value: "light" as const, icon: Sun },
+  { value: "dark" as const, icon: Moon },
+  { value: "auto" as const, icon: Monitor },
 ];
 
 export default function Navbar() {
@@ -20,6 +22,8 @@ export default function Navbar() {
   const router = useRouter();
   const supabase = createClient();
   const { theme, setTheme } = useTheme();
+  const tNav = useTranslations("nav");
+  const tCommon = useTranslations("common");
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => setUser(data.user));
@@ -44,12 +48,16 @@ export default function Navbar() {
   }
 
   const ThemeIcon = themeOptions.find((o) => o.value === theme)?.icon || Monitor;
+  const themeLabel =
+    theme === "light" ? tCommon("themeLight")
+    : theme === "dark" ? tCommon("themeDark")
+    : tCommon("themeAuto");
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: BarChart2, public: true },
-    { href: "/watchlist", label: "Watchlists", icon: BookOpen, public: false },
-    { href: "/portfolio", label: "Portfolio", icon: Briefcase, public: false },
-    { href: "/trades", label: "Trades", icon: DollarSign, public: false },
+    { href: "/", label: tNav("dashboard"), icon: BarChart2, public: true },
+    { href: "/watchlist", label: tNav("watchlist"), icon: BookOpen, public: false },
+    { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
+    { href: "/trades", label: tNav("trades"), icon: DollarSign, public: false },
   ];
 
   const visibleItems = navItems.filter((item) => item.public || user);
@@ -61,8 +69,8 @@ export default function Navbar() {
         <Link href="/" className="flex items-center gap-2">
           <Image src="/vibefin-icon.svg" alt="VibeFin" width={28} height={28} />
           <div className="flex flex-col">
-            <span className="text-sm font-semibold text-foreground leading-tight">vibefin</span>
-            <span className="text-[10px] text-muted-foreground leading-tight hidden sm:block">your daily market vibe check</span>
+            <span className="text-sm font-semibold text-foreground leading-tight">{tCommon("appName")}</span>
+            <span className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{tCommon("tagline")}</span>
           </div>
         </Link>
 
@@ -86,14 +94,17 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-3">
+          {/* Language toggle */}
+          <LanguageSwitcher />
+
           {/* Theme toggle */}
           <button
             onClick={cycleTheme}
             className="flex items-center gap-1.5 px-2 py-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-            title={`Theme: ${theme}`}
+            title={`${tCommon("theme")}: ${themeLabel}`}
           >
             <ThemeIcon className="w-4 h-4" />
-            <span className="text-[10px] uppercase tracking-wider hidden sm:inline">{theme}</span>
+            <span className="text-[10px] uppercase tracking-wider hidden sm:inline">{themeLabel}</span>
           </button>
 
           {user ? (
@@ -104,14 +115,14 @@ export default function Navbar() {
               <Link
                 href="/settings"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                title="Settings"
+                title={tCommon("settings")}
               >
                 <Settings className="w-3.5 h-3.5" />
               </Link>
               <button
                 onClick={handleSignOut}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                title="Sign out"
+                title={tCommon("signOut")}
               >
                 <LogOut className="w-3.5 h-3.5" />
               </button>
@@ -122,7 +133,7 @@ export default function Navbar() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-primary hover:bg-primary/10 transition-colors"
             >
               <LogIn className="w-4 h-4" />
-              Sign in
+              {tCommon("signIn")}
             </Link>
           )}
         </div>
