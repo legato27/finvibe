@@ -1,6 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { osintApi } from "@/lib/api";
 
 // Using a lightweight SVG world map approximation for Phase 7 — no extra map
@@ -9,6 +10,7 @@ import { osintApi } from "@/lib/api";
 // already in the shape either library expects.
 
 export default function OsintMapPage() {
+  const t = useTranslations("osint");
   const [eventType, setEventType] = useState("");
   const [hours, setHours] = useState(24);
 
@@ -40,28 +42,28 @@ export default function OsintMapPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold">OSINT — World Map</h1>
+        <h1 className="text-2xl font-bold">{t("worldMapTitle")}</h1>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <select value={eventType} onChange={(e) => setEventType(e.target.value)}
           className="bg-slate-700 rounded px-2 py-1 text-sm">
-          <option value="">All types</option>
-          <option value="armed_conflict">Armed conflict</option>
-          <option value="cyber_advisory">Cyber</option>
-          <option value="sanctions_change">Sanctions</option>
-          <option value="humanitarian">Humanitarian</option>
+          <option value="">{t("allTypes")}</option>
+          <option value="armed_conflict">{t("etArmedConflict")}</option>
+          <option value="cyber_advisory">{t("etCyber")}</option>
+          <option value="sanctions_change">{t("etSanctions")}</option>
+          <option value="humanitarian">{t("etHumanitarian")}</option>
         </select>
         <select value={hours} onChange={(e) => setHours(Number(e.target.value))}
           className="bg-slate-700 rounded px-2 py-1 text-sm">
-          <option value={6}>Last 6h</option>
-          <option value={24}>Last 24h</option>
-          <option value={72}>Last 72h</option>
+          <option value={6}>{t("last6h")}</option>
+          <option value={24}>{t("last24h")}</option>
+          <option value={72}>{t("last72h")}</option>
         </select>
       </div>
 
       {isLoading ? (
-        <div className="text-slate-400">Loading events…</div>
+        <div className="text-slate-400">{t("loadingEvents")}</div>
       ) : (
         <div className="relative w-full aspect-[2/1] bg-slate-900 rounded overflow-hidden border border-slate-700">
           <svg viewBox="0 0 1000 500" className="w-full h-full">
@@ -90,13 +92,12 @@ export default function OsintMapPage() {
             })}
           </svg>
           <div className="absolute top-2 right-2 text-xs text-slate-400 bg-slate-900/70 px-2 py-1 rounded">
-            {features.length} events
+            {t("eventsCount", { count: features.length })}
           </div>
         </div>
       )}
       <div className="text-xs text-slate-500">
-        Placeholder world grid; swap for react-leaflet or mapbox-gl when a tile key is configured.
-        GeoJSON payload from /api/osint/map is already in the shape either expects.
+        {t("mapPlaceholderNote")}
       </div>
     </div>
   );

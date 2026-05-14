@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import {
@@ -24,10 +25,11 @@ interface SP {
 export default async function ConsentPage(props: {
   searchParams: Promise<SP>;
 }) {
+  const t = await getTranslations("settings");
   const sp = await props.searchParams;
   const {
     client_id,
-    client_name = "an unknown client",
+    client_name,
     redirect_uri,
     code_challenge,
     code_challenge_method,
@@ -35,6 +37,7 @@ export default async function ConsentPage(props: {
     state,
     resource,
   } = sp;
+  const displayClient = client_name || t("consent.unknownClient");
 
   if (
     !client_id ||
@@ -45,11 +48,10 @@ export default async function ConsentPage(props: {
     return (
       <div className="container mx-auto px-4 py-8 max-w-md">
         <h1 className="text-xl font-semibold text-foreground">
-          Invalid OAuth request
+          {t("consent.invalidTitle")}
         </h1>
         <p className="text-sm text-muted-foreground mt-2">
-          The MCP client sent missing or invalid parameters. Close this tab
-          and try connecting again.
+          {t("consent.invalidBody")}
         </p>
       </div>
     );
@@ -126,38 +128,42 @@ export default async function ConsentPage(props: {
   return (
     <div className="container mx-auto px-4 py-8 max-w-md">
       <h1 className="text-xl font-semibold text-foreground">
-        Authorize MCP access
+        {t("consent.title")}
       </h1>
       <p className="text-sm text-muted-foreground mt-2">
-        <span className="font-medium text-foreground">{client_name}</span>{" "}
-        wants to access your vibefin account on your behalf.
+        {t.rich("consent.subtitle", {
+          client: () => (
+            <span className="font-medium text-foreground">{displayClient}</span>
+          ),
+        })}
       </p>
       <div className="card mt-4">
         <div className="p-4 space-y-3 text-sm">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Signed in as
+              {t("consent.signedInAs")}
             </div>
             <div className="text-foreground">{user!.email}</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Redirect target
+              {t("consent.redirectTarget")}
             </div>
             <div className="text-foreground font-mono text-xs">{displayHost}</div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-              Scope
+              {t("consent.scope")}
             </div>
             <div className="text-foreground">{scope}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Manage your watchlists, portfolios, holdings, sells, and read
-              market data. See the{" "}
-              <Link href="/mcp" className="underline">
-                full tool list
-              </Link>
-              .
+              {t.rich("consent.scopeDesc", {
+                link: (chunks) => (
+                  <Link href="/mcp" className="underline">
+                    {chunks}
+                  </Link>
+                ),
+              })}
             </p>
           </div>
         </div>
@@ -175,22 +181,24 @@ export default async function ConsentPage(props: {
           formAction={approve}
           className="flex-1 px-4 py-2 rounded-lg bg-primary/20 border border-primary/50 text-foreground hover:bg-primary/30 text-sm"
         >
-          Approve
+          {t("consent.approve")}
         </button>
         <button
           formAction={deny}
           className="flex-1 px-4 py-2 rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground hover:border-red-400/40 text-sm"
         >
-          Deny
+          {t("consent.deny")}
         </button>
       </form>
 
       <p className="text-[10px] text-muted-foreground mt-4">
-        You can revoke this access any time at{" "}
-        <Link href="/settings" className="underline">
-          /settings
-        </Link>
-        .
+        {t.rich("consent.revokeAnyTime", {
+          link: (chunks) => (
+            <Link href="/settings" className="underline">
+              {chunks}
+            </Link>
+          ),
+        })}
       </p>
     </div>
   );

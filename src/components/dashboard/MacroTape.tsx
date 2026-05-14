@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { TrendingUp, TrendingDown } from "lucide-react";
@@ -42,16 +43,17 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-const INSTRUMENT_TIPS: Record<string, string> = {
-  DXY: "US Dollar Index — measures USD vs basket of 6 currencies. Rising DXY = tighter financial conditions, headwind for equities and commodities. Falling DXY = easier conditions, tailwind for risk assets and gold.",
-  US10Y: "10-Year Treasury Yield — the benchmark risk-free rate. Rising yields = tighter conditions, growth concerns, pressure on growth stocks. Falling yields = flight to safety or easing expectations.",
-  Gold: "Gold futures — the ultimate safe haven. Rises during fear, inflation, and USD weakness. Strong gold + weak equities = risk-off regime. Strong gold + strong equities = inflation hedge.",
-  Oil: "WTI Crude Oil — the economic activity barometer. Rising oil = demand strength or supply shock (inflationary). Falling oil = demand destruction (recessionary). Watch for divergence vs equities.",
-  HYG: "High Yield Corporate Bond ETF — credit market stress gauge. Falling HYG = credit spreads widening, default risk rising, risk-off. Rising HYG = credit markets calm. HYG often leads equity turns by 1-2 weeks.",
-  Copper: "Copper futures — 'Dr. Copper' has a PhD in economics. Rising copper = global manufacturing expansion. Falling copper = industrial slowdown. One of the most reliable leading indicators of economic activity.",
+const INSTRUMENT_TIP_KEYS: Record<string, string> = {
+  DXY: "macroTipDxy",
+  US10Y: "macroTipUs10y",
+  Gold: "macroTipGold",
+  Oil: "macroTipOil",
+  HYG: "macroTipHyg",
+  Copper: "macroTipCopper",
 };
 
 export function MacroTape() {
+  const t = useTranslations("dashboard");
   const { data } = useQuery({
     queryKey: ["macro_tape"],
     queryFn: async () => {
@@ -69,10 +71,10 @@ export function MacroTape() {
     <div className="card">
       <div className="flex items-center justify-between px-3 pt-2 pb-1">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-          Macro Tape
-          <InfoTip tip="Cross-asset macro indicators that provide context for equity positioning. These 6 instruments together tell you about dollar strength, interest rates, inflation expectations, credit stress, and global growth. Divergences between them often signal regime shifts before equities react." />
+          {t("macroTapeTitle")}
+          <InfoTip tip={t("macroTapeInfo")} />
         </span>
-        <span className="text-[9px] text-slate-600">3M sparklines</span>
+        <span className="text-[9px] text-slate-600">{t("macroTapeSubtitle")}</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border/20">
@@ -80,13 +82,15 @@ export function MacroTape() {
           const up1d = inst.change_1d >= 0;
           const up1m = inst.change_1m >= 0;
           const sparkColor = up1m ? "#22c55e" : "#ef4444";
+          const tipKey = INSTRUMENT_TIP_KEYS[inst.key];
+          const tipText = tipKey ? t(tipKey) : t("macroFallback", { label: inst.label });
 
           return (
             <div key={inst.key} className="bg-card p-3 space-y-1.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
                   {inst.label}
-                  <InfoTip size={9} tip={INSTRUMENT_TIPS[inst.key] || `${inst.label} — cross-asset macro indicator.`} />
+                  <InfoTip size={9} tip={tipText} />
                 </span>
               </div>
 

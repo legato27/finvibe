@@ -2,6 +2,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { use } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { osintApi } from "@/lib/api";
 
 type ActorDetail = {
@@ -19,6 +20,8 @@ type ActorDetail = {
 };
 
 export default function ActorProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const t = useTranslations("osint");
+  const tc = useTranslations("common");
   const { id } = use(params);
   const decoded = decodeURIComponent(id);
 
@@ -27,19 +30,19 @@ export default function ActorProfilePage({ params }: { params: Promise<{ id: str
     queryFn: () => osintApi.actor(decoded),
   });
 
-  if (isLoading) return <div className="p-6 text-slate-400">Loading…</div>;
-  if (!data) return <div className="p-6 text-slate-500">Actor not found.</div>;
+  if (isLoading) return <div className="p-6 text-slate-400">{tc("loading")}</div>;
+  if (!data) return <div className="p-6 text-slate-500">{t("actorNotFound")}</div>;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
-      <Link href="/osint" className="text-sm text-slate-400 hover:text-slate-200">← Back to feed</Link>
+      <Link href="/osint" className="text-sm text-slate-400 hover:text-slate-200">{t("backToFeed")}</Link>
       <div className="p-4 bg-slate-800 rounded border border-slate-700">
         <div className="text-xs text-slate-400 uppercase">{data.kind}</div>
         <h1 className="text-3xl font-bold">{data.name}</h1>
         <div className="text-xs text-slate-500 mt-1">{data.id}</div>
       </div>
 
-      <h2 className="text-lg font-semibold">Recent events ({data.recent_events.length})</h2>
+      <h2 className="text-lg font-semibold">{t("recentEventsCount", { count: data.recent_events.length })}</h2>
       <div className="space-y-2">
         {data.recent_events.map((ev) => (
           <Link key={ev.id} href={`/osint?event=${ev.id}`}
@@ -47,10 +50,10 @@ export default function ActorProfilePage({ params }: { params: Promise<{ id: str
             <div className="flex items-center gap-2 text-xs text-slate-400">
               <span>{ev.event_type}</span>
               <span className="px-1.5 py-0.5 bg-slate-700 rounded">{ev.urgency}</span>
-              <span className="px-1.5 py-0.5 bg-slate-700 rounded">role: {ev.role}</span>
+              <span className="px-1.5 py-0.5 bg-slate-700 rounded">{t("roleLabel", { role: ev.role })}</span>
               {ev.occurred_at && <span className="ml-auto">{new Date(ev.occurred_at).toLocaleString()}</span>}
             </div>
-            <div className="mt-1 text-sm text-slate-200">{ev.summary || <span className="italic text-slate-500">no summary</span>}</div>
+            <div className="mt-1 text-sm text-slate-200">{ev.summary || <span className="italic text-slate-500">{t("noSummary")}</span>}</div>
           </Link>
         ))}
       </div>

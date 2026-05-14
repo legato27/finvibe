@@ -1,6 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { ExternalLink, AlertTriangle, Shield, Scale, Globe, Users, Activity } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { osintApi, type OsintEvent } from "@/lib/api";
@@ -50,6 +51,7 @@ interface Props {
 }
 
 export function OsintFeed({ ticker, sinceHours, limit = 60, title }: Props) {
+  const t = useTranslations("osint");
   const hours = sinceHours ?? (ticker ? 48 : 24);
 
   const { data: events = [], isLoading } = useQuery({
@@ -63,29 +65,29 @@ export function OsintFeed({ ticker, sinceHours, limit = 60, title }: Props) {
   });
 
   const heading =
-    title ?? (ticker ? `OSINT — ${ticker}` : "OSINT — Global");
+    title ?? (ticker ? `OSINT — ${ticker}` : t("globalHeading"));
 
   return (
     <div className="card">
       <div className="card-header">
         <span className="card-title">{heading}</span>
         <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span>{events.length} events · last {hours}h</span>
-          <Link href="/osint" className="text-primary hover:underline">all →</Link>
+          <span>{t("eventsCountLastHours", { count: events.length, hours })}</span>
+          <Link href="/osint" className="text-primary hover:underline">{t("allLink")}</Link>
         </div>
       </div>
 
       <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
         {isLoading && (
           <div className="text-slate-500 text-sm animate-pulse py-4 text-center">
-            Loading OSINT feed…
+            {t("loadingFeed")}
           </div>
         )}
         {!isLoading && events.length === 0 && (
           <div className="text-slate-500 text-sm py-4 text-center">
             {ticker
-              ? `No OSINT events touch ${ticker} in the last ${hours}h.`
-              : "No OSINT events yet — crawler runs every 10–15 min."}
+              ? t("noEventsForTicker", { ticker, hours })
+              : t("noEventsYet")}
           </div>
         )}
         {events.map((ev: OsintEvent) => <OsintEventRow key={ev.id} event={ev} />)}
@@ -95,6 +97,7 @@ export function OsintFeed({ ticker, sinceHours, limit = 60, title }: Props) {
 }
 
 function OsintEventRow({ event }: { event: OsintEvent }) {
+  const t = useTranslations("osint");
   const urgencyCls = URGENCY_COLOR[event.urgency] || URGENCY_COLOR.low;
 
   return (
@@ -126,7 +129,7 @@ function OsintEventRow({ event }: { event: OsintEvent }) {
 
         <div className="flex items-start gap-1">
           <p className="text-xs text-slate-300 leading-relaxed line-clamp-2 flex-1">
-            {event.summary || <span className="italic text-slate-600">no summary</span>}
+            {event.summary || <span className="italic text-slate-600">{t("noSummary")}</span>}
           </p>
           {event.primary_article_url && (
             <a
@@ -134,7 +137,7 @@ function OsintEventRow({ event }: { event: OsintEvent }) {
               target="_blank"
               rel="noopener noreferrer"
               className="flex-shrink-0 text-slate-600 hover:text-primary"
-              title="Open source"
+              title={t("openSource")}
             >
               <ExternalLink className="w-3 h-3" />
             </a>

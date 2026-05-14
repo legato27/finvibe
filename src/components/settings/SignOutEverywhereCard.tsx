@@ -2,20 +2,18 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, AlertCircle, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignOutEverywhereCard() {
+  const t = useTranslations("settings");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function signOutEverywhere() {
-    if (
-      !confirm(
-        "Sign out of vibefin on every device? You'll need to log in again here too.",
-      )
-    ) {
+    if (!confirm(t("signOutEverywhereConfirm"))) {
       return;
     }
     setBusy(true);
@@ -35,13 +33,11 @@ export function SignOutEverywhereCard() {
   return (
     <div className="card mt-4">
       <div className="card-header">
-        <span className="card-title">Sign out everywhere</span>
+        <span className="card-title">{t("signOutEverywhere")}</span>
       </div>
       <div className="p-4 space-y-3">
         <p className="text-xs text-muted-foreground">
-          Revoke every active vibefin web session, including this one. MCP
-          personal tokens and OAuth grants are not affected — manage those on
-          the MCP &amp; connections tab.
+          {t("signOutEverywhereLong")}
         </p>
         {error && (
           <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
@@ -59,7 +55,7 @@ export function SignOutEverywhereCard() {
           ) : (
             <LogOut className="w-3.5 h-3.5" />
           )}
-          Sign out everywhere
+          {t("signOutEverywhere")}
         </button>
       </div>
     </div>

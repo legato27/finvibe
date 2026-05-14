@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, AlertCircle } from "lucide-react";
 
 interface Entry {
@@ -15,6 +16,8 @@ interface Resp {
 }
 
 export function LoginHistoryCard() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [data, setData] = useState<Resp | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,37 +36,37 @@ export function LoginHistoryCard() {
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title">Recent activity</span>
+        <span className="card-title">{t("recentActivity")}</span>
       </div>
       <div className="p-4 space-y-3">
         {data === null && !error ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            <Loader2 className="w-3 h-3 animate-spin" /> {tc("loading")}
           </div>
         ) : (
           <>
             <div>
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Last sign in
+                {t("lastSignIn")}
               </div>
               <div className="text-sm text-foreground mt-1">
                 {data?.last_sign_in_at
                   ? new Date(data.last_sign_in_at).toLocaleString()
-                  : "—"}
+                  : t("dash")}
               </div>
             </div>
             {data && data.entries.length > 0 ? (
               <div>
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-                  Audit entries (last 50)
+                  {t("auditEntries")}
                 </div>
                 <div className="border border-border/40 rounded-lg overflow-hidden text-xs">
                   <table className="w-full">
                     <thead className="bg-background/40">
                       <tr className="text-left text-[10px] uppercase text-muted-foreground">
-                        <th className="px-2 py-1.5 font-medium">When</th>
-                        <th className="px-2 py-1.5 font-medium">Action</th>
-                        <th className="px-2 py-1.5 font-medium">IP</th>
+                        <th className="px-2 py-1.5 font-medium">{t("auditWhen")}</th>
+                        <th className="px-2 py-1.5 font-medium">{t("auditAction")}</th>
+                        <th className="px-2 py-1.5 font-medium">{t("auditIp")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/40">
@@ -76,7 +79,7 @@ export function LoginHistoryCard() {
                             {e.action}
                           </td>
                           <td className="px-2 py-1.5 font-mono text-muted-foreground">
-                            {e.ip_address ?? "—"}
+                            {e.ip_address ?? t("dash")}
                           </td>
                         </tr>
                       ))}
@@ -86,10 +89,7 @@ export function LoginHistoryCard() {
               </div>
             ) : (
               <p className="text-[11px] text-muted-foreground">
-                Detailed audit history requires Supabase&apos;s audit log to be
-                readable by the service role on your project. If you don&apos;t
-                see entries here, the &ldquo;Last sign in&rdquo; timestamp above is the
-                best-available record.
+                {t("auditFallback")}
               </p>
             )}
           </>

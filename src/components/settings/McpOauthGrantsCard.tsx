@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertCircle, Loader2, Trash2 } from "lucide-react";
 
 interface Grant {
@@ -16,6 +17,7 @@ interface Grant {
 }
 
 export function McpOauthGrantsCard() {
+  const t = useTranslations("settings");
   const [grants, setGrants] = useState<Grant[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -24,7 +26,7 @@ export function McpOauthGrantsCard() {
     setError(null);
     try {
       const res = await fetch("/api/mcp/oauth/grants");
-      if (!res.ok) throw new Error((await res.json()).error || "Failed to load");
+      if (!res.ok) throw new Error((await res.json()).error || t("grants.failedLoad"));
       const json = await res.json();
       setGrants(json.grants);
     } catch (e) {
@@ -39,12 +41,17 @@ export function McpOauthGrantsCard() {
     }
     window.addEventListener("mcp-clients-changed", onChange);
     return () => window.removeEventListener("mcp-clients-changed", onChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function revokeTokens(g: Grant) {
     if (
       !confirm(
-        `Revoke active sessions for ${g.client_name}?\n\nThis sign out ${g.active_tokens} token${g.active_tokens === 1 ? "" : "s"}. The app credentials remain — re-authorize to reconnect.`,
+        t("grants.revokeConfirm", {
+          name: g.client_name,
+          count: g.active_tokens,
+          plural: g.active_tokens === 1 ? "" : "s",
+        }),
       )
     ) {
       return;
@@ -55,7 +62,7 @@ export function McpOauthGrantsCard() {
         `/api/mcp/oauth/grants/${encodeURIComponent(g.client_id)}`,
         { method: "DELETE" },
       );
-      if (!res.ok) throw new Error((await res.json()).error || "Failed to revoke");
+      if (!res.ok) throw new Error((await res.json()).error || t("grants.failedRevoke"));
       void load();
     } catch (e) {
       setError((e as Error).message);
@@ -66,9 +73,7 @@ export function McpOauthGrantsCard() {
 
   async function deleteClient(g: Grant) {
     if (
-      !confirm(
-        `Delete ${g.client_name} entirely?\n\nThis removes the client_id/secret AND any active tokens. The app cannot reconnect without registering again.`,
-      )
+      !confirm(t("grants.deleteConfirm", { name: g.client_name }))
     ) {
       return;
     }
@@ -78,7 +83,7 @@ export function McpOauthGrantsCard() {
         `/api/mcp/oauth/clients/${encodeURIComponent(g.client_id)}`,
         { method: "DELETE" },
       );
-      if (!res.ok) throw new Error((await res.json()).error || "Failed to delete");
+      if (!res.ok) throw new Error((await res.json()).error || t("grants.failedDelete"));
       void load();
     } catch (e) {
       setError((e as Error).message);
@@ -90,28 +95,25 @@ export function McpOauthGrantsCard() {
   return (
     <div className="card mt-4">
       <div className="card-header flex items-center justify-between">
-        <span className="card-title">Connected apps</span>
+        <span className="card-title">{t("grants.cardTitle")}</span>
         <span className="text-[10px] text-muted-foreground">
-          OAuth-registered MCP clients
+          {t("grants.cardSubtitle")}
         </span>
       </div>
       <div className="p-4 space-y-3">
         <p className="text-xs text-muted-foreground">
-          Apps you&apos;ve registered manually (below) plus any apps that have
-          completed the OAuth flow against your account. &ldquo;Registered&rdquo; means
-          credentials exist but no client has authorized yet; &ldquo;Active&rdquo; means
-          at least one access token is live.
+          {t("grants.intro")}
         </p>
 
         {grants === null && !error ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            <Loader2 className="w-3 h-3 animate-spin" /> Loading…
+            <Loader2 className="w-3 h-3 animate-spin" /> {t("grants.loading")}
           </div>
         ) : grants && grants.length === 0 ? (
           <div className="text-xs text-muted-foreground italic">
-            No connected apps yet. Register one below, or point an
-            MCP-capable client at <code>/api/mcp/mcp</code> with no header to
-            trigger the auto OAuth flow.
+            {t.rich("grants.noneYet", {
+              endpoint: () => <code>/api/mcp/mcp</code>,
+            })}
           </div>
         ) : (
           <div className="divide-y divide-border/40 border border-border/40 rounded-lg overflow-hidden">
@@ -132,11 +134,13 @@ export function McpOauthGrantsCard() {
                           : "bg-muted/30 text-muted-foreground border border-border/40"
                       }`}
                     >
-                      {g.status}
+                      {g.status === "active"
+                        ? t("grants.statusActive")
+                        : t("grants.statusRegistered")}
                     </span>
                     {g.owned_by_me && (
                       <span className="text-[9px] px-1.5 py-0.5 rounded text-muted-foreground border border-border/40">
-                        registered by you
+                        {t("grants.registeredByYou")}
                       </span>
                     )}
                   </div>
@@ -145,14 +149,14 @@ export function McpOauthGrantsCard() {
                   </div>
                   <div className="text-[10px] text-muted-foreground">
                     {g.status === "active"
-                      ? `${g.active_tokens} active token${g.active_tokens === 1 ? "" : "s"}`
-                      : "no active sessions yet"}
+                      ? t("grants.activeTokens", { count: g.active_tokens })
+                      : t("grants.noActive")}
                     {g.registered_at &&
-                      ` · registered ${new Date(g.registered_at).toLocaleDateString()}`}
+                      ` · ${t("grants.registeredOn", { date: new Date(g.registered_at).toLocaleDateString() })}`}
                     {g.first_authorized_at &&
-                      ` · first authorized ${new Date(g.first_authorized_at).toLocaleDateString()}`}
+                      ` · ${t("grants.firstAuth", { date: new Date(g.first_authorized_at).toLocaleDateString() })}`}
                     {g.last_used_at
-                      ? ` · last used ${new Date(g.last_used_at).toLocaleString()}`
+                      ? ` · ${t("grants.lastUsed", { when: new Date(g.last_used_at).toLocaleString() })}`
                       : ""}
                   </div>
                 </div>
@@ -161,17 +165,17 @@ export function McpOauthGrantsCard() {
                     <button
                       onClick={() => revokeTokens(g)}
                       disabled={busyId === g.client_id}
-                      title="Revoke active tokens (keep credentials)"
+                      title={t("grants.signOutTitle")}
                       className="px-2 py-1 text-[11px] rounded border border-border text-muted-foreground hover:text-amber-400 hover:border-amber-400/40 disabled:opacity-50"
                     >
-                      Sign out
+                      {t("grants.signOut")}
                     </button>
                   )}
                   {g.owned_by_me && (
                     <button
                       onClick={() => deleteClient(g)}
                       disabled={busyId === g.client_id}
-                      title="Delete client entirely (revokes tokens too)"
+                      title={t("grants.deleteTitle")}
                       className="p-1.5 text-muted-foreground hover:text-red-400 disabled:opacity-50"
                     >
                       {busyId === g.client_id ? (

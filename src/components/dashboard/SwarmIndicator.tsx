@@ -1,27 +1,33 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useAppStore } from "@/store/useAppStore";
 import { InfoTip } from "@/components/shared/InfoTip";
 
-const SIGNAL_CONFIG = {
+type SignalKey = "Black" | "Gray" | "White" | "Neutral";
+
+const SIGNAL_VISUAL: Record<SignalKey, {
+  color: string; accent: string; glow: string; badge: string;
+  labelKey: string; actionKey: string;
+}> = {
   Black: {
     color: "#ef4444", accent: "#991b1b", glow: "shadow-red-500/20",
-    label: "RISK-OFF", badge: "bg-red-500/15 text-red-400 border-red-500/30",
-    action: "Reduce exposure. Hedging demand high, correlation breakdown.",
+    badge: "bg-red-500/15 text-red-400 border-red-500/30",
+    labelKey: "swarmRiskOff", actionKey: "swarmActionBlack",
   },
   Gray: {
     color: "#f59e0b", accent: "#92400e", glow: "shadow-amber-500/20",
-    label: "CAUTION", badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-    action: "Tighten stops. Crowded positioning, momentum fragile.",
+    badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    labelKey: "swarmCaution", actionKey: "swarmActionGray",
   },
   White: {
     color: "#22c55e", accent: "#166534", glow: "shadow-green-500/20",
-    label: "RISK-ON", badge: "bg-green-500/15 text-green-400 border-green-500/30",
-    action: "Broad participation. Momentum trades favored, ride the trend.",
+    badge: "bg-green-500/15 text-green-400 border-green-500/30",
+    labelKey: "swarmRiskOn", actionKey: "swarmActionWhite",
   },
   Neutral: {
     color: "#64748b", accent: "#1e293b", glow: "shadow-slate-500/10",
-    label: "TRANSITIONAL", badge: "bg-slate-500/15 text-slate-400 border-slate-500/30",
-    action: "Mixed signals. Wait for conviction before adding risk.",
+    badge: "bg-slate-500/15 text-slate-400 border-slate-500/30",
+    labelKey: "swarmTransitional", actionKey: "swarmActionNeutral",
   },
 };
 
@@ -92,17 +98,18 @@ function MetricBar({ label, value, max, color, tip }: {
 }
 
 export function SwarmIndicator() {
+  const t = useTranslations("dashboard");
   const swarm = useAppStore((s) => s.macro.swarm);
 
   if (!swarm) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Computing Swarm...</div>
+        <div className="text-slate-500 text-sm animate-pulse">{t("swarmComputing")}</div>
       </div>
     );
   }
 
-  const cfg = SIGNAL_CONFIG[swarm.signal_type as keyof typeof SIGNAL_CONFIG] || SIGNAL_CONFIG.Neutral;
+  const cfg = SIGNAL_VISUAL[swarm.signal_type as SignalKey] || SIGNAL_VISUAL.Neutral;
   const score = swarm.swarm_score;
   const herding = swarm.largest_cluster_pct;
   const noise = swarm.noise_ratio;
@@ -117,11 +124,11 @@ export function SwarmIndicator() {
       {/* Header */}
       <div className="card-header flex-shrink-0">
         <span className="card-title flex items-center gap-1">
-          Swarm Intelligence
-          <InfoTip tip="Analyzes 50 large-cap stocks using DBSCAN clustering on momentum, volatility, volume, mean-reversion, and beta. Detects herding behavior: when stocks cluster tightly, the market has strong directional conviction. When noise is high, the market is confused. Score: -100 (extreme fear) to +100 (extreme greed)." />
+          {t("swarmTitle")}
+          <InfoTip tip={t("swarmInfo")} />
         </span>
         <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${cfg.badge}`}>
-          {cfg.label}
+          {t(cfg.labelKey)}
         </span>
       </div>
 
@@ -137,7 +144,7 @@ export function SwarmIndicator() {
           <div className="flex flex-col mb-0.5">
             <span className="text-[10px] text-slate-500">/ 100</span>
             <span className="text-[10px] font-medium" style={{ color: cfg.color }}>
-              {conviction}% conviction
+              {t("swarmConviction", { pct: conviction })}
             </span>
           </div>
         </div>
@@ -148,38 +155,38 @@ export function SwarmIndicator() {
         {/* Key metrics with bars */}
         <div className="space-y-2">
           <MetricBar
-            label="Herding"
+            label={t("swarmHerding")}
             value={herding}
             max={1}
             color={herding > 0.5 ? "#f59e0b" : "#22c55e"}
-            tip="% of stocks in the largest behavioral cluster. >50% = dangerous crowding, momentum can snap. <20% = dispersed, no consensus."
+            tip={t("swarmHerdingTip")}
           />
           <MetricBar
-            label="Noise"
+            label={t("swarmNoise")}
             value={noise}
             max={1}
             color={noise > 0.4 ? "#ef4444" : noise > 0.2 ? "#f59e0b" : "#22c55e"}
-            tip="% of stocks with uncorrelated behavior (outliers). High noise = market confusion, no clear direction. Low noise = strong consensus, trend likely to continue."
+            tip={t("swarmNoiseTip")}
           />
           <MetricBar
-            label="Clusters"
+            label={t("swarmClusters")}
             value={clusters}
             max={10}
             color="#3b82f6"
-            tip="Number of distinct behavioral groups. 0-1 = uniform (herding or collapse). 2-3 = polarized. 6+ = healthy diversification with broad participation."
+            tip={t("swarmClustersTip")}
           />
         </div>
 
         {/* Cluster structure summary */}
         <div className="grid grid-cols-2 gap-2">
           <div className="bg-slate-800/40 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-slate-500">Stocks Analyzed</div>
+            <div className="text-[10px] text-slate-500">{t("swarmStocksAnalyzed")}</div>
             <div className="text-sm font-mono font-bold text-slate-300">{stocks}</div>
           </div>
           <div className="bg-slate-800/40 rounded-lg p-2 text-center">
             <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-              Density {"\u0394"}
-              <InfoTip size={9} tip="Change in cluster tightness vs prior reading. Negative = clusters spreading apart (weakening conviction). Positive = clusters tightening (strengthening conviction)." />
+              {t("swarmDensityDelta")}
+              <InfoTip size={9} tip={t("swarmDensityDeltaTip")} />
             </div>
             <div className={`text-sm font-mono font-bold ${
               (swarm.density_delta ?? 0) > 0 ? "text-green-400" :
@@ -196,8 +203,8 @@ export function SwarmIndicator() {
         {swarm.top_factors?.length > 0 && (
           <div>
             <div className="text-[10px] text-slate-500 mb-1 flex items-center gap-0.5">
-              Top Dispersion Factors
-              <InfoTip size={9} tip="Features with highest variance among outlier stocks. These factors are driving the most disagreement in the market — the source of current uncertainty." />
+              {t("swarmTopFactors")}
+              <InfoTip size={9} tip={t("swarmTopFactorsTip")} />
             </div>
             <div className="flex gap-1.5">
               {swarm.top_factors.slice(0, 3).map((f, i) => (
@@ -220,7 +227,7 @@ export function SwarmIndicator() {
         {/* Action line */}
         <div className="mt-auto pt-1 border-t border-border/30">
           <p className="text-[11px] leading-relaxed" style={{ color: cfg.color }}>
-            {cfg.action}
+            {t(cfg.actionKey)}
           </p>
         </div>
       </div>

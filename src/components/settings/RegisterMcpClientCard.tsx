@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { AlertCircle, Check, Copy, Loader2, Plus } from "lucide-react";
 
 interface CreatedClient {
@@ -19,6 +20,8 @@ const PRESETS: Array<{ label: string; redirect_uris: string[] }> = [
 ];
 
 export function RegisterMcpClientCard() {
+  const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [name, setName] = useState(PRESETS[0].label);
   const [redirectInput, setRedirectInput] = useState(
     PRESETS[0].redirect_uris.join("\n"),
@@ -34,11 +37,11 @@ export function RegisterMcpClientCard() {
   }, []);
 
   const ENDPOINTS = [
-    { label: "MCP server URL", value: origin ? `${origin}/api/mcp/mcp` : "/api/mcp/mcp" },
-    { label: "Authorization URL", value: origin ? `${origin}/authorize` : "/authorize" },
-    { label: "Token URL", value: origin ? `${origin}/token` : "/token" },
+    { label: t("register.endpointMcp"), value: origin ? `${origin}/api/mcp/mcp` : "/api/mcp/mcp" },
+    { label: t("register.endpointAuth"), value: origin ? `${origin}/authorize` : "/authorize" },
+    { label: t("register.endpointToken"), value: origin ? `${origin}/token` : "/token" },
     {
-      label: "Discovery URL (auto-fills the rest)",
+      label: t("register.endpointDiscovery"),
       value: origin
         ? `${origin}/.well-known/oauth-authorization-server`
         : "/.well-known/oauth-authorization-server",
@@ -70,7 +73,7 @@ export function RegisterMcpClientCard() {
       });
       if (!res.ok) {
         const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || "Failed to register");
+        throw new Error(j?.error || t("register.failedRegister"));
       }
       setCreated(await res.json());
       setName("");
@@ -92,21 +95,17 @@ export function RegisterMcpClientCard() {
   return (
     <div className="card mt-4">
       <div className="card-header">
-        <span className="card-title">Add a connected app</span>
+        <span className="card-title">{t("register.cardTitle")}</span>
       </div>
       <div className="p-4 space-y-4">
         <p className="text-xs text-muted-foreground">
-          Each app you connect needs its own credentials. Fill in a name and
-          the app&apos;s redirect URI(s), and you&apos;ll get a fresh{" "}
-          <code className="font-mono">client_id</code> + <code className="font-mono">client_secret</code>{" "}
-          pair (shown once). Repeat this for every distinct app you want to use
-          with vibefin.
+          {t("register.intro", { clientId: "client_id", clientSecret: "client_secret" })}
         </p>
 
         {/* Connection endpoints — copy into the MCP client's config */}
         <div className="rounded-lg border border-border/40 bg-background/30 p-3 space-y-2">
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            URLs for your MCP client
+            {t("register.urlsHeading")}
           </div>
           {ENDPOINTS.map((e) => (
             <div key={e.label}>
@@ -125,7 +124,7 @@ export function RegisterMcpClientCard() {
                   ) : (
                     <Copy className="w-3 h-3" />
                   )}
-                  {copied === e.label ? "Copied" : "Copy"}
+                  {copied === e.label ? tc("copied") : tc("copy")}
                 </button>
               </div>
             </div>
@@ -142,19 +141,19 @@ export function RegisterMcpClientCard() {
                   onClick={() => applyPreset(p)}
                   className="text-[11px] px-2 py-1 rounded border border-border bg-background/40 text-muted-foreground hover:text-foreground hover:border-primary/40"
                 >
-                  {p.label} preset
+                  {t("register.presetSuffix", { name: p.label })}
                 </button>
               ))}
             </div>
 
             <div>
               <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                App name
+                {t("register.appName")}
               </label>
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Cursor on my laptop"
+                placeholder={t("register.appNamePh")}
                 required
                 className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
               />
@@ -162,7 +161,7 @@ export function RegisterMcpClientCard() {
 
             <div>
               <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                Redirect URI(s) — one per line
+                {t("register.redirectUris")}
               </label>
               <textarea
                 value={redirectInput}
@@ -173,8 +172,7 @@ export function RegisterMcpClientCard() {
                 className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
               />
               <p className="text-[10px] text-muted-foreground mt-1">
-                Must use https://, or http://localhost / 127.0.0.1, or a
-                custom-scheme URI registered by your client.
+                {t("register.redirectHint")}
               </p>
             </div>
 
@@ -195,7 +193,7 @@ export function RegisterMcpClientCard() {
               ) : (
                 <Plus className="w-3.5 h-3.5" />
               )}
-              Create client
+              {t("register.createClient")}
             </button>
           </form>
         )}
@@ -204,7 +202,7 @@ export function RegisterMcpClientCard() {
           <div className="space-y-3">
             <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
               <div className="text-xs font-medium text-amber-300 flex items-center gap-1.5">
-                <AlertCircle className="w-3.5 h-3.5" /> Save these values now
+                <AlertCircle className="w-3.5 h-3.5" /> {t("register.saveNow")}
               </div>
 
               <Field
@@ -212,12 +210,16 @@ export function RegisterMcpClientCard() {
                 value={created.client_id}
                 copied={copied === "client_id"}
                 onCopy={() => copy("client_id", created.client_id)}
+                copiedLabel={tc("copied")}
+                copyLabel={tc("copy")}
               />
               <Field
-                label="client_secret (shown once)"
+                label={t("register.clientSecretShownOnce")}
                 value={created.client_secret}
                 copied={copied === "client_secret"}
                 onCopy={() => copy("client_secret", created.client_secret)}
+                copiedLabel={tc("copied")}
+                copyLabel={tc("copy")}
               />
               <Field
                 label="redirect_uris"
@@ -226,6 +228,8 @@ export function RegisterMcpClientCard() {
                 onCopy={() =>
                   copy("redirect_uris", created.redirect_uris.join(","))
                 }
+                copiedLabel={tc("copied")}
+                copyLabel={tc("copy")}
               />
             </div>
 
@@ -233,7 +237,7 @@ export function RegisterMcpClientCard() {
               onClick={() => setCreated(null)}
               className="text-[11px] text-muted-foreground hover:text-foreground underline"
             >
-              Register another client
+              {t("register.registerAnother")}
             </button>
           </div>
         )}
@@ -247,11 +251,15 @@ function Field({
   value,
   copied,
   onCopy,
+  copiedLabel,
+  copyLabel,
 }: {
   label: string;
   value: string;
   copied: boolean;
   onCopy: () => void;
+  copiedLabel: string;
+  copyLabel: string;
 }) {
   return (
     <div>
@@ -271,7 +279,7 @@ function Field({
           ) : (
             <Copy className="w-3 h-3" />
           )}
-          {copied ? "Copied" : "Copy"}
+          {copied ? copiedLabel : copyLabel}
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import { FinVibeThoughts } from "./FinVibeThoughts";
 import { TechnicalAnalysis } from "./TechnicalAnalysis";
@@ -30,7 +31,7 @@ interface PortfolioAnalysisProps {
 
 const ACTION_CONFIG = {
   add: {
-    label: "Add to Position",
+    labelKey: "adviceAddToPosition",
     icon: PlusCircle,
     bg: "bg-green-500/15",
     text: "text-green-400",
@@ -38,7 +39,7 @@ const ACTION_CONFIG = {
     ring: "#22c55e",
   },
   hold: {
-    label: "Hold",
+    labelKey: "adviceHold",
     icon: Minus,
     bg: "bg-yellow-500/15",
     text: "text-yellow-400",
@@ -46,7 +47,7 @@ const ACTION_CONFIG = {
     ring: "#eab308",
   },
   reduce: {
-    label: "Reduce Position",
+    labelKey: "adviceReducePosition",
     icon: MinusCircle,
     bg: "bg-orange-500/15",
     text: "text-orange-400",
@@ -54,7 +55,7 @@ const ACTION_CONFIG = {
     ring: "#f97316",
   },
   exit: {
-    label: "Exit Position",
+    labelKey: "adviceExitPosition",
     icon: LogOut,
     bg: "bg-red-500/15",
     text: "text-red-400",
@@ -100,6 +101,7 @@ function PositionAdviceCard({
   stockInfo: any;
   thoughts: any;
 }) {
+  const t = useTranslations("portfolio");
   const pnlPct = ((currentPrice - position.avgCost) / position.avgCost) * 100;
 
   const { data, isLoading, isError, refetch } = useQuery({
@@ -131,7 +133,7 @@ function PositionAdviceCard({
     return (
       <div className="card p-5 flex items-center gap-3 text-muted-foreground text-sm">
         <Loader2 className="w-4 h-4 animate-spin" />
-        AI is analysing your position…
+        {t("aiAnalyzingPosition")}
       </div>
     );
   }
@@ -141,10 +143,10 @@ function PositionAdviceCard({
       <div className="card p-5 flex items-center justify-between text-muted-foreground text-sm">
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-yellow-500" />
-          Position advice unavailable (LLM offline)
+          {t("adviceUnavailable")}
         </div>
         <button onClick={() => refetch()} className="text-xs text-primary hover:underline flex items-center gap-1">
-          <RefreshCw className="w-3 h-3" /> Retry
+          <RefreshCw className="w-3 h-3" /> {t("retry")}
         </button>
       </div>
     );
@@ -168,7 +170,7 @@ function PositionAdviceCard({
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold uppercase ${cfg.bg} ${cfg.text} border ${cfg.border}`}>
               <ActionIcon className="w-3.5 h-3.5" />
-              {cfg.label}
+              {t(cfg.labelKey)}
             </span>
             {data?.headline && (
               <span className="text-sm font-semibold text-foreground/90">{data.headline}</span>
@@ -193,18 +195,18 @@ function PositionAdviceCard({
             <div className="flex gap-4 mt-3 pt-2 border-t border-border/20">
               {data.target_price && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Target</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("target")}</div>
                   <div className="text-sm font-mono font-semibold text-green-400">${Number(data.target_price).toFixed(2)}</div>
                 </div>
               )}
               {data.stop_loss && (
                 <div>
-                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Stop Loss</div>
+                  <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("stopLoss")}</div>
                   <div className="text-sm font-mono font-semibold text-red-400">${Number(data.stop_loss).toFixed(2)}</div>
                 </div>
               )}
               <div className="ml-auto">
-                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Unrealised P&L</div>
+                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("unrealisedPnl")}</div>
                 <div className={`text-sm font-mono font-semibold ${pnlPct >= 0 ? "text-green-400" : "text-red-400"}`}>
                   {pnlPct >= 0 ? <TrendingUp className="w-3.5 h-3.5 inline mr-1" /> : <TrendingDown className="w-3.5 h-3.5 inline mr-1" />}
                   {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%

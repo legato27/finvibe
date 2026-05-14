@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from "recharts";
 import { useAppStore } from "@/store/useAppStore";
 import { useQuery } from "@tanstack/react-query";
@@ -16,6 +17,14 @@ const ZONE_COLORS: Record<string, string> = {
   EXTREME_FEAR: "#ef4444",
 };
 
+const ZONE_KEY_MAP: Record<string, string> = {
+  COMPLACENCY: "vixZoneComplacency",
+  LOW_VOLATILITY: "vixZoneLowVol",
+  NORMAL: "vixZoneNormal",
+  ELEVATED: "vixZoneElevated",
+  EXTREME_FEAR: "vixZoneExtremeFear",
+};
+
 const STRUCTURE_COLORS: Record<string, string> = {
   contango: "#22c55e",
   mild_contango: "#86efac",
@@ -24,7 +33,16 @@ const STRUCTURE_COLORS: Record<string, string> = {
   backwardation: "#ef4444",
 };
 
+const STRUCTURE_KEY_MAP: Record<string, string> = {
+  contango: "vixStructContango",
+  mild_contango: "vixStructMildContango",
+  flat: "vixStructFlat",
+  mild_backwardation: "vixStructMildBackwardation",
+  backwardation: "vixStructBackwardation",
+};
+
 export function VixGauge() {
+  const t = useTranslations("dashboard");
   const vix = useAppStore((s) => s.macro.vix);
 
   // Fetch term structure separately (included in dashboard call but also standalone)
@@ -37,7 +55,7 @@ export function VixGauge() {
   if (!vix) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading VIX...</div>
+        <div className="text-slate-500 text-sm animate-pulse">{t("vixLoading")}</div>
       </div>
     );
   }
@@ -50,19 +68,33 @@ export function VixGauge() {
   const ts = termStructure?.levels;
   const tsColor = STRUCTURE_COLORS[termStructure?.structure] || "#94a3b8";
 
+  const zoneLabel = ZONE_KEY_MAP[vix.zone]
+    ? t(ZONE_KEY_MAP[vix.zone])
+    : String(vix.zone).replace(/_/g, " ").replace("VOLATILITY", "VOL");
+  const zoneTitle = String(vix.zone).replace(/_/g, " ");
+  const structureLabel = termStructure?.structure && STRUCTURE_KEY_MAP[termStructure.structure]
+    ? t(STRUCTURE_KEY_MAP[termStructure.structure])
+    : termStructure?.structure?.replace(/_/g, " ").toUpperCase();
+
+  const stats = [
+    { labelKey: "vix52wLow", value: vix.low_52w, tipKey: "vix52wLowTip" },
+    { labelKey: "vix52wAvg", value: vix.avg_52w, tipKey: "vix52wAvgTip" },
+    { labelKey: "vix52wHigh", value: vix.high_52w, tipKey: "vix52wHighTip" },
+  ];
+
   return (
     <div className="card h-full flex flex-col">
       <div className="card-header flex-shrink-0">
         <span className="card-title flex items-center gap-1">
-          VIX
-          <InfoTip tip="The VIX measures the market's expectation of 30-day volatility on the S&P 500, derived from options prices. Low VIX (<15) = complacency, markets calm. High VIX (>30) = fear, heavy hedging. Spikes often mark short-term bottoms. Known as the 'Fear Index'." />
+          {t("vix")}
+          <InfoTip tip={t("vixInfo")} />
         </span>
         <span
           className="text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded"
           style={{ color, backgroundColor: `${color}22`, border: `1px solid ${color}44` }}
-          title={vix.zone.replace(/_/g, " ")}
+          title={zoneTitle}
         >
-          {vix.zone.replace(/_/g, " ").replace("VOLATILITY", "VOL")}
+          {zoneLabel}
         </span>
       </div>
 
@@ -89,32 +121,31 @@ export function VixGauge() {
             <span className="text-2xl sm:text-3xl font-bold font-mono" style={{ color }}>
               {vix.current.toFixed(1)}
             </span>
-            <span className="text-xs text-slate-500">VIX</span>
+            <span className="text-xs text-slate-500">{t("vix")}</span>
           </div>
         </div>
 
         {/* Stats */}
         <div className="flex flex-col gap-2 sm:gap-3 flex-1 w-full">
           <div>
-            <div className="stat-label text-xs">24h Change</div>
+            <div className="stat-label text-xs">{t("vix24hChange")}</div>
             <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change >= 0 ? "text-red-400" : "text-green-400"}`}>
               {vix.change >= 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" /> : <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />}
               {vix.change >= 0 ? "+" : ""}{vix.change.toFixed(2)} ({vix.change_pct.toFixed(1)}%)
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
-            {[
-              { label: "52W Low", value: vix.low_52w, tip: "Lowest VIX reading in the past year. When VIX is near this level, markets are unusually calm — good for selling premium, but complacency can precede sharp moves." },
-              { label: "Avg", value: vix.avg_52w, tip: "52-week average VIX. Current VIX above this = above-average fear. Below = relative calm. The long-term VIX average is ~19-20." },
-              { label: "52W High", value: vix.high_52w, tip: "Highest VIX spike in the past year. Extreme VIX spikes (>40) often mark capitulation bottoms — historically good buying opportunities for long-term investors." },
-            ].map(({ label, value: v, tip }) => (
-              <div key={label} className="bg-slate-800/50 rounded p-1.5 sm:p-2 cursor-help" title={tip}>
-                <div className="text-[10px] sm:text-xs text-slate-500 flex items-center justify-center gap-0.5">
-                  {label} <InfoTip tip={tip} size={10} />
+            {stats.map(({ labelKey, value: v, tipKey }) => {
+              const tip = t(tipKey);
+              return (
+                <div key={labelKey} className="bg-slate-800/50 rounded p-1.5 sm:p-2 cursor-help" title={tip}>
+                  <div className="text-[10px] sm:text-xs text-slate-500 flex items-center justify-center gap-0.5">
+                    {t(labelKey)} <InfoTip tip={tip} size={10} />
+                  </div>
+                  <div className="font-mono font-semibold text-xs sm:text-sm">{v.toFixed(1)}</div>
                 </div>
-                <div className="font-mono font-semibold text-xs sm:text-sm">{v.toFixed(1)}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
@@ -124,14 +155,14 @@ export function VixGauge() {
         <div className="border-t border-border/50 mt-2 pt-2">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] text-slate-500 font-medium flex items-center gap-0.5">
-              Term Structure
-              <InfoTip size={10} tip="VIX term structure shows implied volatility across different time horizons. CONTANGO (normal): longer-dated VIX > short-dated = calm markets. BACKWARDATION (danger): short-dated VIX > long-dated = near-term fear spiking, investors paying up for immediate protection. Backwardation often precedes or accompanies sharp sell-offs." />
+              {t("vixTermStructure")}
+              <InfoTip size={10} tip={t("vixTermStructureTip")} />
             </span>
             <span
               className="text-[9px] font-bold px-1.5 py-0.5 rounded"
               style={{ color: tsColor, backgroundColor: `${tsColor}18`, border: `1px solid ${tsColor}33` }}
             >
-              {termStructure.structure?.replace(/_/g, " ").toUpperCase()}
+              {structureLabel}
             </span>
           </div>
           <div className="flex gap-1">
@@ -154,7 +185,7 @@ export function VixGauge() {
           </div>
           {termStructure.spread_9d_3m != null && (
             <div className="text-[9px] text-slate-500 mt-1 italic">
-              9D–3M spread: <span className={termStructure.spread_9d_3m > 0 ? "text-red-400" : "text-green-400"}>
+              {t("vixSpread9d3m")} <span className={termStructure.spread_9d_3m > 0 ? "text-red-400" : "text-green-400"}>
                 {termStructure.spread_9d_3m > 0 ? "+" : ""}{termStructure.spread_9d_3m}
               </span>
               {" · "}{termStructure.structure_description}

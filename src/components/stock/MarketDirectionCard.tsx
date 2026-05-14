@@ -1,5 +1,6 @@
 "use client";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 interface MarketDirectionCardProps {
   horizon: string;
@@ -8,9 +9,17 @@ interface MarketDirectionCardProps {
 }
 
 export function MarketDirectionCard({ horizon, direction, priceAction }: MarketDirectionCardProps) {
+  const t = useTranslations("stock");
   const dirLower = (direction || "").toLowerCase();
   const isBullish = dirLower === "bullish";
   const isBearish = dirLower === "bearish";
+  const directionLabel = isBullish
+    ? t("directionBullish")
+    : isBearish
+    ? t("directionBearish")
+    : dirLower === "neutral"
+    ? t("directionNeutral")
+    : direction;
 
   return (
     <div
@@ -36,7 +45,7 @@ export function MarketDirectionCard({ horizon, direction, priceAction }: MarketD
           ) : (
             <Minus className="w-3.5 h-3.5" />
           )}
-          {direction}
+          {directionLabel}
         </div>
       </div>
       <p className="text-xs text-foreground/80 leading-relaxed">{priceAction}</p>

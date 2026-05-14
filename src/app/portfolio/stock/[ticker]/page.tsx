@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import { usePortfolios, usePortfolioHoldings, useLLMAnalysis } from "@/lib/supabase/hooks";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
@@ -18,6 +19,7 @@ import {
 type Tab = "analysis" | "events_news" | "options" | "transactions";
 
 export default function PortfolioStockPage() {
+  const t = useTranslations("portfolio");
   const params = useParams();
   const ticker = (params.ticker as string)?.toUpperCase();
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
@@ -93,10 +95,10 @@ export default function PortfolioStockPage() {
   const isUnderwater = gainLoss < 0;
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "analysis", label: "Analysis", icon: <Brain className="w-3.5 h-3.5" /> },
-    { id: "transactions", label: "Transactions", icon: <ReceiptText className="w-3.5 h-3.5" /> },
-    { id: "events_news", label: "Events & News", icon: <Calendar className="w-3.5 h-3.5" /> },
-    { id: "options", label: "Options", icon: <DollarSign className="w-3.5 h-3.5" /> },
+    { id: "analysis", label: t("tabAnalysis"), icon: <Brain className="w-3.5 h-3.5" /> },
+    { id: "transactions", label: t("tabTransactions"), icon: <ReceiptText className="w-3.5 h-3.5" /> },
+    { id: "events_news", label: t("tabEventsNews"), icon: <Calendar className="w-3.5 h-3.5" /> },
+    { id: "options", label: t("tabOptions"), icon: <DollarSign className="w-3.5 h-3.5" /> },
   ];
 
   return (
@@ -118,30 +120,30 @@ export default function PortfolioStockPage() {
         <div className="card p-4">
           <div className="flex items-center gap-2 mb-3">
             <Briefcase className="w-4 h-4 text-muted-foreground" />
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Your Position</span>
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("yourPosition")}</span>
             {position.lotCount > 1 && (
-              <span className="text-[10px] text-muted-foreground/60">{position.lotCount} lots</span>
+              <span className="text-[10px] text-muted-foreground/60">{t("lots", { count: position.lotCount })}</span>
             )}
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Shares</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("sharesLabel")}</div>
               <div className="text-lg font-mono font-bold">
                 {position.totalShares % 1 === 0 ? position.totalShares : position.totalShares.toFixed(4)}
               </div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Avg Cost</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("columnAvgCost")}</div>
               <div className="text-lg font-mono font-bold">${position.avgCost.toFixed(2)}</div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Mkt Value</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("columnMktValue")}</div>
               <div className="text-lg font-mono font-bold">
                 {currentPrice > 0 ? `$${mktValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
               </div>
             </div>
             <div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Unrealised P&L</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("unrealisedPnl")}</div>
               {currentPrice > 0 ? (
                 <div className={`flex items-center gap-1 text-lg font-mono font-bold ${isUnderwater ? "text-red-500" : "text-green-500"}`}>
                   {isUnderwater ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
@@ -191,7 +193,7 @@ export default function PortfolioStockPage() {
 
       {activeTab === "analysis" && (!position || currentPrice === 0) && (
         <div className="card p-8 text-center text-muted-foreground text-sm">
-          {!position ? "No position data found." : "Price data unavailable."}
+          {!position ? t("noPositionData") : t("priceUnavailable")}
         </div>
       )}
 
@@ -208,7 +210,7 @@ export default function PortfolioStockPage() {
           <StockEvents ticker={ticker} />
           <div className="card">
             <div className="card-header">
-              <span className="card-title">Latest News — {ticker}</span>
+              <span className="card-title">{t("latestNewsFor", { ticker })}</span>
             </div>
             <RealtimeNewsFeed tickers={[ticker]} />
           </div>
@@ -225,7 +227,7 @@ export default function PortfolioStockPage() {
         />
       ) : activeTab === "options" && (
         <div className="card p-8 text-center text-muted-foreground text-sm">
-          {!position ? "No position data found for this ticker." : "Price data unavailable."}
+          {!position ? t("noPositionForTicker") : t("priceUnavailable")}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
 import { InfoTip } from "@/components/shared/InfoTip";
@@ -12,6 +13,7 @@ function valueColor(v: number): string {
 }
 
 export function CryptoFearGreed() {
+  const t = useTranslations("dashboard");
   const { data } = useQuery({
     queryKey: ["crypto_fear_greed"],
     queryFn: () => macroApi.dashboard().then((d: any) => null).catch(() => null),
@@ -39,8 +41,8 @@ export function CryptoFearGreed() {
     <div className="bg-slate-800/40 rounded-lg p-3 border border-border/30">
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
-          Crypto Fear & Greed
-          <InfoTip size={9} tip="Alternative.me Fear & Greed Index for crypto. Combines volatility, volume, social media, BTC dominance, and Google Trends. 0 = Extreme Fear (buy signal historically). 100 = Extreme Greed (sell signal). Contrarian indicator — buy when others are fearful." />
+          {t("cryptoFngTitle")}
+          <InfoTip size={9} tip={t("fngTip")} />
         </span>
       </div>
       <div className="flex items-center gap-3">

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import {
   DollarSign, Shield, RefreshCw, Wrench, ChevronDown, ChevronUp,
@@ -212,6 +213,7 @@ function StrategyCard({
   llmLoading: boolean;
   defaultOpen?: boolean;
 }) {
+  const t = useTranslations("options");
   const [open, setOpen] = useState(defaultOpen);
   const confidence = llmData?.confidence ?? rec.fallbackConfidence;
   const reasoning = llmData?.reasoning || rec.baseReasoning;
@@ -231,7 +233,7 @@ function StrategyCard({
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-xs font-mono text-green-400 hidden sm:inline">${rec.premium.toFixed(2)}/sh</span>
           {rec.annualized > 0 && (
-            <span className="text-xs font-mono text-primary hidden md:inline">{rec.annualized.toFixed(0)}% ann.</span>
+            <span className="text-xs font-mono text-primary hidden md:inline">{t("ivAnn", { pct: rec.annualized.toFixed(0) })}</span>
           )}
           <ConfidenceRing value={confidence} loading={llmLoading && !llmData} />
           {open ? <ChevronUp className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" />}
@@ -242,12 +244,12 @@ function StrategyCard({
         <div className="px-4 pb-4 pt-2 border-t border-border/20 space-y-3">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
-              ["Strike", `$${rec.strike.toFixed(2)}`],
-              ["Premium", `$${rec.premium.toFixed(2)}/sh`],
-              ["Expiry", rec.expiry],
-              ["Breakeven", `$${rec.breakeven.toFixed(2)}`],
-              rec.maxReturn > 0 ? ["Max Return", `${rec.maxReturn.toFixed(1)}%`] : null,
-              rec.annualized > 0 ? ["Annualised", `${rec.annualized.toFixed(0)}%`] : null,
+              [t("strikeLabel"), `$${rec.strike.toFixed(2)}`],
+              [t("premiumLabel"), `$${rec.premium.toFixed(2)}/sh`],
+              [t("expiryLabel"), rec.expiry],
+              [t("breakevenLabel"), `$${rec.breakeven.toFixed(2)}`],
+              rec.maxReturn > 0 ? [t("maxReturnLabel"), `${rec.maxReturn.toFixed(1)}%`] : null,
+              rec.annualized > 0 ? [t("annualisedLabel"), `${rec.annualized.toFixed(0)}%`] : null,
             ].filter(Boolean).map((pair) => {
               const [label, val] = pair as [string, string];
               return (
@@ -262,18 +264,18 @@ function StrategyCard({
           {/* LLM / base reasoning */}
           <div className={`rounded-lg p-3 text-xs leading-relaxed ${llmData ? "bg-primary/5 border border-primary/20" : "bg-accent/30"}`}>
             {llmLoading && !llmData
-              ? <span className="text-muted-foreground/60 flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> AI scoring…</span>
+              ? <span className="text-muted-foreground/60 flex items-center gap-1.5"><Loader2 className="w-3 h-3 animate-spin" /> {t("aiScoring")}</span>
               : <span className="text-muted-foreground">{reasoning}</span>
             }
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
-              <div className="text-[10px] text-green-400 uppercase tracking-wider font-semibold mb-1">Entry</div>
+              <div className="text-[10px] text-green-400 uppercase tracking-wider font-semibold mb-1">{t("entryLabel")}</div>
               <p className="text-xs text-muted-foreground">{rec.entryCriteria}</p>
             </div>
             <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-3">
-              <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold mb-1">Exit</div>
+              <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold mb-1">{t("exitLabel")}</div>
               <p className="text-xs text-muted-foreground">{rec.exitCriteria}</p>
             </div>
           </div>
@@ -286,17 +288,18 @@ function StrategyCard({
 // ── Wheel Cycle Diagram ──────────────────────────────────────
 
 function WheelCycle({ price, position }: { price: number; position?: Position }) {
+  const t = useTranslations("options");
   const phase = position ? "covered_call" : "csp";
   return (
     <div className="bg-accent/20 border border-border/30 rounded-lg p-3 mb-3">
-      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 font-semibold">The Wheel Cycle</div>
+      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2 font-semibold">{t("wheelCycleTitle")}</div>
       <div className="flex items-center gap-1 text-xs flex-wrap">
         {[
-          { label: "① Sell CSP", active: phase === "csp" },
-          { label: "→ Assigned?", arrow: true },
-          { label: "② Sell CC", active: phase === "covered_call" },
-          { label: "→ Called away?", arrow: true },
-          { label: "① Restart", },
+          { label: t("wheelStep1"), active: phase === "csp" },
+          { label: t("wheelAssigned"), arrow: true },
+          { label: t("wheelStep2"), active: phase === "covered_call" },
+          { label: t("wheelCalledAway"), arrow: true },
+          { label: t("wheelRestart"), },
         ].map((s, i) => (
           s.arrow
             ? <span key={i} className="text-muted-foreground/40">→</span>
@@ -307,7 +310,7 @@ function WheelCycle({ price, position }: { price: number; position?: Position })
       </div>
       {position && (
         <p className="text-[10px] text-muted-foreground mt-2">
-          You own shares — you're in the CC phase. Sell covered calls to collect income until called away, then restart CSP.
+          {t("wheelCcPhase")}
         </p>
       )}
     </div>
@@ -327,6 +330,7 @@ interface StockOptionsStrategyProps {
 export function StockOptionsStrategy({
   ticker, currentPrice, stockInfo, thoughts, position,
 }: StockOptionsStrategyProps) {
+  const t = useTranslations("options");
   const isUnderwater = position ? currentPrice < position.avgCost : false;
   const [tab, setTab] = useState<Tab>("income");
 
@@ -371,19 +375,19 @@ export function StockOptionsStrategy({
     : [];
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: string }[] = [
-    { id: "income", label: "Income", icon: <DollarSign className="w-3.5 h-3.5" /> },
-    { id: "wheel", label: "Wheel", icon: <RotateCcw className="w-3.5 h-3.5" /> },
-    { id: "hedge", label: "Hedge", icon: <Shield className="w-3.5 h-3.5" /> },
-    ...(position ? [{ id: "repair" as Tab, label: "Repair", icon: <Wrench className="w-3.5 h-3.5" />, badge: isUnderwater ? "!" : undefined }] : []),
+    { id: "income", label: t("tabIncome"), icon: <DollarSign className="w-3.5 h-3.5" /> },
+    { id: "wheel", label: t("tabWheel"), icon: <RotateCcw className="w-3.5 h-3.5" /> },
+    { id: "hedge", label: t("tabHedge"), icon: <Shield className="w-3.5 h-3.5" /> },
+    ...(position ? [{ id: "repair" as Tab, label: t("tabRepair"), icon: <Wrench className="w-3.5 h-3.5" />, badge: isUnderwater ? "!" : undefined }] : []),
   ];
 
   const activeRecs = tab === "income" ? income : tab === "wheel" ? wheel : tab === "hedge" ? hedge : repair;
 
   const contextBanner: Record<Tab, { style: string; text: string }> = {
-    income: { style: "bg-primary/5 border-primary/20", text: position ? `Sell premium against your ${position.shares} shares to generate recurring income and lower your avg cost of $${position.avgCost.toFixed(2)}.` : "Sell premium against shares you own (or would own via assignment) to generate income." },
-    wheel: { style: "bg-purple-500/5 border-purple-500/20", text: "Repeatedly sell cash-secured puts → get assigned → sell covered calls → called away → repeat. Compound income over time." },
-    hedge: { style: "bg-blue-500/5 border-blue-500/20", text: position ? `Protect your ${position.shares}× ${ticker} position ($${(currentPrice * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 })} value) against a significant drawdown.` : "Use options to hedge an existing or planned stock position against downside risk." },
-    repair: { style: "bg-orange-500/5 border-orange-500/20", text: position && isUnderwater ? `Down $${((position.avgCost - currentPrice) * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 })} total. Strategies to recover breakeven without adding capital.` : "Position is profitable — repair strategies only apply to underwater holdings." },
+    income: { style: "bg-primary/5 border-primary/20", text: position ? t("bannerIncomeWithPos", { shares: position.shares, cost: position.avgCost.toFixed(2) }) : t("bannerIncomeNoPos") },
+    wheel: { style: "bg-purple-500/5 border-purple-500/20", text: t("bannerWheel") },
+    hedge: { style: "bg-blue-500/5 border-blue-500/20", text: position ? t("bannerHedgeWithPos", { shares: position.shares, ticker, value: (currentPrice * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 }) }) : t("bannerHedgeNoPos") },
+    repair: { style: "bg-orange-500/5 border-orange-500/20", text: position && isUnderwater ? t("bannerRepairUnderwater", { amount: ((position.avgCost - currentPrice) * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 }) }) : t("bannerRepairOk") },
   };
 
   const banner = contextBanner[tab];
@@ -393,9 +397,9 @@ export function StockOptionsStrategy({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="text-sm font-semibold">Options Strategies</div>
+          <div className="text-sm font-semibold">{t("optionsStrategiesTitle")}</div>
           <div className="text-[10px] text-muted-foreground mt-0.5 space-x-2">
-            <span>IV est. {ivPct}%</span>
+            <span>{t("ivEst", { pct: ivPct })}</span>
             <span>·</span>
             <span>{verdict.toUpperCase()} · {conviction}</span>
             {position && (
@@ -403,8 +407,8 @@ export function StockOptionsStrategy({
                 <span>·</span>
                 <span className={isUnderwater ? "text-orange-400" : "text-green-400"}>
                   {isUnderwater
-                    ? `Underwater $${(position.avgCost - currentPrice).toFixed(2)}/sh`
-                    : `+$${(currentPrice - position.avgCost).toFixed(2)}/sh`}
+                    ? t("underwaterPerSh", { amount: (position.avgCost - currentPrice).toFixed(2) })
+                    : t("upPerSh", { amount: (currentPrice - position.avgCost).toFixed(2) })}
                 </span>
               </>
             )}
@@ -455,15 +459,15 @@ export function StockOptionsStrategy({
             ))
           : (
             <div className="text-center text-sm text-muted-foreground py-6">
-              {tab === "repair" ? "Position is not underwater — no repair needed." : "No strategies available."}
+              {tab === "repair" ? t("noRepairNeeded") : t("noStrategiesAvailable")}
             </div>
           )
         }
       </div>
 
       <p className="text-[10px] text-muted-foreground/50">
-        Estimates only — not financial advice. Verify strikes and premiums with your broker.
-        {llmLoading && <span className="ml-1 text-primary/60">AI scoring in progress…</span>}
+        {t("disclaimerEstimates")}
+        {llmLoading && <span className="ml-1 text-primary/60">{t("aiScoringInProgress")}</span>}
       </p>
     </div>
   );

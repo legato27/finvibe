@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Check, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function PasswordCard() {
+  const t = useTranslations("settings");
   const [pw, setPw] = useState("");
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,11 +17,11 @@ export function PasswordCard() {
     e.preventDefault();
     setError(null);
     if (pw.length < 8) {
-      setError("Password must be at least 8 characters");
+      setError(t("errPwLen"));
       return;
     }
     if (pw !== confirm) {
-      setError("Passwords do not match");
+      setError(t("errPwMismatch"));
       return;
     }
     setBusy(true);
@@ -40,28 +42,26 @@ export function PasswordCard() {
   return (
     <div className="card">
       <div className="card-header flex items-center justify-between">
-        <span className="card-title">Change password</span>
+        <span className="card-title">{t("changePassword")}</span>
         {savedAt && !busy && (
           <span className="flex items-center gap-1 text-[10px] text-emerald-400">
-            <Check className="w-3 h-3" /> Updated
+            <Check className="w-3 h-3" /> {t("password.updatedShort")}
           </span>
         )}
       </div>
       <form onSubmit={submit} className="p-4 space-y-3">
         <p className="text-xs text-muted-foreground">
-          You&apos;re already signed in, so the new password takes effect
-          immediately. Existing sessions on other devices stay valid until
-          they expire — use &ldquo;Sign out everywhere&rdquo; below to revoke them.
+          {t("passwordIntroLong")}
         </p>
         <div>
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            New password
+            {t("newPassword")}
           </label>
           <input
             type="password"
             value={pw}
             onChange={(e) => setPw(e.target.value)}
-            placeholder="At least 8 characters"
+            placeholder={t("passwordHint")}
             className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
             autoComplete="new-password"
             required
@@ -69,7 +69,7 @@ export function PasswordCard() {
         </div>
         <div>
           <label className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Confirm new password
+            {t("confirmNewPassword")}
           </label>
           <input
             type="password"
@@ -92,7 +92,7 @@ export function PasswordCard() {
           className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-primary/15 border border-primary/40 text-foreground hover:bg-primary/25 disabled:opacity-50"
         >
           {busy && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-          Update password
+          {t("updatePassword")}
         </button>
       </form>
     </div>

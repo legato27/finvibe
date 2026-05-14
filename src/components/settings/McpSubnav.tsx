@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 const TABS = [
-  { href: "/settings/mcp/tokens", label: "Personal tokens" },
-  { href: "/settings/mcp/oauth", label: "Connected apps" },
-  { href: "/settings/mcp/guide", label: "Connection guide" },
+  { href: "/settings/mcp/tokens", labelKey: "tokens" },
+  { href: "/settings/mcp/oauth", labelKey: "connectedApps" },
+  { href: "/settings/mcp/guide", labelKey: "guide" },
 ] as const;
 
 export function McpSubnav() {
+  const t = useTranslations("settings.tab");
   const pathname = usePathname();
   return (
     <div className="border-b border-border/40 mb-4">
       <nav className="flex gap-1 overflow-x-auto -mb-px">
-        {TABS.map(({ href, label }) => {
+        {TABS.map(({ href, labelKey }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
@@ -26,7 +28,7 @@ export function McpSubnav() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {label}
+              {t(labelKey)}
             </Link>
           );
         })}

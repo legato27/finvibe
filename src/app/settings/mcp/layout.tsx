@@ -1,18 +1,19 @@
+import { getTranslations } from "next-intl/server";
 import { McpSubnav } from "@/components/settings/McpSubnav";
 
-export default function McpSettingsLayout({
+export default async function McpSettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations("settings");
   return (
     <div>
       <h2 className="text-2xl font-bold text-foreground mb-1">
-        MCP &amp; connections
+        {t("mcp")}
       </h2>
       <p className="text-sm text-muted-foreground mb-4">
-        Personal access tokens, OAuth-connected apps, and how to wire up an
-        MCP client.
+        {t("subtitleMcp")}
       </p>
       <McpSubnav />
       {children}

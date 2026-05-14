@@ -1,7 +1,8 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
-import { ShieldAlert, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { ShieldAlert, TrendingUp, TrendingDown } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
 
 const REGIME_COLORS: Record<string, string> = {
@@ -12,7 +13,16 @@ const REGIME_COLORS: Record<string, string> = {
   deep_negative: "#ef4444",
 };
 
+const REGIME_KEY_MAP: Record<string, string> = {
+  long_gamma: "gexRegimeLongGamma",
+  positive_gamma: "gexRegimePositiveGamma",
+  neutral_gamma: "gexRegimeNeutralGamma",
+  negative_gamma: "gexRegimeNegativeGamma",
+  deep_negative: "gexRegimeDeepNegative",
+};
+
 export function GexCard() {
+  const t = useTranslations("dashboard");
   const { data: gex } = useQuery({
     queryKey: ["gex"],
     queryFn: macroApi.gex,
@@ -22,13 +32,16 @@ export function GexCard() {
   if (!gex || gex.error) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading GEX...</div>
+        <div className="text-slate-500 text-sm animate-pulse">{t("gexLoading")}</div>
       </div>
     );
   }
 
   const color = REGIME_COLORS[gex.regime] || "#94a3b8";
   const isPositive = gex.net_gex > 0;
+  const regimeLabel = REGIME_KEY_MAP[gex.regime]
+    ? t(REGIME_KEY_MAP[gex.regime])
+    : String(gex.regime).replace(/_/g, " ").toUpperCase();
 
   return (
     <div className="card h-full flex flex-col">
@@ -36,15 +49,15 @@ export function GexCard() {
         <div className="flex items-center gap-1.5">
           <ShieldAlert className="w-4 h-4 text-slate-400" />
           <span className="card-title flex items-center gap-1">
-            Dealer GEX
-            <InfoTip tip="Gamma Exposure (GEX) measures how much options market-makers (dealers) need to hedge. POSITIVE GEX: dealers sell rallies & buy dips = low volatility, mean-reverting market. NEGATIVE GEX: dealers buy rallies & sell dips = amplified moves, trending/volatile market. This is the #1 intraday regime indicator for SPX/QQQ." />
+            {t("gexTitle")}
+            <InfoTip tip={t("gexInfo")} />
           </span>
         </div>
         <span
           className="text-[10px] font-medium px-2 py-0.5 rounded"
           style={{ color, backgroundColor: `${color}22`, border: `1px solid ${color}44` }}
         >
-          {gex.regime.replace(/_/g, " ").toUpperCase()}
+          {regimeLabel}
         </span>
       </div>
 
@@ -53,7 +66,7 @@ export function GexCard() {
         <div className="flex items-center gap-3">
           <div>
             <div className="text-[10px] text-slate-500 flex items-center gap-0.5">
-              Net GEX <InfoTip size={10} tip="Net Gamma Exposure = Call GEX + Put GEX. Positive = dealers dampen volatility (sell high, buy low). Negative = dealers amplify moves. Large positive = expect tight ranges. Large negative = expect big swings." />
+              {t("gexNet")} <InfoTip size={10} tip={t("gexNetTip")} />
             </div>
             <div className="flex items-center gap-1">
               {isPositive ? (
@@ -71,11 +84,11 @@ export function GexCard() {
           </div>
           <div className="flex-1 grid grid-cols-2 gap-2 text-center">
             <div className="bg-slate-800/50 rounded p-1.5">
-              <div className="text-[10px] text-slate-500">Call GEX</div>
+              <div className="text-[10px] text-slate-500">{t("gexCall")}</div>
               <div className="font-mono text-xs text-green-400">{gex.call_gex}{gex.net_gex_unit || "M"}</div>
             </div>
             <div className="bg-slate-800/50 rounded p-1.5">
-              <div className="text-[10px] text-slate-500">Put GEX</div>
+              <div className="text-[10px] text-slate-500">{t("gexPut")}</div>
               <div className="font-mono text-xs text-red-400">{gex.put_gex}{gex.net_gex_unit || "M"}</div>
             </div>
           </div>
@@ -87,19 +100,19 @@ export function GexCard() {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-[10px] text-slate-500 flex items-center gap-0.5">
-                  Zero-Gamma <InfoTip size={10} tip="The price level where dealer gamma flips from positive to negative. ABOVE zero-gamma: dealers suppress vol (buy dips). BELOW zero-gamma: dealers amplify selling (sell dips). When SPY drops below this level, expect accelerated selling and higher volatility." />
+                  {t("gexZero")} <InfoTip size={10} tip={t("gexZeroTip")} />
                 </div>
                 <div className="text-lg font-bold font-mono text-amber-400">
                   ${gex.zero_gamma_level}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-slate-500">SPY Spot</div>
+                <div className="text-[10px] text-slate-500">{t("gexSpot")}</div>
                 <div className="text-sm font-mono text-slate-300">${gex.spot}</div>
               </div>
               {gex.distance_to_zero != null && (
                 <div className="text-right">
-                  <div className="text-[10px] text-slate-500">Distance</div>
+                  <div className="text-[10px] text-slate-500">{t("gexDistance")}</div>
                   <div className={`text-sm font-mono font-bold ${gex.distance_to_zero > 0 ? "text-green-400" : "text-red-400"}`}>
                     {gex.distance_to_zero > 0 ? "+" : ""}{gex.distance_to_zero}%
                   </div>

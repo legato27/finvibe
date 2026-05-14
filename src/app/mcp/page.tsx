@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { TOOL_CATALOG, type ToolDoc, type ToolGroup } from "@/lib/mcp/catalog";
 
 export const metadata = {
@@ -20,12 +21,28 @@ const GROUP_ORDER: ToolGroup[] = [
   "AI",
 ];
 
-function ToolCard({ tool }: { tool: ToolDoc }) {
+const GROUP_KEY: Record<ToolGroup, string> = {
+  Profile: "groupProfile",
+  Watchlists: "groupWatchlists",
+  Portfolios: "groupPortfolios",
+  Holdings: "groupHoldings",
+  Sales: "groupSales",
+  "Market data": "groupMarketData",
+  AI: "groupAI",
+};
+
+function ToolCard({
+  tool,
+  t,
+}: {
+  tool: ToolDoc;
+  t: (key: string, values?: Record<string, string | number | Date>) => string;
+}) {
   return (
     <div id={tool.name} className="card">
       <div className="card-header flex items-center justify-between">
         <code className="card-title font-mono text-sm">{tool.name}</code>
-        <span className="text-[10px] text-muted-foreground">{tool.group}</span>
+        <span className="text-[10px] text-muted-foreground">{t(GROUP_KEY[tool.group])}</span>
       </div>
       <div className="p-4 space-y-3">
         <div className="text-sm text-foreground">{tool.title}</div>
@@ -34,16 +51,16 @@ function ToolCard({ tool }: { tool: ToolDoc }) {
         {tool.params.length > 0 ? (
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Parameters
+              {t("parameters")}
             </div>
             <div className="border border-border/40 rounded-lg overflow-hidden text-xs">
               <table className="w-full">
                 <thead className="bg-background/40">
                   <tr className="text-left text-[10px] uppercase text-muted-foreground">
-                    <th className="px-2 py-1.5 font-medium">Name</th>
-                    <th className="px-2 py-1.5 font-medium">Type</th>
-                    <th className="px-2 py-1.5 font-medium">Required</th>
-                    <th className="px-2 py-1.5 font-medium">Notes</th>
+                    <th className="px-2 py-1.5 font-medium">{t("colName")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("colType")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("colRequired")}</th>
+                    <th className="px-2 py-1.5 font-medium">{t("colNotes")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
@@ -54,7 +71,7 @@ function ToolCard({ tool }: { tool: ToolDoc }) {
                         {p.type}
                       </td>
                       <td className="px-2 py-1.5 text-muted-foreground">
-                        {p.required ? "yes" : "no"}
+                        {p.required ? t("yes") : t("no")}
                       </td>
                       <td className="px-2 py-1.5 text-muted-foreground">
                         {p.description ?? ""}
@@ -67,13 +84,13 @@ function ToolCard({ tool }: { tool: ToolDoc }) {
           </div>
         ) : (
           <div className="text-[10px] text-muted-foreground italic">
-            No parameters.
+            {t("noParams")}
           </div>
         )}
 
         <div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-            Returns
+            {t("returns")}
           </div>
           <div className="text-xs text-foreground/90 font-mono bg-background/40 border border-border/40 rounded p-2">
             {tool.returns}
@@ -84,7 +101,8 @@ function ToolCard({ tool }: { tool: ToolDoc }) {
   );
 }
 
-export default function McpDocsPage() {
+export default async function McpDocsPage() {
+  const t = await getTranslations("mcpDocs");
   const grouped: Record<ToolGroup, ToolDoc[]> = {
     Profile: [],
     Watchlists: [],
@@ -94,7 +112,7 @@ export default function McpDocsPage() {
     "Market data": [],
     AI: [],
   };
-  for (const t of TOOL_CATALOG) grouped[t.group].push(t);
+  for (const tool of TOOL_CATALOG) grouped[tool.group].push(tool);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -102,32 +120,28 @@ export default function McpDocsPage() {
         href="/"
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4"
       >
-        <ChevronLeft className="w-3.5 h-3.5" /> Back
+        <ChevronLeft className="w-3.5 h-3.5" /> {t("backToHome")}
       </Link>
 
       <h1 className="text-2xl font-bold text-foreground mb-1">
-        MCP API reference
+        {t("title")}
       </h1>
       <p className="text-sm text-muted-foreground mb-6">
-        vibefin exposes a Model Context Protocol server so any MCP-compatible
-        client &mdash; Claude Desktop, Claude Code, Cursor, Cline, Continue,
-        Windsurf, ChatGPT custom GPTs (via MCP), or your own &mdash; can manage
-        watchlists, portfolios, holdings, sells, and read market data on your
-        behalf.
+        {t("intro")}
       </p>
 
       {/* Endpoint and auth */}
       <div className="card mb-6">
         <div className="card-header flex items-center justify-between">
-          <span className="card-title">Endpoint</span>
+          <span className="card-title">{t("endpoint")}</span>
           <span className="text-[10px] text-muted-foreground">
-            Streamable HTTP &middot; MCP 2025-03-26
+            {t("endpointBadge")}
           </span>
         </div>
         <div className="p-4 space-y-3 text-xs">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              URL
+              {t("url")}
             </div>
             <code className="font-mono text-foreground bg-background/40 border border-border/40 rounded px-2 py-1.5 inline-block">
               https://fin.vibelife.sg/api/mcp/mcp
@@ -135,31 +149,29 @@ export default function McpDocsPage() {
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Authentication
+              {t("authentication")}
             </div>
             <div className="text-foreground/90">
-              Per-user personal access token sent as{" "}
+              {t("authBodyPre")}{" "}
               <code className="font-mono text-[11px]">
                 Authorization: Bearer vbf_…
               </code>
-              . Generate one at{" "}
+              {t("authBodyMid")}{" "}
               <Link
                 href="/settings"
                 className="underline text-primary hover:text-primary/80"
               >
                 /settings
               </Link>{" "}
-              while signed in. Tokens scope every request to your own data.
+              {t("authBodySuffix")}
             </div>
           </div>
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Transport
+              {t("transport")}
             </div>
             <div className="text-foreground/90">
-              Streamable HTTP (the current MCP spec, March 2025 revision).
-              Stateless &mdash; each request stands alone, no session resumption
-              required.
+              {t("transportBody")}
             </div>
           </div>
         </div>
@@ -168,12 +180,12 @@ export default function McpDocsPage() {
       {/* Connection snippets */}
       <div className="card mb-6">
         <div className="card-header">
-          <span className="card-title">Connect a client</span>
+          <span className="card-title">{t("connectClient")}</span>
         </div>
         <div className="p-4 space-y-4 text-xs">
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Generic JSON-RPC over HTTP
+              {t("snippetGeneric")}
             </div>
             <pre className="font-mono text-[11px] text-foreground bg-background/40 border border-border/40 rounded p-2 overflow-x-auto">{`curl -X POST https://fin.vibelife.sg/api/mcp/mcp \\
   -H "Authorization: Bearer vbf_<your-token>" \\
@@ -188,7 +200,7 @@ export default function McpDocsPage() {
 
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Claude Code
+              {t("snippetClaudeCode")}
             </div>
             <pre className="font-mono text-[11px] text-foreground bg-background/40 border border-border/40 rounded p-2 overflow-x-auto">{`claude mcp add --transport http vibefin https://fin.vibelife.sg/api/mcp/mcp \\
   --header "Authorization: Bearer vbf_<your-token>"`}</pre>
@@ -196,7 +208,7 @@ export default function McpDocsPage() {
 
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Claude Desktop &middot;{" "}
+              {t("snippetClaudeDesktopPre")}
               <code className="font-mono">claude_desktop_config.json</code>
             </div>
             <pre className="font-mono text-[11px] text-foreground bg-background/40 border border-border/40 rounded p-2 overflow-x-auto">{`{
@@ -211,7 +223,7 @@ export default function McpDocsPage() {
 
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Cursor &middot; <code className="font-mono">~/.cursor/mcp.json</code>
+              {t("snippetCursorPre")}<code className="font-mono">~/.cursor/mcp.json</code>
             </div>
             <pre className="font-mono text-[11px] text-foreground bg-background/40 border border-border/40 rounded p-2 overflow-x-auto">{`{
   "mcpServers": {
@@ -225,12 +237,11 @@ export default function McpDocsPage() {
 
           <div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
-              Cline / Continue / Windsurf / other MCP clients
+              {t("snippetOther")}
             </div>
             <p className="text-foreground/90">
-              Any client that supports the Streamable HTTP transport will work.
-              Point it at the URL above with the same{" "}
-              <code className="font-mono">Authorization</code> header.
+              {t("snippetOtherBodyPre")}{" "}
+              <code className="font-mono">Authorization</code> {t("snippetOtherBodySuffix")}
             </p>
           </div>
         </div>
@@ -238,7 +249,7 @@ export default function McpDocsPage() {
 
       {/* Tools */}
       <h2 className="text-lg font-semibold text-foreground mb-3">
-        Tools ({TOOL_CATALOG.length})
+        {t("toolsHeading", { count: TOOL_CATALOG.length })}
       </h2>
 
       {GROUP_ORDER.map((group) => {
@@ -247,11 +258,11 @@ export default function McpDocsPage() {
         return (
           <section key={group} className="mb-8">
             <h3 className="text-sm font-semibold text-foreground mb-3 uppercase tracking-wider text-muted-foreground">
-              {group}
+              {t(GROUP_KEY[group])}
             </h3>
             <div className="space-y-3">
-              {tools.map((t) => (
-                <ToolCard key={t.name} tool={t} />
+              {tools.map((tool) => (
+                <ToolCard key={tool.name} tool={tool} t={t} />
               ))}
             </div>
           </section>
@@ -259,7 +270,7 @@ export default function McpDocsPage() {
       })}
 
       <div className="text-[10px] text-muted-foreground border-t border-border/40 pt-4 mt-8">
-        MCP is an open standard.{" "}
+        {t("openStandard")}{" "}
         <a
           href="https://modelcontextprotocol.io"
           target="_blank"

@@ -1,33 +1,18 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
 import { BarChart3 } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
 
-function BreadthCell({ label, value, suffix = "%", change }: {
-  label: string; value?: number; suffix?: string; change?: number;
-}) {
-  const color = value == null ? "text-slate-600"
-    : value > 60 ? "text-green-400"
-    : value > 40 ? "text-yellow-400"
-    : "text-red-400";
-
-  return (
-    <div className="flex-1 text-center px-2 py-2">
-      <div className="text-[10px] text-slate-500 whitespace-nowrap">{label}</div>
-      <div className={`text-lg font-bold font-mono ${color}`}>
-        {value != null ? `${value}${suffix}` : "—"}
-      </div>
-      {change != null && (
-        <div className={`text-[10px] font-mono ${change >= 0 ? "text-green-500" : "text-red-500"}`}>
-          {change >= 0 ? "+" : ""}{change}{suffix}
-        </div>
-      )}
-    </div>
-  );
-}
+const SIGNAL_KEY_MAP: Record<string, string> = {
+  broad_strength: "breadthSigBroadStrength",
+  broad_weakness: "breadthSigBroadWeakness",
+  narrowing: "breadthSigNarrowing",
+};
 
 export function BreadthStrip() {
+  const t = useTranslations("dashboard");
   const { data: breadth } = useQuery({
     queryKey: ["breadth"],
     queryFn: macroApi.breadth,
@@ -43,24 +28,28 @@ export function BreadthStrip() {
     : breadth.signal === "narrowing" ? "text-amber-400 bg-amber-500/10"
     : "text-slate-400 bg-slate-800";
 
+  const signalLabel = breadth.signal && SIGNAL_KEY_MAP[breadth.signal]
+    ? t(SIGNAL_KEY_MAP[breadth.signal])
+    : t("breadthSigNeutral");
+
   return (
     <div className="card">
       <div className="flex items-center justify-between px-3 pt-2">
         <div className="flex items-center gap-1.5">
           <BarChart3 className="w-3.5 h-3.5 text-slate-500" />
           <span className="text-xs font-semibold text-slate-400 flex items-center gap-1">
-            Market Breadth
-            <InfoTip tip="Breadth measures how many stocks participate in a market move. BROAD (>70% above MAs) = healthy, sustainable rally. NARROW (<30%) = weak, only a few stocks leading. Breadth divergences (index rising but breadth falling) are classic warning signals of a coming reversal." />
+            {t("breadthTitle")}
+            <InfoTip tip={t("breadthInfo")} />
           </span>
         </div>
         <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${signalColor}`}>
-          {breadth.signal?.replace(/_/g, " ").toUpperCase()}
+          {signalLabel}
         </span>
       </div>
       <div className="flex divide-x divide-border/30">
         <div className="flex-1 text-center px-2 py-2">
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-            % &gt; 50 DMA <InfoTip size={10} tip="Percentage of S&P 500 stocks trading above their 50-day moving average. This measures short-term momentum. >70% = strong breadth, broad rally. <30% = weak, most stocks in short-term downtrends. Useful for timing: extreme low readings often mark short-term bottoms." />
+            {t("breadthPctAbove50")} <InfoTip size={10} tip={t("breadthPctAbove50Tip")} />
           </div>
           <div className={`text-lg font-bold font-mono ${(breadth.pct_above_50dma ?? 50) > 60 ? "text-green-400" : (breadth.pct_above_50dma ?? 50) > 40 ? "text-yellow-400" : "text-red-400"}`}>
             {breadth.pct_above_50dma != null ? `${breadth.pct_above_50dma}%` : "—"}
@@ -73,7 +62,7 @@ export function BreadthStrip() {
         </div>
         <div className="flex-1 text-center px-2 py-2">
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-            % &gt; 200 DMA <InfoTip size={10} tip="Percentage of stocks above their 200-day moving average. This measures long-term trend health. >65% = broad bull market. <40% = bear market conditions. The 200 DMA is the most-watched MA by institutions — being above it defines an 'uptrend'." />
+            {t("breadthPctAbove200")} <InfoTip size={10} tip={t("breadthPctAbove200Tip")} />
           </div>
           <div className={`text-lg font-bold font-mono ${(breadth.pct_above_200dma ?? 50) > 60 ? "text-green-400" : (breadth.pct_above_200dma ?? 50) > 40 ? "text-yellow-400" : "text-red-400"}`}>
             {breadth.pct_above_200dma != null ? `${breadth.pct_above_200dma}%` : "—"}
@@ -86,7 +75,7 @@ export function BreadthStrip() {
         </div>
         <div className="flex-1 text-center px-2 py-2">
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-            A/D Ratio <InfoTip size={10} tip="Advance/Decline ratio — how many stocks went up vs down today. >1.5 = strong buying pressure across the board. <0.7 = broad selling. A rising market with falling A/D ratio = bearish divergence (narrow rally, few leaders)." />
+            {t("breadthAdRatio")} <InfoTip size={10} tip={t("breadthAdRatioTip")} />
           </div>
           <div className={`text-lg font-bold font-mono ${(breadth.adv_dec_ratio ?? 1) > 1.2 ? "text-green-400" : (breadth.adv_dec_ratio ?? 1) > 0.8 ? "text-yellow-400" : "text-red-400"}`}>
             {breadth.adv_dec_ratio ?? "—"}
@@ -94,7 +83,7 @@ export function BreadthStrip() {
         </div>
         <div className="flex-1 text-center px-2 py-2">
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
-            NH – NL <InfoTip size={10} tip="New 20-day Highs minus New 20-day Lows. Positive = more stocks making new highs (bullish). Negative = more stocks making new lows (bearish). Persistent negative readings during a rally = hidden weakness under the surface." />
+            {t("breadthNhNl")} <InfoTip size={10} tip={t("breadthNhNlTip")} />
           </div>
           <div className={`text-lg font-bold font-mono ${(breadth.new_highs_lows ?? 0) > 0 ? "text-green-400" : (breadth.new_highs_lows ?? 0) < 0 ? "text-red-400" : "text-yellow-400"}`}>
             {breadth.new_highs_lows ?? "—"}

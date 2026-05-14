@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   User,
   Shield,
@@ -12,14 +13,15 @@ import {
 } from "lucide-react";
 
 const NAV = [
-  { href: "/settings/profile", label: "Profile", icon: User },
-  { href: "/settings/security", label: "Security", icon: Shield },
-  { href: "/settings/login-history", label: "Login history", icon: Clock },
-  { href: "/settings/currency", label: "Currency", icon: DollarSign },
-  { href: "/settings/mcp", label: "MCP & connections", icon: Plug },
+  { href: "/settings/profile", labelKey: "profile", icon: User },
+  { href: "/settings/security", labelKey: "security", icon: Shield },
+  { href: "/settings/login-history", labelKey: "loginHistory", icon: Clock },
+  { href: "/settings/currency", labelKey: "currency", icon: DollarSign },
+  { href: "/settings/mcp", labelKey: "mcp", icon: Plug },
 ] as const;
 
 export function SettingsSidebar() {
+  const t = useTranslations("settings");
   const pathname = usePathname();
   return (
     <aside className="w-full md:w-56 md:flex-shrink-0">
@@ -27,11 +29,11 @@ export function SettingsSidebar() {
         href="/"
         className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-4"
       >
-        <ChevronLeft className="w-3.5 h-3.5" /> Back
+        <ChevronLeft className="w-3.5 h-3.5" /> {t("back")}
       </Link>
-      <h1 className="text-lg font-semibold text-foreground mb-4">Settings</h1>
+      <h1 className="text-lg font-semibold text-foreground mb-4">{t("title")}</h1>
       <nav className="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {NAV.map(({ href, labelKey, icon: Icon }) => {
           const active = pathname === href || pathname.startsWith(href + "/");
           return (
             <Link
@@ -44,7 +46,7 @@ export function SettingsSidebar() {
               }`}
             >
               <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-              <span>{label}</span>
+              <span>{t(labelKey)}</span>
             </Link>
           );
         })}

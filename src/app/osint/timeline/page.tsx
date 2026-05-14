@@ -1,6 +1,7 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { osintApi } from "@/lib/api";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend, CartesianGrid, ResponsiveContainer,
@@ -20,6 +21,8 @@ const COLORS: Record<string, string> = {
 };
 
 export default function OsintTimelinePage() {
+  const t = useTranslations("osint");
+  const tc = useTranslations("common");
   const [granularity, setGranularity] = useState<"hour" | "day">("hour");
   const [hours, setHours] = useState(168);
 
@@ -42,27 +45,27 @@ export default function OsintTimelinePage() {
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-bold">OSINT — Timeline</h1>
+        <h1 className="text-2xl font-bold">{t("timelineTitle")}</h1>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <select value={granularity} onChange={(e) => setGranularity(e.target.value as "hour" | "day")}
           className="bg-slate-700 rounded px-2 py-1 text-sm">
-          <option value="hour">Hourly buckets</option>
-          <option value="day">Daily buckets</option>
+          <option value="hour">{t("hourlyBuckets")}</option>
+          <option value="day">{t("dailyBuckets")}</option>
         </select>
         <select value={hours} onChange={(e) => setHours(Number(e.target.value))}
           className="bg-slate-700 rounded px-2 py-1 text-sm">
-          <option value={24}>Last 24h</option>
-          <option value={72}>Last 72h</option>
-          <option value={168}>Last 7d</option>
-          <option value={720}>Last 30d</option>
+          <option value={24}>{t("last24h")}</option>
+          <option value={72}>{t("last72h")}</option>
+          <option value={168}>{t("last7d")}</option>
+          <option value={720}>{t("last30d")}</option>
         </select>
       </div>
 
       <div className="h-[400px] bg-slate-900 rounded p-4 border border-slate-700">
         {isLoading ? (
-          <div className="text-slate-400">Loading…</div>
+          <div className="text-slate-400">{tc("loading")}</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>

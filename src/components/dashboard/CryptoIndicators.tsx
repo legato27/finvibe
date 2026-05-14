@@ -1,4 +1,5 @@
 "use client";
+import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingDown, TrendingUp, Bitcoin, Coins } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
@@ -14,6 +15,7 @@ interface CryptoData {
 }
 
 function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
+  const t = useTranslations("dashboard");
   const up = data.change_24h >= 0;
   return (
     <div className="flex items-center gap-3 py-2">
@@ -23,10 +25,13 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
           <span className="text-sm font-bold">{data.name}</span>
           <span className={`text-[9px] px-1 py-0 rounded ${
             data.momentum === "bullish" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
-          }`}>{data.momentum === "bullish" ? "Bull" : "Bear"}</span>
+          }`}>{data.momentum === "bullish" ? t("cryptoBull") : t("cryptoBear")}</span>
         </div>
         <div className="text-[10px] text-slate-500 font-mono">
-          7D ${data.ma7?.toLocaleString()} · 30D ${data.ma30?.toLocaleString()}
+          {t("cryptoMaSummary", {
+            ma7: data.ma7?.toLocaleString() ?? "—",
+            ma30: data.ma30?.toLocaleString() ?? "—",
+          })}
         </div>
       </div>
       <div className="text-right">
@@ -51,6 +56,8 @@ function fngColor(v: number): string {
 }
 
 export function CryptoIndicators() {
+  const t = useTranslations("dashboard");
+  const tc = useTranslations("common");
   const { data, isLoading, error } = useQuery({
     queryKey: ["crypto_indicators"],
     queryFn: async () => {
@@ -76,7 +83,7 @@ export function CryptoIndicators() {
   if (isLoading) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">Loading crypto...</div>
+        <div className="text-slate-500 text-sm animate-pulse">{t("cryptoLoading")}</div>
       </div>
     );
   }
@@ -88,7 +95,7 @@ export function CryptoIndicators() {
   if (error || !btc) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm">Crypto data unavailable</div>
+        <div className="text-slate-500 text-sm">{t("cryptoUnavailable")}</div>
       </div>
     );
   }
@@ -99,10 +106,10 @@ export function CryptoIndicators() {
     <div className="card h-full flex flex-col">
       <div className="card-header flex-shrink-0">
         <span className="card-title flex items-center gap-1">
-          Crypto
-          <InfoTip tip="Live crypto prices from Binance. Momentum is based on 7-day vs 30-day moving average crossover. Bullish = price above both MAs and 7D > 30D. Bearish = price below MAs or 7D < 30D." />
+          {t("cryptoTitle")}
+          <InfoTip tip={t("cryptoInfo")} />
         </span>
-        <span className="text-[10px] text-slate-500">Live</span>
+        <span className="text-[10px] text-slate-500">{tc("live")}</span>
       </div>
       <div className="flex-1 divide-y divide-border/30">
         <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-orange-400 flex-shrink-0" />} />
@@ -116,8 +123,8 @@ export function CryptoIndicators() {
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <div className="text-[10px] text-slate-500 flex items-center gap-0.5 mb-1">
-                Fear & Greed Index
-                <InfoTip size={9} tip="Alternative.me Fear & Greed Index for crypto. Combines volatility, volume, social media, BTC dominance, and Google Trends. 0 = Extreme Fear (historically a buy signal). 100 = Extreme Greed (sell signal). A contrarian indicator — be greedy when others are fearful." />
+                {t("fngTitle")}
+                <InfoTip size={9} tip={t("fngTip")} />
               </div>
               {/* Gauge bar */}
               <div className="relative w-full h-2 rounded-full overflow-hidden bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 opacity-30">
@@ -127,8 +134,8 @@ export function CryptoIndicators() {
                 />
               </div>
               <div className="flex justify-between text-[8px] text-slate-600 mt-0.5">
-                <span>Fear</span>
-                <span>Greed</span>
+                <span>{t("fngFear")}</span>
+                <span>{t("fngGreed")}</span>
               </div>
             </div>
             <div className="text-right flex-shrink-0">

@@ -1,5 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { sentimentApi } from "@/lib/api";
 import { ExternalLink, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -27,6 +28,7 @@ function scoreToClass(score: number) {
 }
 
 export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
+  const t = useTranslations("news");
   const { data: feed = [], isLoading } = useQuery({
     queryKey: ["news_feed", tickers?.join(",")],
     queryFn: () => sentimentApi.newsFeed(60, tickers),
@@ -38,9 +40,9 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
     return (
       <div className="card">
         <div className="card-header">
-          <span className="card-title">News & Sentiment</span>
+          <span className="card-title">{t("newsAndSentiment")}</span>
         </div>
-        <div className="text-slate-500 text-sm animate-pulse py-4 text-center">Loading news feed...</div>
+        <div className="text-slate-500 text-sm animate-pulse py-4 text-center">{t("loadingFeed")}</div>
       </div>
     );
   }
@@ -48,16 +50,16 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
   return (
     <div className="card">
       <div className="card-header">
-        <span className="card-title">News & Sentiment</span>
-        <span className="text-xs text-slate-500">{feed.length} articles · FinBERT scored</span>
+        <span className="card-title">{t("newsAndSentiment")}</span>
+        <span className="text-xs text-slate-500">{t("articlesCount", { count: feed.length })}</span>
       </div>
 
       <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
         {feed.length === 0 && (
           <div className="text-slate-500 text-sm py-4 text-center">
             {tickers && tickers.length > 0
-              ? `No news found for ${tickers.join(", ")} — articles appear as they are published`
-              : "No news available yet — crawler runs every 5 minutes"}
+              ? t("noNewsForTickers", { tickers: tickers.join(", ") })
+              : t("noNewsYet")}
           </div>
         )}
         {feed.map((item: NewsItem, idx: number) => (
