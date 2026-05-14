@@ -19,6 +19,24 @@ const api: AxiosInstance = axios.create({
   headers: { "Content-Type": "application/json" },
 });
 
+// Forward the active UI locale to the backend so LLM-generated text comes back
+// in the right language. Reads the `vibefin-locale` cookie that the
+// LanguageSwitcher writes; falls back to navigator.language.
+api.interceptors.request.use((config) => {
+  if (typeof document !== "undefined") {
+    const m = document.cookie.match(/(?:^|;\s*)vibefin-locale=([^;]+)/);
+    const cookieLocale = m ? decodeURIComponent(m[1]) : null;
+    const locale =
+      cookieLocale ||
+      (typeof navigator !== "undefined" && /^zh/i.test(navigator.language)
+        ? "zh"
+        : "en");
+    config.headers = config.headers || {};
+    (config.headers as Record<string, string>)["Accept-Language"] = locale;
+  }
+  return config;
+});
+
 // ── Watchlist ─────────────────────────────────────────────────
 
 export const watchlistApi = {
