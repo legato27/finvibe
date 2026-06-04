@@ -256,6 +256,32 @@ export const TOOL_CATALOG: ToolDoc[] = [
     ],
     returns: "Per-ticker price map from the backend.",
   },
+  {
+    name: "get_price_history",
+    group: "Market data",
+    title: "Get OHLC price history",
+    description:
+      "Return daily OHLCV price history for a ticker from the market-data backend. " +
+      "Up to 10 years of daily candles are available; pick the lookback with `period`.",
+    params: [
+      { name: "ticker", type: "string", required: true },
+      {
+        name: "period",
+        type: "1mo | 3mo | 6mo | 1y | 2y | 5y | 10y",
+        required: false,
+        description: "Lookback window. Defaults to 1y.",
+      },
+      {
+        name: "interval",
+        type: "string",
+        required: false,
+        description: "Candle interval, e.g. 1d. Defaults to 1d.",
+      },
+    ],
+    returns:
+      "{ ticker, interval, data: [{ Date, Open, High, Low, Close, Volume }] }, " +
+      "ordered oldest → newest.",
+  },
 
   // ── AI ───────────────────────────────────────────────────
   {

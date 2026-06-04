@@ -49,6 +49,13 @@ export const market = {
       method: "POST",
       body: JSON.stringify({ tickers }),
     }),
+  // Daily OHLCV history. period is constrained by DGX to
+  // 1mo|3mo|6mo|1y|2y|5y|10y (10y is the max available).
+  priceHistory: (ticker: string, period = "1y", interval = "1d") =>
+    dgxJson<unknown>(
+      `/api/stocks/${encodeURIComponent(ticker)}/price-history` +
+        `?period=${encodeURIComponent(period)}&interval=${encodeURIComponent(interval)}`,
+    ),
   generateThoughts: (ticker: string) =>
     dgxJson<unknown>(
       `/api/stocks/${encodeURIComponent(ticker)}/generate-thoughts`,

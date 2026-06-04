@@ -234,6 +234,22 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.refreshPrices(args.tickers)),
   );
 
+  server.registerTool(
+    "get_price_history",
+    {
+      ...meta("get_price_history"),
+      inputSchema: {
+        ticker: z.string().min(1),
+        period: z
+          .enum(["1mo", "3mo", "6mo", "1y", "2y", "5y", "10y"])
+          .optional(),
+        interval: z.string().min(1).optional(),
+      },
+    },
+    async (args) =>
+      ok(await market.priceHistory(args.ticker, args.period, args.interval)),
+  );
+
   // ── AI ───────────────────────────────────────────────────
   server.registerTool(
     "get_llm_thoughts",
