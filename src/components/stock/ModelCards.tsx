@@ -188,7 +188,24 @@ function detailRows(model: any, t: (k: string, v?: any) => string): Array<[strin
   if (pred.current_price != null) rows.push([t("detail.currentPrice"), fmt(pred.current_price)]);
   if (pred.predicted_price_3m != null) rows.push([t("detail.predictedPrice3m"), fmt(pred.predicted_price_3m)]);
 
-  if (tt === "ensemble" && pred.regime) rows.push([t("detail.marketRegime"), String(pred.regime)]);
+  if (tt === "ensemble") {
+    const reg = pred.regime || {};
+    if (reg.ann_vol_pct != null) {
+      const band =
+        reg.vol_low_threshold_pct != null && reg.vol_high_threshold_pct != null
+          ? ` (band ${reg.vol_low_threshold_pct}–${reg.vol_high_threshold_pct}%)`
+          : "";
+      rows.push(["Ann Vol", `${reg.ann_vol_pct}%${band}`]);
+    }
+    if (reg.ou_z_score != null) rows.push(["OU z-score", fmt(reg.ou_z_score)]);
+    const u = pred.uncertainty_decomposition;
+    if (u && u.epistemic_pct != null) {
+      rows.push([
+        "Uncertainty",
+        `epistemic ${u.epistemic_pct}% / aleatoric ${u.aleatoric_pct ?? "—"}%${u.dominant ? ` — ${u.dominant}` : ""}`,
+      ]);
+    }
+  }
   if (tt === "kronos" || tt === "lstm_forecast") {
     if (pred.architecture) rows.push([t("detail.architecture"), String(pred.architecture)]);
     if (pred.mc_samples != null) rows.push([t("detail.samplePaths"), fmt(pred.mc_samples)]);

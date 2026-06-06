@@ -7,6 +7,7 @@ import { StockSearch } from "@/components/shared/StockSearch";
 import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus } from "lucide-react";
 import { stocksApi } from "@/lib/api";
 import { useQueryClient } from "@tanstack/react-query";
+import { formatMoS } from "@/lib/valuation";
 
 /* ── Add-to-Portfolio Modal ─────────────────────────────────── */
 function AddToPortfolioModal({
@@ -517,7 +518,7 @@ export default function WatchlistPage() {
                                 stock.margin_of_safety > 0 ? "text-green-400" : "text-red-400"
                               }`}>
                                 {stock.margin_of_safety > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                {(stock.margin_of_safety * 100).toFixed(0)}%
+                                {formatMoS(stock.margin_of_safety)}
                               </span>
                             </div>
                           )}

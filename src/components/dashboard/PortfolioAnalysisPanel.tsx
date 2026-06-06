@@ -568,6 +568,34 @@ function StructuredMemo({
         </div>
       </details>
 
+      {(riskContext?.portfolio as any)?.var_cvar_1day && (() => {
+        const p = (riskContext as any).portfolio;
+        const vc = p.var_cvar_1day;
+        const cell = (label: string, val: string) => (
+          <div>
+            <div className="text-[10px] text-muted-foreground">{label}</div>
+            <div className="font-mono text-foreground/90">{val}</div>
+          </div>
+        );
+        const pctOrNa = (x: number | null | undefined) => (x != null ? `${x}%` : "n/a");
+        return (
+          <div className="rounded-lg border border-border/30 bg-muted/20 p-3 space-y-2">
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Quant Risk (computed)</div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+              {cell("1d VaR 95%", pctOrNa(vc.confidence_95?.hist_var_pct))}
+              {cell("1d CVaR 95%", pctOrNa(vc.confidence_95?.hist_cvar_pct))}
+              {cell("1d VaR 99%", pctOrNa(vc.confidence_99?.hist_var_pct))}
+              {cell("Port vol (ann)", pctOrNa(p.vol_target?.current_ann_vol_pct))}
+            </div>
+            {p.vol_target && (
+              <div className="text-[10px] text-muted-foreground">
+                Vol-target {p.vol_target.target_ann_vol_pct}% → suggested gross exposure {p.vol_target.suggested_gross_exposure_pct}%
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {riskContext && (
         <details className="group">
           <summary className="flex items-center gap-2 cursor-pointer list-none text-[10px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors select-none">

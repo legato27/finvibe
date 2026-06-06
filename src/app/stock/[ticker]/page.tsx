@@ -7,6 +7,7 @@ import { useLLMAnalysis } from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
+import { DcfScenarios } from "@/components/stock/DcfScenarios";
 import { ModelCards } from "@/components/stock/ModelCards";
 import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
 import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
@@ -179,20 +180,23 @@ export default function StockDetailPage() {
       )}
 
       {activeTab === "analysis" && (
-        <FinVibeThoughts
-          ticker={ticker}
-          thoughts={thoughts}
-          generatedAt={thoughtsGeneratedAt}
-          isGenerating={generatingThoughts && !thoughts}
-          onGenerate={() => setGeneratingThoughts(true)}
-          onGenerateDone={() => setGeneratingThoughts(false)}
-          llmIntrinsicValue={
-            llm.intrinsic_value ?? llm.llm_intrinsic_value ?? thoughtsData?.llm_intrinsic_value
-          }
-          llmMarginOfSafety={
-            llm.margin_of_safety ?? llm.llm_margin_of_safety ?? thoughtsData?.llm_margin_of_safety
-          }
-        />
+        <div className="space-y-4">
+          <DcfScenarios dcf={detail.dcf_detail} />
+          <FinVibeThoughts
+            ticker={ticker}
+            thoughts={thoughts}
+            generatedAt={thoughtsGeneratedAt}
+            isGenerating={generatingThoughts && !thoughts}
+            onGenerate={() => setGeneratingThoughts(true)}
+            onGenerateDone={() => setGeneratingThoughts(false)}
+            llmIntrinsicValue={
+              llm.intrinsic_value ?? llm.llm_intrinsic_value ?? thoughtsData?.llm_intrinsic_value
+            }
+            llmMarginOfSafety={
+              llm.margin_of_safety ?? llm.llm_margin_of_safety ?? thoughtsData?.llm_margin_of_safety
+            }
+          />
+        </div>
       )}
 
       {activeTab === "options" && (

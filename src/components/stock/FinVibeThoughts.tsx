@@ -244,6 +244,44 @@ export function FinVibeThoughts({
         )}
       </div>
 
+      {/* Trade Plan (C2) */}
+      {thoughts.trade_plan && typeof thoughts.trade_plan === "object" && (
+        <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">
+          <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wider mb-3">
+            {t('tradePlan')}
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+            {([
+              { key: "entry_zone", label: t('entryZone'), money: true },
+              { key: "stop_loss", label: t('stopLoss'), money: true },
+              { key: "target_1", label: t('target1'), money: true },
+              { key: "target_2", label: t('target2'), money: true },
+              { key: "risk_reward", label: t('riskReward'), money: false },
+              { key: "timeframe", label: t('timeframe'), money: false },
+            ]).map(({ key, label, money }) => {
+              const val = thoughts.trade_plan[key];
+              if (val == null || val === "") return null;
+              // Only price fields get a $; risk_reward/timeframe are plain text.
+              const display =
+                money && typeof val === "number"
+                  ? `$${val.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                  : String(val);
+              return (
+                <div key={key}>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{label}</div>
+                  <div className="font-mono text-foreground/90">{display}</div>
+                </div>
+              );
+            })}
+          </div>
+          {thoughts.trade_plan.position_sizing && (
+            <p className="text-xs text-muted-foreground leading-relaxed mt-3">
+              {thoughts.trade_plan.position_sizing}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Competitive Advantages */}
       {thoughts.competitive_advantages && typeof thoughts.competitive_advantages === "object" && (
         <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">
@@ -297,6 +335,8 @@ export function FinVibeThoughts({
         <Section title={t('fcfAnalysis')} content={thoughts.fcf_analysis} />
         <Section title={t('managementQuality')} content={thoughts.management_quality} />
         <Section title={t('valuationSnapshot')} content={thoughts.valuation_snapshot} />
+        <Section title={t('peerRelative')} content={thoughts.peer_relative} />
+        <Section title={t('analystConsensus')} content={thoughts.analyst_consensus} />
       </div>
     </div>
   );

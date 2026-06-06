@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown, Eye, ChevronRight, Lock } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import { formatMoS } from "@/lib/valuation";
 
 /**
  * Compact watchlist summary for the dashboard.
@@ -171,7 +172,7 @@ function AuthenticatedWatchlist() {
                     mosPositive ? "text-green-400" : "text-red-400"
                   }`}>
                     {mosPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    {(stock.margin_of_safety * 100).toFixed(0)}%
+                    {formatMoS(stock.margin_of_safety)}
                   </span>
                 )}
               </div>

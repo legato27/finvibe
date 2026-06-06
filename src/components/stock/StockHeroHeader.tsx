@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { formatMoS } from "@/lib/valuation";
 
 interface Props {
   ticker: string;
@@ -37,15 +38,14 @@ export function StockHeroHeader({
     },
     {
       label: t('mos'),
-      value: detail?.margin_of_safety != null
-        ? `${Number(detail.margin_of_safety).toFixed(1)}%` : null,
+      value: formatMoS(detail?.margin_of_safety),
+      sub: t('dcf'),
       color: detail?.margin_of_safety != null
         ? (detail.margin_of_safety > 0 ? "text-green-400" : "text-red-400") : undefined,
     },
     {
       label: t('mos'),
-      value: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
-        ? `${Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety).toFixed(1)}%` : null,
+      value: formatMoS(llmData.margin_of_safety ?? llmData.llm_margin_of_safety),
       sub: t('ai'),
       color: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
         ? (Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400") : undefined,
