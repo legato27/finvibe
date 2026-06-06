@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Brain, RefreshCw, ChevronDown, ChevronUp, Shield, Target, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { MarketDirectionCard } from "./MarketDirectionCard";
@@ -50,24 +50,30 @@ export function FinVibeThoughts({
 }: FinVibeThoughtsProps) {
   const t = useTranslations('stock');
   const [localGenerating, setLocalGenerating] = useState(false);
+  // generatedAt at the moment generation started. Completion = a NEWER timestamp arrives.
+  // The old `!thoughts` check never cleared the spinner when re-generating an analysis that
+  // already existed (thoughts stayed truthy), leaving it spinning forever.
+  const genStartedAtRef = useRef<string | null>(null);
 
-  // Stop polling once thoughts arrive
   useEffect(() => {
-    if (thoughts && isGenerating && onGenerateDone) {
-      onGenerateDone();
+    if (!localGenerating) return;
+    if (thoughts && generatedAt !== genStartedAtRef.current) {
       setLocalGenerating(false);
+      onGenerateDone?.();
     }
-  }, [thoughts, isGenerating, onGenerateDone]);
+  }, [thoughts, generatedAt, localGenerating, onGenerateDone]);
 
   const generating = isGenerating || localGenerating;
 
   async function handleGenerate() {
+    genStartedAtRef.current = generatedAt; // snapshot so we can detect the new analysis
     setLocalGenerating(true);
     onGenerate?.();
     try {
       await stocksApi.generateThoughts(ticker);
     } catch {
       setLocalGenerating(false);
+      onGenerateDone?.();
     }
   }
 
