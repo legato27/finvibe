@@ -156,7 +156,7 @@ export function PortfolioAnalysisPanel({
             ) : (
               <Cpu className="w-3.5 h-3.5" />
             )}
-            Gemma
+            Qwen3.6
           </button>
         </div>
       </div>
@@ -178,7 +178,7 @@ export function PortfolioAnalysisPanel({
         {running && (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            {t("runningAnalysis", { provider: running === "claude" ? "Claude" : "Gemma" })}
+            {t("runningAnalysis", { provider: running === "claude" ? "Claude" : "Qwen3.6" })}
           </div>
         )}
 
