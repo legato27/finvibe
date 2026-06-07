@@ -847,6 +847,8 @@
     "neutral": "中性",
     "news": "新闻",
     "newsFinbert": "新闻 (FinBERT)",
+    "polygonRead": "Polygon 解读",
+    "polygonInsights": "{count} 条个股标记洞察",
     "reddit": "Reddit",
     "score": "评分",
     "sentimentLabel": "情绪",

@@ -847,6 +847,8 @@
     "neutral": "Neutral",
     "news": "News",
     "newsFinbert": "News (FinBERT)",
+    "polygonRead": "Polygon read",
+    "polygonInsights": "{count} ticker-tagged insights",
     "reddit": "Reddit",
     "score": "Score",
     "sentimentLabel": "情绪",

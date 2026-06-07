@@ -92,6 +92,31 @@ export function SentimentPanel({ ticker }: Props) {
           </div>
         )}
       </div>
+
+      {/* Polygon precision-tagged "why" — provider per-ticker insight + reasoning */}
+      {data.polygon_reasoning && (
+        <div className="mt-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
+              {t("polygonRead")}
+            </span>
+            {data.polygon_score != null && (
+              <span className="text-xs font-mono font-semibold" style={{ color: sentimentColor(data.polygon_score) }}>
+                {data.polygon_score >= 0 ? "+" : ""}{(data.polygon_score * 100).toFixed(0)}
+              </span>
+            )}
+            {data.polygon_articles ? (
+              <span className="text-[11px] text-slate-500">
+                {t("polygonInsights", { count: data.polygon_articles })}
+              </span>
+            ) : null}
+          </div>
+          {data.polygon_headline && (
+            <div className="text-xs font-medium text-slate-300 mb-0.5">{data.polygon_headline}</div>
+          )}
+          <p className="text-xs text-slate-400 leading-snug line-clamp-3">{data.polygon_reasoning}</p>
+        </div>
+      )}
     </div>
   );
 }
