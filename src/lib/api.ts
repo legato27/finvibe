@@ -165,6 +165,9 @@ export const modelsApi = {
   lastRun: (ticker: string) => api.get(`/api/models/${ticker}/last-run`).then((r) => r.data),
   crossSectional: () => api.get(`/api/models/cross-sectional/ranked`).then((r) => r.data),
   optionsRanked: () => api.get(`/api/models/options-ranked`).then((r) => r.data),
+  optionsRecoScorecard: (window = 60) =>
+    api.get(`/api/models/options-reco/scorecard?window=${window}`).then((r) => r.data),
+  optionsRecoOpen: () => api.get(`/api/models/options-reco/open`).then((r) => r.data),
 };
 
 // ── Macro ─────────────────────────────────────────────────────
