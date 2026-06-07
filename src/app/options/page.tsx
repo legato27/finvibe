@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Star } from "lucide-react";
-import { modelsApi } from "@/lib/api";
+import { modelsApi, stocksApi } from "@/lib/api";
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
 
 type Profile = "conservative" | "balanced" | "aggressive";
@@ -110,6 +110,18 @@ export default function OptionsBookPage() {
     staleTime: 60 * 60 * 1000,
   });
 
+  // Live prices — the book itself is cached ~25h, so overlay realtime quotes
+  // (one batched call for all names) and refresh every 60s.
+  const tickers = data?.ranked.map((r) => r.ticker) ?? [];
+  const { data: livePrices } = useQuery<Array<{ ticker: string; price: number | null }>>({
+    queryKey: ["options-live-prices", tickers.length],
+    queryFn: () => stocksApi.refreshPrices(tickers),
+    enabled: tickers.length > 0,
+    refetchInterval: 60_000,
+    staleTime: 55_000,
+  });
+  const priceMap = new Map((livePrices ?? []).map((p) => [p.ticker, p.price]));
+
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto">
       <div>
@@ -146,7 +158,13 @@ export default function OptionsBookPage() {
       {data && (
         <>
           <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-            <span>{data.universe_size} elevated-vol names (RV ≥ p{data.vol_gate_percentile})</span>
+            <span className="flex items-center gap-2">
+              {data.universe_size} elevated-vol names (RV ≥ p{data.vol_gate_percentile})
+              <span className="flex items-center gap-1 text-emerald-400/90">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                live prices · 60s
+              </span>
+            </span>
             <button onClick={() => setShowTrack((v) => !v)} className="text-primary hover:underline">
               {showTrack ? "Hide track record" : "Show track record →"}
             </button>
@@ -199,7 +217,13 @@ export default function OptionsBookPage() {
             {data.ranked
               .filter((r) => filter === "all" || r.strategy === filter)
               .map((r) => (
-                <RankRow key={r.ticker} r={r} profile={profile} horizons={data.horizons} />
+                <RankRow
+                  key={r.ticker}
+                  r={r}
+                  profile={profile}
+                  horizons={data.horizons}
+                  livePrice={priceMap.get(r.ticker) ?? null}
+                />
               ))}
           </div>
         </>
@@ -208,11 +232,17 @@ export default function OptionsBookPage() {
   );
 }
 
-function RankRow({ r, profile, horizons }: { r: OptRow; profile: Profile; horizons: string[] }) {
+function RankRow({
+  r, profile, horizons, livePrice,
+}: { r: OptRow; profile: Profile; horizons: string[]; livePrice: number | null }) {
   const rec = r.recommendation?.[profile];
   const bestLevel = rec ? r.levels[`${rec.best_dte}d`] : undefined;
   const em = bestLevel?.expected_move;
   const band = rec?.quant_band;
+  // Live quote overlays the cached book price; flag when they diverge so it's
+  // clear the strikes/band were anchored to the reference (book-compute) price.
+  const shownPrice = livePrice ?? r.price;
+  const drifted = livePrice != null && r.price > 0 && Math.abs(livePrice - r.price) / r.price > 0.01;
 
   return (
     <div className={`card p-3 ${r.iv_suspect ? "opacity-70" : ""}`}>
@@ -225,7 +255,11 @@ function RankRow({ r, profile, horizons }: { r: OptRow; profile: Profile; horizo
         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${STRAT_STYLE[r.strategy]}`}>
           {r.strategy}
         </span>
-        <span className="font-mono text-sm">{usd(r.price)}</span>
+        <span className="font-mono text-sm flex items-baseline gap-1">
+          {usd(shownPrice)}
+          {livePrice != null && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse self-center" />}
+          {drifted && <span className="text-[10px] text-muted-foreground/70">ref {usd(r.price)}</span>}
+        </span>
         {r.atm_iv_pct != null && (
           <span className="text-[11px] flex items-center gap-1">
             IV <span className="font-mono text-emerald-300">{r.atm_iv_pct}%</span>
