@@ -61,7 +61,7 @@ function fmtVol(v: number): string {
 
 // ── Component ────────────────────────────────────────────────
 
-export function PriceChart({ ticker }: { ticker: string }) {
+export function PriceChart({ ticker, priceAction }: { ticker: string; priceAction?: any }) {
   const t = useTranslations('stock');
   // ── DOM + chart refs ──────────────────────────────────────
   const containerRef  = useRef<HTMLDivElement>(null);
@@ -223,6 +223,57 @@ export function PriceChart({ ticker }: { ticker: string }) {
         ma50Ref.current  = ma50S;
         ma200Ref.current = ma200S;
 
+        // ── Price Action (PAM) overlays ──
+        const pa = priceAction;
+        if (pa?.synthesis) {
+          const kl = pa.synthesis.key_levels || {};
+          const lines: { price: number; color: string; title: string }[] = [];
+          if (kl.sweet_spot) {
+            lines.push({ price: kl.sweet_spot.low, color: "#6366f1", title: "SS↓" });
+            lines.push({ price: kl.sweet_spot.high, color: "#6366f1", title: "SS↑" });
+          }
+          if (kl.invalidation != null) lines.push({ price: kl.invalidation, color: "#ef4444", title: "Invalid" });
+          if (kl.structural_target != null) lines.push({ price: kl.structural_target, color: "#22c55e", title: "Target" });
+          Object.entries(kl.support_resistance || {}).forEach(([k, v]) => {
+            if (typeof v === "number") lines.push({ price: v, color: "#64748b", title: k });
+          });
+          lines.forEach(({ price, color, title }) => {
+            try {
+              mainSeries.createPriceLine({
+                price, color, lineWidth: 1, lineStyle: LineStyle.Dotted,
+                axisLabelVisible: true, title,
+              });
+            } catch { /* ignore */ }
+          });
+
+          // Swing + FSB markers from the timeframe matching the current interval
+          const tfKey = interval === "1wk" ? "weekly" : interval === "1mo" ? "monthly" : "daily";
+          const tf = pa.timeframes?.[tfKey];
+          if (tf) {
+            const times = new Set(chartData.map((d) => d.time));
+            const markers: any[] = [];
+            (tf.swing_markers || []).forEach((m: any) => {
+              if (!times.has(m.date)) return;
+              markers.push({
+                time: m.date, position: m.type === "H" ? "aboveBar" : "belowBar",
+                color: m.type === "H" ? "#f87171" : "#4ade80", shape: "circle", text: m.type,
+              });
+            });
+            (tf.fsb_markers || []).forEach((m: any) => {
+              if (!times.has(m.date)) return;
+              markers.push({
+                time: m.date, position: m.dir === "bull" ? "belowBar" : "aboveBar",
+                color: m.dir === "bull" ? "#22c55e" : "#ef4444",
+                shape: m.dir === "bull" ? "arrowUp" : "arrowDown", text: "FSB",
+              });
+            });
+            if (markers.length) {
+              markers.sort((a, b) => a.time.localeCompare(b.time));
+              try { mainSeries.setMarkers(markers); } catch { /* ignore */ }
+            }
+          }
+        }
+
         // ── Restore saved drawings ──
         try {
           const saved: number[] = JSON.parse(localStorage.getItem(drawKey) ?? "[]");
@@ -288,7 +339,7 @@ export function PriceChart({ ticker }: { ticker: string }) {
         chartRef.current = null;
       }
     };
-  }, [chartData, chartMode, ticker, drawKey]);
+  }, [chartData, chartMode, ticker, drawKey, priceAction, interval]);
 
   // ── MA visibility toggles (don't rebuild chart) ──────────
   useEffect(() => { ma20Ref.current?.applyOptions({ visible: showMA20 }); }, [showMA20]);

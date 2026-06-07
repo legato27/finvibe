@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi, sentimentApi } from "@/lib/api";
 import { useLLMAnalysis } from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
+import { PriceActionAnalysis } from "@/components/stock/PriceActionAnalysis";
 import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { DcfScenarios } from "@/components/stock/DcfScenarios";
@@ -53,6 +54,16 @@ export default function StockDetailPage() {
   });
 
   const { data: supabaseLlm } = useLLMAnalysis(ticker);
+
+  // Price Action (PAM) — shared by the chart overlays and the analysis panel
+  // (same queryKey → react-query dedupes to a single request)
+  const { data: priceAction } = useQuery({
+    queryKey: ["price-action", ticker],
+    queryFn: () => stocksApi.priceAction(ticker),
+    enabled: !!ticker,
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
 
   // Refresh live price on mount — updates DB so detail query stays fresh
   const qc = useQueryClient();
@@ -171,7 +182,12 @@ export default function StockDetailPage() {
           TAB CONTENT
           ═══════════════════════════════════════════════════ */}
 
-      {activeTab === "chart" && <PriceChart ticker={ticker} />}
+      {activeTab === "chart" && (
+        <div className="space-y-4">
+          <PriceChart ticker={ticker} priceAction={priceAction} />
+          <PriceActionAnalysis ticker={ticker} />
+        </div>
+      )}
 
       {activeTab === "analysis" && (
         <div className="space-y-4">

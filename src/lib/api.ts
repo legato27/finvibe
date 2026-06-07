@@ -60,6 +60,8 @@ export const stocksApi = {
   generateThoughts: (ticker: string) => api.post(`/api/stocks/${ticker}/generate-thoughts`).then((r) => r.data),
   priceHistory: (ticker: string, period = "1y", interval = "1d") =>
     api.get(`/api/stocks/${ticker}/price-history?period=${period}&interval=${interval}`).then((r) => r.data),
+  priceAction: (ticker: string) =>
+    api.get(`/api/stocks/${ticker}/price-action`).then((r) => r.data),
   refreshPrices: (tickers: string[]) =>
     api.post("/api/stocks/prices/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),
