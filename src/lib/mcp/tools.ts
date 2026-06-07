@@ -269,54 +269,29 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => {
       const tickers = [...new Set(args.tickers.map((t) => t.toUpperCase()))];
 
-      // 1. Pull DGX /detail per ticker → mirror stock_catalog + llm_analysis.
-      const syncResults = await Promise.allSettled(
-        tickers.map((t) => db.ensureBasicEnrichment(ctx.supabase, t)),
+      // Single idempotent kick per ticker. DGX runs the full pipeline and is the
+      // sole writer of the stock_catalog / llm_analysis mirror — we don't pull
+      // DGX's view and write it ourselves anymore.
+      const results = await Promise.allSettled(
+        tickers.map((t) => market.enrich(t)),
       );
 
-      // 2. Queue fresh thoughts + quant models so DGX has new data to sync
-      //    on the next run.
-      const queueResults = await Promise.allSettled(
-        tickers.map(async (t) => {
-          const [thoughts, models] = await Promise.allSettled([
-            market.generateThoughts(t),
-            market.runAllModels(t),
-          ]);
-          return {
-            ticker: t,
-            thoughts:
-              thoughts.status === "fulfilled"
-                ? (thoughts.value as { task_id?: string })?.task_id ?? "queued"
-                : `error: ${String(thoughts.reason).slice(0, 120)}`,
-            models:
-              models.status === "fulfilled"
-                ? (models.value as { task_id?: string })?.task_id ?? "queued"
-                : String(models.reason).includes("429")
-                  ? "skipped (already run today)"
-                  : `error: ${String(models.reason).slice(0, 120)}`,
-          };
-        }),
-      );
-
-      const synced = syncResults
-        .map((r, i) =>
-          r.status === "fulfilled"
-            ? { ticker: tickers[i], ...r.value }
-            : { ticker: tickers[i], error: String(r.reason) },
-        );
+      const jobs = results.map((r, i) => ({
+        ticker: tickers[i],
+        status: r.status === "fulfilled"
+          ? "enrichment_kicked"
+          : `error: ${String(r.reason).slice(0, 160)}`,
+      }));
 
       return ok({
         tickers,
-        synced,
-        jobs: queueResults.map((r) =>
-          r.status === "fulfilled" ? r.value : { error: String(r.reason) },
-        ),
+        jobs,
         note:
-          "Pulled DGX's view of each ticker and mirrored it into both " +
-          "stock_catalog (name/sector/price/moat/intrinsic when available) and " +
-          "llm_analysis (LLM-derived intrinsic + thoughts summary). Also queued " +
-          "fresh thoughts + quant models so the next sync picks up new data. " +
-          "Re-run enrich_stock after ~60s to capture the LLM completion.",
+          "Requested enrichment from DGX for each ticker. DGX runs prices → " +
+          "financials → moat → DCF → ETF → trends → LLM metadata → thoughts/" +
+          "models, then syncs the result to Supabase (stock_catalog + " +
+          "llm_analysis). Name/sector/price appear within seconds; the rest in " +
+          "30-90s. Read back via list_watchlists / get_stock_catalog.",
       });
     },
   );
