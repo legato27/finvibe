@@ -13,6 +13,7 @@ interface NewsItem {
   score: number;
   published_at?: string;
   sentiment_label: string;
+  sentiment_reasoning?: string;
 }
 
 function SentimentIcon({ label }: { label: string }) {
@@ -25,6 +26,14 @@ function scoreToClass(score: number) {
   if (score > 0.1) return "border-green-900/50 bg-green-950/20";
   if (score < -0.1) return "border-red-900/50 bg-red-950/20";
   return "border-border/50";
+}
+
+// Left-border + text tint for the per-ticker "why" line (Polygon reasoning),
+// keyed to the sentiment sign so the rationale reads in the label's color.
+function reasoningToClass(score: number) {
+  if (score > 0.1) return "border-green-700 text-green-300/80";
+  if (score < -0.1) return "border-red-700 text-red-300/80";
+  return "border-slate-700 text-slate-400";
 }
 
 export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
@@ -101,6 +110,14 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
                   </a>
                 )}
               </div>
+
+              {item.sentiment_reasoning && (
+                <p
+                  className={`text-[11px] italic leading-snug mt-1 pl-1.5 border-l-2 line-clamp-3 ${reasoningToClass(item.score)}`}
+                >
+                  {item.sentiment_reasoning}
+                </p>
+              )}
             </div>
 
             <div
