@@ -145,33 +145,30 @@ export default function RankedBookPage() {
             ))}
           </div>
 
+          {/* legend (kept above the table — InfoTip cards would be clipped inside the scroll container) */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
+            <span className="text-foreground/70 font-medium">Legend:</span>
+            <InfoTip label="Price" tip={TIPS.price} size={11} />
+            <InfoTip label="Prob" tip={TIPS.prob} size={11} />
+            <InfoTip label="Composite z" tip={TIPS.composite} size={11} />
+            <InfoTip label="%ile" tip={TIPS.percentile} size={11} />
+            <InfoTip label="Signal" tip={TIPS.signal} size={11} />
+            <InfoTip label="PAM" tip={TIPS.pam} size={11} />
+          </div>
+
           <div className="card overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
                   <th className="text-left p-2">#</th>
                   <th className="text-left p-2">Ticker</th>
-                  <th className="text-right p-2">
-                    <span className="inline-flex items-center gap-1">Price <InfoTip tip={TIPS.price} size={11} /></span>
-                  </th>
-                  <th className="text-right p-2">
-                    <span className="inline-flex items-center gap-1">Prob <InfoTip tip={TIPS.prob} size={11} /></span>
-                  </th>
+                  <th className="text-right p-2" title={TIPS.price}>Price</th>
+                  <th className="text-right p-2" title={TIPS.prob}>Prob</th>
                   <th className="text-left p-2 hidden sm:table-cell">Sector</th>
-                  <th className="text-right p-2">
-                    <span className="inline-flex items-center gap-1">
-                      Composite z <InfoTip tip={TIPS.composite} size={11} />
-                    </span>
-                  </th>
-                  <th className="text-right p-2 hidden md:table-cell">
-                    <span className="inline-flex items-center gap-1">%ile <InfoTip tip={TIPS.percentile} size={11} /></span>
-                  </th>
-                  <th className="text-center p-2">
-                    <span className="inline-flex items-center gap-1">Signal <InfoTip tip={TIPS.signal} size={11} /></span>
-                  </th>
-                  <th className="text-center p-2">
-                    <span className="inline-flex items-center gap-1">PAM <InfoTip tip={TIPS.pam} size={11} /></span>
-                  </th>
+                  <th className="text-right p-2" title={TIPS.composite}>Composite z</th>
+                  <th className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>%ile</th>
+                  <th className="text-center p-2" title={TIPS.signal}>Signal</th>
+                  <th className="text-center p-2" title={TIPS.pam}>PAM</th>
                 </tr>
               </thead>
               <tbody>
