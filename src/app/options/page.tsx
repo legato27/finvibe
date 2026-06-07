@@ -6,7 +6,7 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle } from "lucide-react";
 import { modelsApi } from "@/lib/api";
 
-interface Level { support: number; resistance: number; expected_move: number }
+interface Level { support: number; resistance: number; expected_move: number; iv_pct?: number }
 interface OptRow {
   rank: number;
   ticker: string;
@@ -15,6 +15,9 @@ interface OptRow {
   realized_vol_ann_pct: number;
   fwd_vol_ann_pct: number | null;
   vol_percentile: number;
+  atm_iv_pct?: number | null;
+  total_oi?: number | null;
+  iv_source?: "polygon" | "realized_proxy";
   trend: "up" | "down" | "neutral";
   strategy: "Sell Puts" | "Sell Calls" | "Sell Strangle";
   score: number;
@@ -26,6 +29,7 @@ interface OptBook {
   universe_size: number;
   vol_gate_percentile: number;
   horizons: string[];
+  iv_source?: "polygon" | "realized_proxy";
   iv_proxy_note: string;
   ranked: OptRow[];
 }
@@ -62,15 +66,26 @@ export default function OptionsBookPage() {
         </p>
       </div>
 
-      {/* Honest IV caveat */}
-      <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-[11px] text-amber-200/90 leading-relaxed flex gap-2">
-        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-        <span>
-          No options feed yet — &ldquo;elevated IV&rdquo; is proxied by <b>realized-volatility percentile</b> (current vs the
-          stock&rsquo;s own 2-yr history), and the expected move is vol-implied, not from the option market. Treat this as
-          a screener for likely-rich-premium setups, not exact strikes/premiums.
-        </span>
-      </div>
+      {/* IV source note */}
+      {data?.iv_source === "polygon" ? (
+        <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-3 text-[11px] text-emerald-200/90 leading-relaxed flex gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <b>Real option-market IV</b> (Polygon) for US names — ATM IV, per-DTE IV, expected move and open interest from the
+            live chain. Non-US names fall back to a realized-vol proxy. IV <b>rank/percentile</b> (vs each name&rsquo;s own IV
+            history) is the next upgrade.
+          </span>
+        </div>
+      ) : (
+        <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-[11px] text-amber-200/90 leading-relaxed flex gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            No live options feed — &ldquo;elevated IV&rdquo; is proxied by <b>realized-volatility percentile</b>, and the
+            expected move is vol-implied, not from the option market. A screener for likely-rich-premium setups, not exact
+            strikes/premiums.
+          </span>
+        </div>
+      )}
 
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">Scanning for elevated-vol setups…</div>}
       {error && <div className="card p-6 text-sm text-red-400">Failed to load.</div>}
@@ -110,10 +125,18 @@ export default function OptionsBookPage() {
                       {r.strategy}
                     </span>
                     <span className="font-mono text-sm">{usd(r.price)}</span>
+                    {r.atm_iv_pct != null && (
+                      <span className="text-[11px] flex items-center gap-1">
+                        IV <span className="font-mono text-emerald-300">{r.atm_iv_pct}%</span>
+                      </span>
+                    )}
                     <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                       RV <span className="font-mono text-foreground/80">{r.realized_vol_ann_pct}%</span>
                       <span className="text-muted-foreground/70">(p{r.vol_percentile})</span>
                     </span>
+                    {r.total_oi != null && (
+                      <span className="text-[11px] text-muted-foreground">OI {r.total_oi.toLocaleString()}</span>
+                    )}
                     <span className="text-[11px] flex items-center gap-1">{trendIcon(r.trend)}{r.trend}</span>
                     <span className="text-[11px] text-muted-foreground ml-auto">
                       score <span className="font-mono text-foreground/80">{r.score.toFixed(2)}</span>
@@ -130,7 +153,10 @@ export default function OptionsBookPage() {
                           <div className="font-mono text-foreground/80">
                             S {usd(L.support)} · R {usd(L.resistance)}
                           </div>
-                          <div className="text-muted-foreground">exp. move ±{usd(L.expected_move)}</div>
+                          <div className="text-muted-foreground">
+                            exp. move ±{usd(L.expected_move)}
+                            {L.iv_pct != null && <span className="text-emerald-300/80"> · IV {L.iv_pct}%</span>}
+                          </div>
                         </div>
                       );
                     })}
