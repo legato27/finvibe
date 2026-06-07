@@ -64,6 +64,8 @@ export const stocksApi = {
     api.get(`/api/stocks/${ticker}/price-action`).then((r) => r.data),
   refreshPrices: (tickers: string[]) =>
     api.post("/api/stocks/prices/batch", { tickers }).then((r) => r.data),
+  pamBatch: (tickers: string[]) =>
+    api.post("/api/stocks/pam/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),
   optionsInference: (ticker: string, body: Record<string, unknown>) =>
     api.post(`/api/stocks/${ticker}/options-inference`, body).then((r) => r.data),
