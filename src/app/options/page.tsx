@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle } from "lucide-react";
 import { modelsApi } from "@/lib/api";
+import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
 
 interface Level { support: number; resistance: number; expected_move: number; iv_pct?: number }
 interface OptRow {
@@ -24,6 +25,7 @@ interface OptRow {
   sell_put_score: number;
   sell_call_score: number;
   levels: Record<string, Level>;
+  pam?: PamSummary | null;
 }
 interface OptBook {
   universe_size: number;
@@ -138,6 +140,9 @@ export default function OptionsBookPage() {
                       <span className="text-[11px] text-muted-foreground">OI {r.total_oi.toLocaleString()}</span>
                     )}
                     <span className="text-[11px] flex items-center gap-1">{trendIcon(r.trend)}{r.trend}</span>
+                    <span className="text-[11px] flex items-center gap-1">
+                      <span className="text-muted-foreground">PAM</span> <PamBadge pam={r.pam} />
+                    </span>
                     <span className="text-[11px] text-muted-foreground ml-auto">
                       score <span className="font-mono text-foreground/80">{r.score.toFixed(2)}</span>
                     </span>

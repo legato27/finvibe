@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { modelsApi } from "@/lib/api";
+import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
 
 interface RankedRow {
   ticker: string;
@@ -15,6 +16,7 @@ interface RankedRow {
   bucket: "long" | "short" | "neutral";
   factors: Record<string, number>;
   factors_used: number;
+  pam?: PamSummary | null;
 }
 
 interface RankedBook {
@@ -95,6 +97,7 @@ export default function RankedBookPage() {
                   <th className="text-right p-2">Composite z</th>
                   <th className="text-right p-2 hidden md:table-cell">%ile</th>
                   <th className="text-center p-2">Signal</th>
+                  <th className="text-center p-2">PAM</th>
                 </tr>
               </thead>
               <tbody>
@@ -121,6 +124,9 @@ export default function RankedBookPage() {
                           {bucketIcon(r.bucket)}
                           {r.bucket}
                         </span>
+                      </td>
+                      <td className="p-2 text-center">
+                        <PamBadge pam={r.pam} />
                       </td>
                     </tr>
                   ))}
