@@ -12,174 +12,29 @@ function tickerOf(t: string): string {
   return t.trim().toUpperCase();
 }
 
-// Pull DGX's full view of a ticker (stock_catalog basics + LLM sub-object)
-// and mirror it into Supabase ourselves. DGX has its own enrichment worker
-// that eventually syncs to Supabase, but timing is unreliable — this puts
-// MCP in the driver's seat so the watchlist UI shows what DGX knows.
-//
-// Status promotion (own this column locally, don't wait on DGX):
-//   - DGX returned an explicit non-pending status → mirror it.
-//   - basic data landed (name) AND LLM analysis has substantive content
-//     (thoughts_summary or llm_intrinsic_value) → done.
-//   - basic data landed but LLM analysis is still empty → processing.
-//   - DGX returned nothing usable → leave row as-is so a future sweep retries.
-export async function ensureBasicEnrichment(
-  supabase: ServiceSupabase,
-  ticker: string,
-): Promise<{ basic_fields: string[]; llm_fields: string[]; status?: string }> {
-  const result = {
-    basic_fields: [] as string[],
-    llm_fields: [] as string[],
-    status: undefined as string | undefined,
-  };
-  try {
-    const detail = (await market.detail(ticker)) as Record<string, unknown> | null;
-    if (!detail) return result;
-
-    // 1. Build stock_catalog patch from whatever DGX has populated.
-    const stockPatch: Record<string, unknown> = {};
-    const copy = (k: string, v: unknown, write?: string) => {
-      if (v === null || v === undefined) return;
-      stockPatch[write ?? k] = v;
-    };
-    copy("name", detail.name);
-    copy("sector", detail.sector);
-    copy("industry", detail.industry);
-    copy("description", detail.description);
-    if (typeof detail.last_price === "number") {
-      stockPatch.last_price = detail.last_price;
-      stockPatch.last_price_updated_at = new Date().toISOString();
-    }
-    copy("ten_yr_low", detail.ten_yr_low);
-    copy("ten_yr_high", detail.ten_yr_high);
-    copy("moat_rating", detail.moat_rating);
-    copy("moat_confidence", detail.moat_confidence);
-    copy("moat_detail", detail.moat_detail);
-    copy("intrinsic_value", detail.intrinsic_value);
-    copy("margin_of_safety", detail.margin_of_safety);
-    copy("wacc", detail.wacc);
-    copy("quarterly_trend", detail.quarterly_trend);
-    copy("yearly_trend", detail.yearly_trend);
-    copy("is_etf", detail.is_etf);
-    copy("etf_memberships", detail.etf_memberships);
-
-    // 2. Upsert llm_analysis from the nested `llm` object if DGX has any.
-    //    Done before the status decision so we know whether substantive LLM
-    //    data is now present in the DB.
-    let llmHasSubstance = false;
-    const llm = detail.llm as Record<string, unknown> | null | undefined;
-    if (llm && typeof llm === "object") {
-      const llmPatch: Record<string, unknown> = { ticker };
-      const llmCopy = (k: string, v: unknown, write: string) => {
-        if (v === null || v === undefined) return;
-        llmPatch[write] = v;
-      };
-      llmCopy("sector", llm.sector, "llm_sector");
-      llmCopy("moat", llm.moat, "llm_moat");
-      llmCopy("description", llm.description, "llm_description");
-      llmCopy("intrinsic_value", llm.intrinsic_value, "llm_intrinsic_value");
-      llmCopy("margin_of_safety", llm.margin_of_safety, "llm_margin_of_safety");
-      llmCopy("thoughts_summary", llm.thoughts_summary, "thoughts_summary");
-      llmCopy(
-        "thoughts_generated_at",
-        llm.thoughts_generated_at,
-        "thoughts_generated_at",
-      );
-      // Only upsert if we got at least one substantive field beyond the ticker.
-      if (Object.keys(llmPatch).length > 1) {
-        const { error } = await supabase
-          .from("llm_analysis")
-          .upsert(llmPatch, { onConflict: "ticker" });
-        if (error) {
-          console.error(`[mcp] llm_analysis upsert ${ticker}:`, error);
-        } else {
-          result.llm_fields = Object.keys(llmPatch).filter((k) => k !== "ticker");
-          llmHasSubstance =
-            llmPatch.thoughts_summary != null ||
-            llmPatch.llm_intrinsic_value != null;
-        }
-      }
-    }
-
-    // If DGX hasn't already promoted basic data on its own, also check the
-    // existing llm_analysis row — we may have flipped it in a prior call.
-    if (!llmHasSubstance) {
-      const { data: existingLlm } = await supabase
-        .from("llm_analysis")
-        .select("thoughts_summary, llm_intrinsic_value")
-        .eq("ticker", ticker)
-        .maybeSingle();
-      llmHasSubstance =
-        !!existingLlm &&
-        (existingLlm.thoughts_summary != null ||
-          existingLlm.llm_intrinsic_value != null);
-    }
-
-    // 3. Decide enrichment_status to write.
-    let nextStatus: string | undefined;
-    if (
-      typeof detail.enrichment_status === "string" &&
-      detail.enrichment_status !== "pending"
-    ) {
-      nextStatus = detail.enrichment_status;
-    } else if (stockPatch.name) {
-      nextStatus = llmHasSubstance ? "done" : "processing";
-    }
-    if (nextStatus) {
-      stockPatch.enrichment_status = nextStatus;
-      result.status = nextStatus;
-    }
-
-    // 4. Persist the stock_catalog patch (only if we actually have changes).
-    if (Object.keys(stockPatch).length) {
-      const { error } = await supabase
-        .from("stock_catalog")
-        .update(stockPatch)
-        .eq("ticker", ticker);
-      if (error) {
-        console.error(`[mcp] stock_catalog update ${ticker}:`, error);
-      } else {
-        result.basic_fields = Object.keys(stockPatch);
-      }
-    }
-  } catch (err) {
-    console.error(`[mcp] ensureBasicEnrichment ${ticker} failed`, err);
-  }
-  return result;
-}
-
-// Synchronously populate name/sector/price into stock_catalog (so the
-// watchlist UI shows data immediately on next read), then queue the
-// LLM thoughts and quant model jobs on DGX. Both DGX endpoints return 202
-// immediately (the actual work runs async on DGX), so awaiting them
-// directly is fast and far more reliable than after() inside mcp-handler.
+// Request enrichment from DGX. DGX is the single source of truth for stock
+// details + enrichment_status and the SOLE writer of the Supabase stock_catalog
+// / llm_analysis mirror. The web/MCP clients only ever (1) create the 'pending'
+// request row (getOrCreateStock) and (2) call this to kick the pipeline — they
+// no longer pull DGX's view and write fields/status themselves. That old
+// dual-writer design (two engines racing on the same rows, with different field
+// sets and different meanings of "done") is what made the two databases
+// disagree. DGX's /watchlist/enrich is idempotent and:
+//   - ensures its local row + runs the full pipeline,
+//   - mirrors name/sector/price early (status stays 'processing'),
+//   - pushes the full stock + llm projection once, at the end (status 'done'),
+//   - and a periodic reconcile task backstops any missed push.
 export async function kickoffEnrichment(
-  supabase: ServiceSupabase,
+  _supabase: ServiceSupabase,
   ticker: string,
-): Promise<{ thoughts_task?: string; models_task?: string }> {
-  await ensureBasicEnrichment(supabase, ticker);
-  const [thoughtsRes, modelsRes] = await Promise.allSettled([
-    market.generateThoughts(ticker),
-    market.runAllModels(ticker),
-  ]);
-  const out: { thoughts_task?: string; models_task?: string } = {};
-  if (thoughtsRes.status === "fulfilled") {
-    const r = thoughtsRes.value as { task_id?: string } | null;
-    if (r?.task_id) out.thoughts_task = r.task_id;
-  } else {
-    console.error(`[mcp] generateThoughts ${ticker} failed`, thoughtsRes.reason);
+): Promise<{ kicked: boolean; error?: string }> {
+  try {
+    await market.enrich(ticker);
+    return { kicked: true };
+  } catch (err) {
+    console.error(`[mcp] enrich ${ticker} failed`, err);
+    return { kicked: false, error: String(err).slice(0, 200) };
   }
-  if (modelsRes.status === "fulfilled") {
-    const r = modelsRes.value as { task_id?: string } | null;
-    if (r?.task_id) out.models_task = r.task_id;
-  } else {
-    // 429 "Already run today" is expected — quant models are once-daily.
-    const msg = String(modelsRes.reason);
-    if (!msg.includes("429")) {
-      console.error(`[mcp] runAllModels ${ticker} failed`, modelsRes.reason);
-    }
-  }
-  return out;
 }
 
 // Find tickers across the user's watchlists + portfolio holdings whose
@@ -379,12 +234,13 @@ export async function addToWatchlist(
     ticker: stock.ticker,
     stock_id: stock.id,
     enrichment: {
-      basic: "name/sector/price written to stock_catalog",
       ...enrichment,
       note:
-        "AI thoughts and quant models run async on the backend; LLM-derived " +
-        "intrinsic value and moat appear in 30-90s. The 'Fair Value' column " +
-        "(stock_catalog.intrinsic_value) is filled by a separate DGX worker.",
+        "Enrichment requested from DGX (the source of truth). Name/sector/price " +
+        "mirror to stock_catalog within seconds; moat, Fair Value " +
+        "(intrinsic_value), LLM intrinsic value and thoughts follow in 30-90s as " +
+        "DGX completes and syncs. enrichment_status flips pending → processing → " +
+        "done; this client no longer writes those fields itself.",
     },
   };
 }

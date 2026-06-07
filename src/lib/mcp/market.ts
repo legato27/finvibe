@@ -66,29 +66,28 @@ export const market = {
       `/api/models/${encodeURIComponent(ticker)}/run/all`,
       { method: "GET" },
     ),
+  // Idempotent enrichment kick. DGX ensures its local row, runs the full
+  // pipeline (prices → financials → moat → DCF → ETF → trends → LLM metadata →
+  // thoughts/models) and is the SOLE writer of the Supabase stock_catalog /
+  // llm_analysis mirror. The web/MCP clients only request enrichment here; they
+  // do not write detail fields or enrichment_status themselves.
+  enrich: (ticker: string) =>
+    dgxJson<unknown>(
+      `/api/watchlist/enrich`,
+      { method: "POST", body: JSON.stringify({ ticker }) },
+    ),
 };
 
-// Kick off the full enrichment pipeline for a set of tickers.
-// Errors are swallowed per-stage so one slow/broken backend doesn't
-// block the others.
+// Request enrichment for a set of tickers. One idempotent call per ticker;
+// errors are swallowed so one slow/broken ticker doesn't block the others.
 export async function enrichTickers(tickers: string[]): Promise<void> {
   if (!tickers.length) return;
   const unique = [...new Set(tickers.map((t) => t.toUpperCase()))];
-
-  // Prices first (single batched call, usually fast).
-  await market.refreshPrices(unique).catch((err) => {
-    console.error("[mcp enrich] refreshPrices failed", err);
-  });
-
-  // Then thoughts + quant models per ticker, in parallel.
   await Promise.allSettled(
-    unique.flatMap((ticker) => [
-      market.generateThoughts(ticker).catch((err) => {
-        console.error(`[mcp enrich] generateThoughts ${ticker} failed`, err);
+    unique.map((ticker) =>
+      market.enrich(ticker).catch((err) => {
+        console.error(`[mcp enrich] enrich ${ticker} failed`, err);
       }),
-      market.runAllModels(ticker).catch((err) => {
-        console.error(`[mcp enrich] runAllModels ${ticker} failed`, err);
-      }),
-    ]),
+    ),
   );
 }
