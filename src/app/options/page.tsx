@@ -6,6 +6,29 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Star } from "lucide-react";
 import { modelsApi, stocksApi } from "@/lib/api";
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
+import { InfoTip } from "@/components/shared/InfoTip";
+
+// Field explanations — reused by the legend (InfoTip) and inline `title` hovers.
+const TIPS: Record<string, string> = {
+  price: "Live price (refreshed every 60s). The strikes & expected-move band are anchored to the book's reference price; a 'ref' tag appears if the live price has drifted >1%.",
+  iv: "ATM implied volatility from the live option market (Polygon), annualized. Higher IV = richer premium to sell.",
+  ivRank: "IV Rank — where today's IV sits in its own 1-year low–high range (0–100). High = IV is rich vs the name's history, the classic 'sell premium now' signal. Builds up over ~20+ trading days.",
+  ivPct: "IV Percentile — % of the last year's days when IV was BELOW today's. 80 = IV has rarely been this high.",
+  rv: "Realized-volatility percentile — where the current 21-day realized vol sits vs this name's own 2-year history. The gate for 'elevated vol = richer premium'.",
+  oi: "Total open interest across near-the-money strikes — a rough liquidity read.",
+  conviction: "Strength of the quant × PAM directional lean (0–100%). Higher = quant ensemble and price-action agree more strongly.",
+  score: "Overall rank score: premium richness + directional conviction + best-DTE annualized return. Halved for names with implausible (suspect) volatility.",
+  strategy: "What to sell, from the blend: Sell Puts (bullish lean), Sell Calls (bearish), or Sell Strangle (neutral / strong disagreement).",
+  pop: "Probability of OTM — the chance the sold option expires worthless (you keep the full premium), from a Black-Scholes model on the per-DTE IV.",
+  delta: "Option delta ≈ the rough probability of assignment. ~0.30 is standard premium selling.",
+  premium: "Estimated credit received per share (×100 per contract). Model estimate, not a live chain quote.",
+  ann: "Annualized return if the option expires worthless = max return × 365 / DTE.",
+  expMove: "Expected ±1σ move over the chosen DTE (spot ± IV×√t). The likely range, not a strike.",
+  basis: "What the strike is anchored to: a PAM structural level (sweet-spot / SMA50 / monthly) when one is nearby, else a multiple of the expected move.",
+  quantBand: "The quant ensemble's 3-month forecast range (p10–p90), scaled to the DTE. Shown as context — it does not move the strike.",
+  pam: "Price Action (PAM) setup: monthly trend → weekly timing → daily trigger, coloured by direction. Drives the directional lean alongside quant.",
+  risk: "Strike distance: Conservative = furthest OTM (highest POP, less premium); Aggressive = closest to the money (more premium, more assignment risk).",
+};
 
 type Profile = "conservative" | "balanced" | "aggressive";
 type Strat = "sell_puts" | "sell_calls" | "sell_strangle";
@@ -58,6 +81,8 @@ interface OptRow {
   conviction?: number;
   iv_suspect?: boolean;
   vol_note?: string | null;
+  iv_rank?: number | null;
+  iv_percentile?: number | null;
   recommendation?: Record<Profile, Recommendation>;
   lean?: Lean;
   levels: Record<string, Level>;
@@ -213,6 +238,27 @@ export default function OptionsBookPage() {
             </div>
           </div>
 
+          {/* legend — what each field means */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
+            <span className="text-foreground/70 font-medium">Legend:</span>
+            <InfoTip label="IV" tip={TIPS.iv} size={11} />
+            <InfoTip label="IV Rank" tip={TIPS.ivRank} size={11} />
+            <InfoTip label="RV %ile" tip={TIPS.rv} size={11} />
+            <InfoTip label="OI" tip={TIPS.oi} size={11} />
+            <InfoTip label="Conv" tip={TIPS.conviction} size={11} />
+            <InfoTip label="Score" tip={TIPS.score} size={11} />
+            <span className="text-border">|</span>
+            <InfoTip label="POP" tip={TIPS.pop} size={11} />
+            <InfoTip label="Δ" tip={TIPS.delta} size={11} />
+            <InfoTip label="Premium" tip={TIPS.premium} size={11} />
+            <InfoTip label="Ann." tip={TIPS.ann} size={11} />
+            <InfoTip label="Exp. move" tip={TIPS.expMove} size={11} />
+            <InfoTip label="Basis" tip={TIPS.basis} size={11} />
+            <InfoTip label="Quant band" tip={TIPS.quantBand} size={11} />
+            <InfoTip label="PAM" tip={TIPS.pam} size={11} />
+            <InfoTip label="Risk" tip={TIPS.risk} size={11} />
+          </div>
+
           <div className="space-y-2">
             {data.ranked
               .filter((r) => filter === "all" || r.strategy === filter)
@@ -261,19 +307,26 @@ function RankRow({
           {drifted && <span className="text-[10px] text-muted-foreground/70">ref {usd(r.price)}</span>}
         </span>
         {r.atm_iv_pct != null && (
-          <span className="text-[11px] flex items-center gap-1">
+          <span className="text-[11px] flex items-center gap-1" title={TIPS.iv}>
             IV <span className="font-mono text-emerald-300">{r.atm_iv_pct}%</span>
           </span>
         )}
-        <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+        {r.iv_rank != null && (
+          <span className="text-[11px] flex items-center gap-1" title={TIPS.ivRank}>
+            IVR <span className="font-mono text-emerald-300/90">{r.iv_rank}</span>
+          </span>
+        )}
+        <span className="text-[11px] text-muted-foreground flex items-center gap-1" title={TIPS.rv}>
           RV <span className="font-mono text-foreground/80">{r.realized_vol_ann_pct}%</span>
           <span className="text-muted-foreground/70">(p{r.vol_percentile})</span>
         </span>
         {r.total_oi != null && (
-          <span className="text-[11px] text-muted-foreground">OI {r.total_oi.toLocaleString()}</span>
+          <span className="text-[11px] text-muted-foreground" title={TIPS.oi}>
+            OI {r.total_oi.toLocaleString()}
+          </span>
         )}
         <span className="text-[11px] flex items-center gap-1">{trendIcon(r.trend)}{r.trend}</span>
-        <span className="text-[11px] flex items-center gap-1">
+        <span className="text-[11px] flex items-center gap-1" title={TIPS.pam}>
           <span className="text-muted-foreground">PAM</span> <PamBadge pam={r.pam} />
         </span>
         {r.iv_suspect && (
@@ -284,15 +337,16 @@ function RankRow({
             <AlertTriangle className="w-3 h-3" /> IV suspect
           </span>
         )}
-        <span className="text-[11px] text-muted-foreground ml-auto">
-          conv <span className="font-mono text-foreground/80">{pct(r.conviction)}</span> · score{" "}
-          <span className="font-mono text-foreground/80">{r.score.toFixed(2)}</span>
+        <span className="text-[11px] text-muted-foreground ml-auto flex gap-1">
+          <span title={TIPS.conviction}>conv <span className="font-mono text-foreground/80">{pct(r.conviction)}</span></span>
+          <span>·</span>
+          <span title={TIPS.score}>score <span className="font-mono text-foreground/80">{r.score.toFixed(2)}</span></span>
         </span>
       </div>
 
       {/* recommendation headline */}
       {rec && (
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
+        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm" title={`${TIPS.strategy} ${TIPS.pop} ${TIPS.ann}`}>
           <span className={`font-semibold ${STRAT_TEXT[rec.strategy]}`}>{r.strategy.toUpperCase()}</span>
           <span className="text-muted-foreground">·</span>
           <span className="font-mono">{rec.best_dte} DTE</span>
@@ -315,6 +369,7 @@ function RankRow({
           return (
             <div
               key={h}
+              title={`Strike to sell at ${d.dte} DTE. ${TIPS.pop} ${TIPS.premium} ${TIPS.ann}`}
               className={`rounded p-2 text-[10px] border ${
                 isBest ? "bg-primary/10 border-primary/40" : "bg-accent/20 border-border/20"
               }`}
@@ -339,7 +394,7 @@ function RankRow({
       {rec && (
         <div className="mt-2 text-[10px] text-muted-foreground flex flex-wrap gap-x-3 gap-y-0.5">
           {em != null && (
-            <span>
+            <span title={TIPS.expMove}>
               Exp. move ({rec.best_dte}d):{" "}
               <span className="font-mono text-foreground/80">
                 {usd(r.price - em)} – {usd(r.price + em)}
@@ -348,12 +403,12 @@ function RankRow({
             </span>
           )}
           {rec.structural_basis && (
-            <span>
+            <span title={TIPS.basis}>
               basis: <span className="text-foreground/80">{rec.structural_basis}</span>
             </span>
           )}
           {band && (band.down != null || band.up != null) && (
-            <span>
+            <span title={TIPS.quantBand}>
               quant {rec.best_dte}d: <span className="font-mono text-foreground/70">{usd(band.down)} – {usd(band.up)}</span>
             </span>
           )}
