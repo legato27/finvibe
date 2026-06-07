@@ -30,6 +30,28 @@ export function useUser() {
   });
 }
 
+/** Set of the signed-in user's watchlist tickers (uppercase). Empty when logged
+ *  out or with no watchlist — callers fall back to showing all names. RLS scopes
+ *  watchlist_items to the user through the parent watchlist. */
+export function useMyWatchlistTickers() {
+  return useQuery({
+    queryKey: ["my-watchlist-tickers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("watchlist_items")
+        .select("stock_catalog(ticker)");
+      const set = new Set<string>();
+      if (error) return set;
+      for (const it of (data ?? []) as Array<{ stock_catalog?: { ticker?: string } | null }>) {
+        const t = it.stock_catalog?.ticker;
+        if (t) set.add(t.toUpperCase());
+      }
+      return set;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useProfile() {
   return useQuery({
     queryKey: ["profile"],
