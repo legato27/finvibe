@@ -4,8 +4,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { modelsApi } from "@/lib/api";
+import { modelsApi, stocksApi } from "@/lib/api";
+import { useMyWatchlistTickers } from "@/lib/supabase/hooks";
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
+import { InfoTip } from "@/components/shared/InfoTip";
+import { ScopeSortControls } from "@/components/shared/ScopeSortControls";
 
 interface RankedRow {
   ticker: string;
@@ -18,7 +21,6 @@ interface RankedRow {
   factors_used: number;
   pam?: PamSummary | null;
 }
-
 interface RankedBook {
   universe_size: number;
   factors: string[];
@@ -32,27 +34,61 @@ const BUCKET_STYLE: Record<string, string> = {
   short: "text-red-400",
   neutral: "text-muted-foreground",
 };
+const TIPS = {
+  composite:
+    "Cross-sectional composite z-score blending momentum, value (margin of safety), moat and other factors vs the whole universe. Higher = stronger relative rank.",
+  percentile:
+    "Rank percentile (0–100) within the universe — 100 = top-ranked. This is the book's conviction / probability-of-edge measure; the list is sorted by it.",
+  signal: "Top quintile → Long, bottom quintile → Short, middle → Neutral.",
+  pam: "Price Action (PAM) setup: monthly trend → weekly timing → daily trigger, coloured by direction.",
+  price: "Live price, refreshed every 60s.",
+};
 
 function bucketIcon(b: string) {
   if (b === "long") return <TrendingUp className="w-3.5 h-3.5" />;
   if (b === "short") return <TrendingDown className="w-3.5 h-3.5" />;
   return <Minus className="w-3.5 h-3.5" />;
 }
+const usd = (x?: number | null) =>
+  x == null ? "—" : `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function RankedBookPage() {
   const [filter, setFilter] = useState<"all" | "long" | "short">("all");
+  const [scope, setScope] = useState<"mine" | "all">("mine");
+
   const { data, isLoading, error } = useQuery<RankedBook>({
     queryKey: ["cross-sectional-ranked"],
     queryFn: () => modelsApi.crossSectional(),
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: myTickers } = useMyWatchlistTickers();
+  const hasMine = (myTickers?.size ?? 0) > 0;
+  const useMine = scope === "mine" && hasMine;
+
+  // Live prices (the ranking is cached; overlay realtime quotes for all names).
+  const tickers = data?.ranked.map((r) => r.ticker) ?? [];
+  const { data: livePrices } = useQuery<Array<{ ticker: string; price: number | null }>>({
+    queryKey: ["ranked-live-prices", tickers.length],
+    queryFn: () => stocksApi.refreshPrices(tickers),
+    enabled: tickers.length > 0,
+    refetchInterval: 60_000,
+    staleTime: 55_000,
+  });
+  const priceMap = new Map((livePrices ?? []).map((p) => [p.ticker, p.price]));
+
+  // Already sorted by composite_z (rank 1 = highest conviction) from the backend.
+  const visibleRows = (data?.ranked ?? [])
+    .filter((r) => filter === "all" || r.bucket === filter)
+    .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false));
+
   return (
     <div className="space-y-4 max-w-[1100px] mx-auto">
       <div>
         <h1 className="text-lg font-semibold">Ranked Book</h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Cross-sectional composite z-score across the watchlist universe. Top quintile = long, bottom = short.
+          Cross-sectional composite z-score across the watchlist universe — ranked by conviction (top quintile = long,
+          bottom = short). Highest-conviction names first.
         </p>
       </div>
 
@@ -61,18 +97,20 @@ export default function RankedBookPage() {
 
       {data && (
         <>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
             <span>{data.universe_size} names</span>
+            <span className="flex items-center gap-1 text-emerald-400/90">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              live prices · 60s
+            </span>
             <span>·</span>
             <span>factors: {data.factors.join(", ")}</span>
-            {data.excluded_insufficient_data?.length ? (
-              <>
-                <span>·</span>
-                <span>{data.excluded_insufficient_data.length} excluded (sparse data)</span>
-              </>
-            ) : null}
           </div>
 
+          {/* scope: my watchlist vs all */}
+          <ScopeSortControls scope={scope} onScope={setScope} hasMine={hasMine} mineCount={myTickers?.size} />
+
+          {/* long / short / all */}
           <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
             {(["all", "long", "short"] as const).map((f) => (
               <button
@@ -93,23 +131,50 @@ export default function RankedBookPage() {
                 <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
                   <th className="text-left p-2">#</th>
                   <th className="text-left p-2">Ticker</th>
+                  <th className="text-right p-2">
+                    <span className="inline-flex items-center gap-1">Price <InfoTip tip={TIPS.price} size={11} /></span>
+                  </th>
                   <th className="text-left p-2 hidden sm:table-cell">Sector</th>
-                  <th className="text-right p-2">Composite z</th>
-                  <th className="text-right p-2 hidden md:table-cell">%ile</th>
-                  <th className="text-center p-2">Signal</th>
-                  <th className="text-center p-2">PAM</th>
+                  <th className="text-right p-2">
+                    <span className="inline-flex items-center gap-1">
+                      Composite z <InfoTip tip={TIPS.composite} size={11} />
+                    </span>
+                  </th>
+                  <th className="text-right p-2 hidden md:table-cell">
+                    <span className="inline-flex items-center gap-1">%ile <InfoTip tip={TIPS.percentile} size={11} /></span>
+                  </th>
+                  <th className="text-center p-2">
+                    <span className="inline-flex items-center gap-1">Signal <InfoTip tip={TIPS.signal} size={11} /></span>
+                  </th>
+                  <th className="text-center p-2">
+                    <span className="inline-flex items-center gap-1">PAM <InfoTip tip={TIPS.pam} size={11} /></span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {data.ranked
-                  .filter((r) => filter === "all" || r.bucket === filter)
-                  .map((r) => (
+                {visibleRows.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                      No names match.{" "}
+                      {useMine && "Your watchlist names may be excluded for sparse data — try “All”."}
+                    </td>
+                  </tr>
+                )}
+                {visibleRows.map((r) => {
+                  const live = priceMap.get(r.ticker) ?? null;
+                  return (
                     <tr key={r.ticker} className="border-b border-border/10 hover:bg-accent/40">
                       <td className="p-2 text-muted-foreground font-mono">{r.rank}</td>
                       <td className="p-2">
                         <Link href={`/stock/${r.ticker}`} className="font-medium text-primary hover:underline">
                           {r.ticker}
                         </Link>
+                      </td>
+                      <td className="p-2 text-right font-mono">
+                        <span className="inline-flex items-center justify-end gap-1">
+                          {usd(live)}
+                          {live != null && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
+                        </span>
                       </td>
                       <td className="p-2 text-muted-foreground hidden sm:table-cell">{r.sector ?? "—"}</td>
                       <td className={`p-2 text-right font-mono ${r.composite_z >= 0 ? "text-emerald-400" : "text-red-400"}`}>
@@ -129,7 +194,8 @@ export default function RankedBookPage() {
                         <PamBadge pam={r.pam} />
                       </td>
                     </tr>
-                  ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus, AlertTriangle, Star } from "lucide-react";
 import { modelsApi, stocksApi } from "@/lib/api";
+import { useMyWatchlistTickers } from "@/lib/supabase/hooks";
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
 import { InfoTip } from "@/components/shared/InfoTip";
+import { ScopeSortControls } from "@/components/shared/ScopeSortControls";
 
 // Field explanations — reused by the legend (InfoTip) and inline `title` hovers.
 const TIPS: Record<string, string> = {
@@ -128,12 +130,30 @@ export default function OptionsBookPage() {
   const [filter, setFilter] = useState<"all" | "Sell Puts" | "Sell Calls" | "Sell Strangle">("all");
   const [profile, setProfile] = useState<Profile>("balanced");
   const [showTrack, setShowTrack] = useState(false);
+  const [scope, setScope] = useState<"mine" | "all">("mine");
+  const [sort, setSort] = useState<"pop" | "ann" | "score">("pop");
 
   const { data, isLoading, error } = useQuery<OptBook>({
     queryKey: ["options-ranked"],
     queryFn: () => modelsApi.optionsRanked(),
     staleTime: 60 * 60 * 1000,
   });
+
+  const { data: myTickers } = useMyWatchlistTickers();
+  const hasMine = (myTickers?.size ?? 0) > 0;
+  const useMine = scope === "mine" && hasMine;
+
+  const sortKey = (r: OptRow) =>
+    sort === "pop"
+      ? r.recommendation?.[profile]?.pop ?? -1
+      : sort === "ann"
+        ? r.recommendation?.[profile]?.annualized_return_pct ?? -1
+        : r.score;
+  const visibleRows = (data?.ranked ?? [])
+    .filter((r) => filter === "all" || r.strategy === filter)
+    .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false))
+    .slice()
+    .sort((a, b) => sortKey(b) - sortKey(a));
 
   // Live prices — the book itself is cached ~25h, so overlay realtime quotes
   // (one batched call for all names) and refresh every 60s.
@@ -196,6 +216,21 @@ export default function OptionsBookPage() {
           </div>
 
           {showTrack && <TrackRecord />}
+
+          {/* scope + sort */}
+          <ScopeSortControls
+            scope={scope}
+            onScope={setScope}
+            hasMine={hasMine}
+            mineCount={myTickers?.size}
+            sort={sort}
+            sortOptions={[
+              { value: "pop", label: "Probability (POP)" },
+              { value: "ann", label: "Annualized" },
+              { value: "score", label: "Score" },
+            ]}
+            onSort={(s) => setSort(s as "pop" | "ann" | "score")}
+          />
 
           {/* controls */}
           <div className="flex flex-wrap items-center gap-3">
@@ -260,17 +295,20 @@ export default function OptionsBookPage() {
           </div>
 
           <div className="space-y-2">
-            {data.ranked
-              .filter((r) => filter === "all" || r.strategy === filter)
-              .map((r) => (
-                <RankRow
-                  key={r.ticker}
-                  r={r}
-                  profile={profile}
-                  horizons={data.horizons}
-                  livePrice={priceMap.get(r.ticker) ?? null}
-                />
-              ))}
+            {visibleRows.length === 0 && (
+              <div className="card p-6 text-sm text-muted-foreground">
+                No names match. {useMine && "Your watchlist names may not be in the elevated-vol universe — try “All”."}
+              </div>
+            )}
+            {visibleRows.map((r) => (
+              <RankRow
+                key={r.ticker}
+                r={r}
+                profile={profile}
+                horizons={data.horizons}
+                livePrice={priceMap.get(r.ticker) ?? null}
+              />
+            ))}
           </div>
         </>
       )}
