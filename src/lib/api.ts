@@ -162,6 +162,7 @@ export const modelsApi = {
   taskStatus: (taskId: string) => api.get(`/api/models/tasks/${taskId}/status`).then((r) => r.data),
   lastRun: (ticker: string) => api.get(`/api/models/${ticker}/last-run`).then((r) => r.data),
   crossSectional: () => api.get(`/api/models/cross-sectional/ranked`).then((r) => r.data),
+  optionsRanked: () => api.get(`/api/models/options-ranked`).then((r) => r.data),
 };
 
 // ── Macro ─────────────────────────────────────────────────────

@@ -599,7 +599,8 @@
     "ranked": "排名榜",
     "settings": "设置",
     "trades": "交易",
-    "watchlist": "自选股"
+    "watchlist": "自选股",
+    "optionsBook": "期权卖方榜"
   },
   "options": {
     "adjustment": "调整计划",

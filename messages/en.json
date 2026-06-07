@@ -599,7 +599,8 @@
     "ranked": "Ranked Book",
     "settings": "Settings",
     "trades": "Trades",
-    "watchlist": "Watchlists"
+    "watchlist": "Watchlists",
+    "optionsBook": "Options Book"
   },
   "options": {
     "adjustment": "Adjustment plan",
