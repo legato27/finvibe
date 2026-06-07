@@ -19,6 +19,7 @@ interface RankedRow {
   bucket: "long" | "short" | "neutral";
   factors: Record<string, number>;
   factors_used: number;
+  prob_profit_pct?: number | null;
   pam?: PamSummary | null;
 }
 interface RankedBook {
@@ -35,10 +36,12 @@ const BUCKET_STYLE: Record<string, string> = {
   neutral: "text-muted-foreground",
 };
 const TIPS = {
+  prob:
+    "Ensemble model's probability that the name is profitable over its 3-month horizon. Sort by this for highest-probability names on top.",
   composite:
     "Cross-sectional composite z-score blending momentum, value (margin of safety), moat and other factors vs the whole universe. Higher = stronger relative rank.",
   percentile:
-    "Rank percentile (0–100) within the universe — 100 = top-ranked. This is the book's conviction / probability-of-edge measure; the list is sorted by it.",
+    "Rank percentile (0–100) within the universe — 100 = top-ranked composite-z conviction.",
   signal: "Top quintile → Long, bottom quintile → Short, middle → Neutral.",
   pam: "Price Action (PAM) setup: monthly trend → weekly timing → daily trigger, coloured by direction.",
   price: "Live price, refreshed every 60s.",
@@ -55,6 +58,7 @@ const usd = (x?: number | null) =>
 export default function RankedBookPage() {
   const [filter, setFilter] = useState<"all" | "long" | "short">("all");
   const [scope, setScope] = useState<"mine" | "all">("mine");
+  const [sort, setSort] = useState<"prob" | "z">("prob");
 
   const { data, isLoading, error } = useQuery<RankedBook>({
     queryKey: ["cross-sectional-ranked"],
@@ -77,10 +81,15 @@ export default function RankedBookPage() {
   });
   const priceMap = new Map((livePrices ?? []).map((p) => [p.ticker, p.price]));
 
-  // Already sorted by composite_z (rank 1 = highest conviction) from the backend.
+  // Backend rank (the `rank` column) reflects composite-z; display order follows
+  // the chosen sort — prob-of-profit (default) or composite-z conviction.
+  const sortKey = (r: RankedRow) =>
+    sort === "prob" ? r.prob_profit_pct ?? -1 : r.composite_z;
   const visibleRows = (data?.ranked ?? [])
     .filter((r) => filter === "all" || r.bucket === filter)
-    .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false));
+    .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false))
+    .slice()
+    .sort((a, b) => sortKey(b) - sortKey(a));
 
   return (
     <div className="space-y-4 max-w-[1100px] mx-auto">
@@ -107,8 +116,19 @@ export default function RankedBookPage() {
             <span>factors: {data.factors.join(", ")}</span>
           </div>
 
-          {/* scope: my watchlist vs all */}
-          <ScopeSortControls scope={scope} onScope={setScope} hasMine={hasMine} mineCount={myTickers?.size} />
+          {/* scope + sort */}
+          <ScopeSortControls
+            scope={scope}
+            onScope={setScope}
+            hasMine={hasMine}
+            mineCount={myTickers?.size}
+            sort={sort}
+            sortOptions={[
+              { value: "prob", label: "Prob of profit" },
+              { value: "z", label: "Conviction (z)" },
+            ]}
+            onSort={(s) => setSort(s as "prob" | "z")}
+          />
 
           {/* long / short / all */}
           <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
@@ -134,6 +154,9 @@ export default function RankedBookPage() {
                   <th className="text-right p-2">
                     <span className="inline-flex items-center gap-1">Price <InfoTip tip={TIPS.price} size={11} /></span>
                   </th>
+                  <th className="text-right p-2">
+                    <span className="inline-flex items-center gap-1">Prob <InfoTip tip={TIPS.prob} size={11} /></span>
+                  </th>
                   <th className="text-left p-2 hidden sm:table-cell">Sector</th>
                   <th className="text-right p-2">
                     <span className="inline-flex items-center gap-1">
@@ -154,7 +177,7 @@ export default function RankedBookPage() {
               <tbody>
                 {visibleRows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="p-6 text-center text-muted-foreground">
+                    <td colSpan={9} className="p-6 text-center text-muted-foreground">
                       No names match.{" "}
                       {useMine && "Your watchlist names may be excluded for sparse data — try “All”."}
                     </td>
@@ -175,6 +198,11 @@ export default function RankedBookPage() {
                           {usd(live)}
                           {live != null && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
                         </span>
+                      </td>
+                      <td className={`p-2 text-right font-mono ${
+                        r.prob_profit_pct == null ? "text-muted-foreground" : r.prob_profit_pct >= 50 ? "text-emerald-400" : "text-red-400"
+                      }`}>
+                        {r.prob_profit_pct == null ? "—" : `${r.prob_profit_pct.toFixed(0)}%`}
                       </td>
                       <td className="p-2 text-muted-foreground hidden sm:table-cell">{r.sector ?? "—"}</td>
                       <td className={`p-2 text-right font-mono ${r.composite_z >= 0 ? "text-emerald-400" : "text-red-400"}`}>
