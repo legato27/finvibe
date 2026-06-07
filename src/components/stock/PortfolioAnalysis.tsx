@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import { FinVibeThoughts } from "./FinVibeThoughts";
-import { TechnicalAnalysis } from "./TechnicalAnalysis";
 import { ModelCards } from "./ModelCards";
 import {
   TrendingUp, TrendingDown, Minus, PlusCircle, MinusCircle,
@@ -256,9 +255,6 @@ export function PortfolioAnalysis({
         llmIntrinsicValue={thoughtsData?.llm_intrinsic_value ?? null}
         llmMarginOfSafety={thoughtsData?.llm_margin_of_safety ?? null}
       />
-
-      {/* Technical analysis */}
-      <TechnicalAnalysis ticker={ticker} />
 
       {/* Quant models */}
       <ModelCards ticker={ticker} />

@@ -1299,40 +1299,6 @@
     "yes": "是",
     "yieldLabel": "股息率"
   },
-  "technical": {
-    "analyzing": "正在分析当前价格走势...",
-    "bbSqueeze": "收口",
-    "bollingerBands": "布林带",
-    "loadFailed": "加载分析失败",
-    "macd": "MACD",
-    "movingAverages": "均线",
-    "noActivePattern": "暂无活跃形态",
-    "noPattern": "暂无活跃形态",
-    "overbought": "超买",
-    "oversold": "超卖",
-    "resistance": "阻力位",
-    "rsi": "RSI 相对强弱",
-    "strength": {
-      "moderate": "中",
-      "strong": "强",
-      "weak": "弱"
-    },
-    "support": "支撑位",
-    "title": "技术分析",
-    "titleHeader": "技术分析",
-    "top": "最佳",
-    "topBadge": "首选",
-    "trend": {
-      "downtrend": "下降趋势",
-      "ranging": "震荡",
-      "uptrend": "上升趋势"
-    },
-    "trendDown": "下降趋势",
-    "trendFlat": "横盘整理",
-    "trendLabel": "趋势",
-    "trendUp": "上升趋势",
-    "volPrefix": "成交量"
-  },
   "trades": {
     "ai": "AI:",
     "all": "全部",

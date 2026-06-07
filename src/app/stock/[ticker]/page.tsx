@@ -9,7 +9,6 @@ import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { DcfScenarios } from "@/components/stock/DcfScenarios";
 import { ModelCards } from "@/components/stock/ModelCards";
-import { TechnicalAnalysis } from "@/components/stock/TechnicalAnalysis";
 import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
@@ -172,12 +171,7 @@ export default function StockDetailPage() {
           TAB CONTENT
           ═══════════════════════════════════════════════════ */}
 
-      {activeTab === "chart" && (
-        <>
-          <PriceChart ticker={ticker} />
-          <TechnicalAnalysis ticker={ticker} />
-        </>
-      )}
+      {activeTab === "chart" && <PriceChart ticker={ticker} />}
 
       {activeTab === "analysis" && (
         <div className="space-y-4">
