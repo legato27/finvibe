@@ -52,6 +52,21 @@ export function useMyWatchlistTickers() {
   });
 }
 
+/** Rename a watchlist. RLS scopes the update to the owner. */
+export function useRenameWatchlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, name }: { id: number; name: string }) => {
+      const clean = name.trim();
+      if (!clean) throw new Error("Name required");
+      const { error } = await supabase.from("watchlists").update({ name: clean }).eq("id", id);
+      if (error) throw new Error(error.message);
+      return { id, name: clean };
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["watchlists"] }),
+  });
+}
+
 export function useProfile() {
   return useQuery({
     queryKey: ["profile"],

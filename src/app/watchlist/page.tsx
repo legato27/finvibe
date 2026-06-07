@@ -2,11 +2,12 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding } from "@/lib/supabase/hooks";
+import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding, useRenameWatchlist } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
-import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus } from "lucide-react";
+import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
+import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus, Pencil, Check } from "lucide-react";
 import { stocksApi } from "@/lib/api";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { formatMoS } from "@/lib/valuation";
 
 /* ── Add-to-Portfolio Modal ─────────────────────────────────── */
@@ -248,6 +249,31 @@ export default function WatchlistPage() {
 
   const { data: llmMap } = useLLMAnalysisBatch(activeTickers);
 
+  // Live prices for the active list (60s) — overlay on the synced last_price.
+  const { data: livePrices } = useQuery<Array<{ ticker: string; price: number | null }>>({
+    queryKey: ["wl-live-prices", activeTickers],
+    queryFn: () => stocksApi.refreshPrices(activeTickers),
+    enabled: activeTickers.length > 0,
+    refetchInterval: 60_000,
+    staleTime: 55_000,
+  });
+  const priceMap = useMemo(
+    () => new Map((livePrices ?? []).map((p) => [p.ticker, p.price])),
+    [livePrices],
+  );
+
+  // PAM (price-action) setup per ticker for the badge.
+  const { data: pamMap } = useQuery<Record<string, PamSummary | null>>({
+    queryKey: ["wl-pam", activeTickers],
+    queryFn: () => stocksApi.pamBatch(activeTickers),
+    enabled: activeTickers.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  const renameWatchlist = useRenameWatchlist();
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+
   function handleAddStock(ticker: string, _name: string) {
     if (activeWatchlist) {
       addStock.mutate({ watchlistId: activeWatchlist.id, ticker });
@@ -390,7 +416,44 @@ export default function WatchlistPage() {
             <>
               <div className="card-header">
                 <div className="flex items-center gap-2">
-                  <span className="card-title">{activeWatchlist.name}</span>
+                  {editingName ? (
+                    <span className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        value={nameDraft}
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && nameDraft.trim()) {
+                            renameWatchlist.mutate({ id: activeWatchlist.id, name: nameDraft });
+                            setEditingName(false);
+                          } else if (e.key === "Escape") setEditingName(false);
+                        }}
+                        className="bg-muted/50 border border-border/40 rounded px-2 py-0.5 text-sm focus:outline-none focus:border-primary/50"
+                      />
+                      <button
+                        onClick={() => {
+                          if (nameDraft.trim()) renameWatchlist.mutate({ id: activeWatchlist.id, name: nameDraft });
+                          setEditingName(false);
+                        }}
+                        className="text-primary hover:text-primary/80"
+                        aria-label="Save name"
+                      >
+                        <Check className="w-4 h-4" />
+                      </button>
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1.5 group/name">
+                      <span className="card-title">{activeWatchlist.name}</span>
+                      <button
+                        onClick={() => { setNameDraft(activeWatchlist.name); setEditingName(true); }}
+                        className="text-muted-foreground/40 hover:text-primary opacity-0 group-hover/name:opacity-100 transition-opacity"
+                        aria-label="Rename watchlist"
+                        title="Rename"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </span>
+                  )}
                   {activeTickers.length > 0 && (
                     <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                       <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
@@ -428,6 +491,9 @@ export default function WatchlistPage() {
                     if (!stock) return null;
 
                     const llm = llmMap?.[stock.ticker];
+                    const livePrice = priceMap.get(stock.ticker) ?? null;
+                    const shownPrice = livePrice ?? stock.last_price;
+                    const pam = pamMap?.[stock.ticker];
                     const isEtf = stock.is_etf || stock.asset_type === "etf";
 
                     // Sector display logic
@@ -477,6 +543,7 @@ export default function WatchlistPage() {
                               {llm?.thoughts_json && (
                                 <span title={t("thoughtsAvailable")}><Brain className="w-3 h-3 text-primary/50" /></span>
                               )}
+                              {pam && <PamBadge pam={pam} />}
                             </div>
                             <div className="text-xs text-muted-foreground truncate max-w-[130px] sm:max-w-[250px]">
                               {stock.name || "—"}
@@ -495,10 +562,13 @@ export default function WatchlistPage() {
                         </div>
 
                         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                          {stock.last_price != null && stock.last_price > 0 && (
+                          {shownPrice != null && shownPrice > 0 && (
                             <div className="text-right">
-                              <span className="font-mono text-sm text-foreground">${stock.last_price.toFixed(2)}</span>
-                              {stock.last_price_updated_at && (
+                              <span className="font-mono text-sm text-foreground inline-flex items-center gap-1">
+                                ${shownPrice.toFixed(2)}
+                                {livePrice != null && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
+                              </span>
+                              {livePrice == null && stock.last_price_updated_at && (
                                 <div className={`text-[10px] ${isStale(stock.last_price_updated_at) ? "text-amber-400/70" : "text-muted-foreground/40"}`}>
                                   {timeAgo(stock.last_price_updated_at)}
                                 </div>
