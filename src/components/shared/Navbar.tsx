@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, DollarSign, Settings, ListOrdered, Coins } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, DollarSign, Settings, ListOrdered, Coins, Rocket } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { useTranslations } from "next-intl";
@@ -57,6 +57,7 @@ export default function Navbar() {
     { href: "/", label: tNav("dashboard"), icon: BarChart2, public: true },
     { href: "/watchlist", label: tNav("watchlist"), icon: BookOpen, public: false },
     { href: "/ranked", label: tNav("ranked"), icon: ListOrdered, public: true },
+    { href: "/multibagger", label: "Multibagger", icon: Rocket, public: true },
     { href: "/options", label: tNav("optionsBook"), icon: Coins, public: true },
     { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
     { href: "/trades", label: tNav("trades"), icon: DollarSign, public: false },

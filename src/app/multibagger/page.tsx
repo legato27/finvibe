@@ -1,0 +1,375 @@
+"use client";
+
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { TrendingUp, Sparkles, ShieldAlert, RefreshCw } from "lucide-react";
+import { scannerApi } from "@/lib/api";
+import { InfoTip } from "@/components/shared/InfoTip";
+
+// Scanner emits a lighter PAM read than the watchlist PamSummary.
+interface PamRead {
+  structure?: string | null;
+  clarity?: string | null;
+  rsi?: number | null;
+  near_pivot?: boolean;
+}
+const PAM_STYLE: Record<string, string> = {
+  UC: "text-emerald-400",
+  DC: "text-red-400",
+  "UR zone": "text-amber-400",
+  "DR zone": "text-amber-400",
+  Ranging: "text-muted-foreground",
+};
+
+// ── Types ────────────────────────────────────────────────────────
+interface Fundamentals {
+  rev_growth_yoy?: number | null;
+  eps_growth_yoy?: number | null;
+  accelerating?: boolean;
+  margin_trend?: string | null;
+}
+interface RedFlags {
+  verdict?: "clean" | "caution" | "avoid";
+  redflags?: string[];
+  note?: string;
+}
+interface Candidate {
+  rank: number;
+  ticker: string;
+  name?: string;
+  sector?: string | null;
+  theme_cluster?: string | null;
+  track: "A" | "B";
+  price: number;
+  composite: number;
+  rs_rating: number;
+  ret_1m?: number | null;
+  ret_3m?: number | null;
+  ret_6m?: number | null;
+  ret_12m?: number | null;
+  pct_from_52w_high?: number | null;
+  market_cap_band?: string | null;
+  float_m?: number | null;
+  short_interest_pct?: number | null;
+  trend_template_passed?: number;
+  fundamentals?: Fundamentals | null;
+  catalyst?: { score: number; source: string } | null;
+  pam?: PamRead | null;
+  redflags?: RedFlags | null;
+}
+interface Regime {
+  regime: "risk_on" | "neutral" | "risk_off";
+  score: number;
+  vix?: { level?: number | null; trend?: string };
+  breadth_pct_above_200dma?: number | null;
+  spy_trend?: string;
+  leading_sectors?: string[];
+  scoring_profile?: string;
+}
+interface ScanResult {
+  as_of: string;
+  matrix_end?: string;
+  regime: Regime | null;
+  universe_size: number;
+  pass1_survivors: number;
+  scored: number;
+  candidates: Candidate[];
+  method: string;
+}
+
+const REGIME_STYLE: Record<string, string> = {
+  risk_on: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
+  neutral: "text-amber-400 border-amber-400/40 bg-amber-400/10",
+  risk_off: "text-red-400 border-red-400/40 bg-red-400/10",
+};
+const VERDICT_STYLE: Record<string, string> = {
+  clean: "text-emerald-400",
+  caution: "text-amber-400",
+  avoid: "text-red-400",
+};
+const TIPS = {
+  track:
+    "A = confirmed leader (Minervini Trend Template + RS). B = early-stage base/VCP breakout with RS-line new high — the earlier multibagger entry.",
+  composite:
+    "0–100 blend: RS, gate completeness, fundamental acceleration, institutional footprint, PAM structure, catalyst, squeeze fuel, cap band & sector leadership. Regime-flexed.",
+  rs: "IBD-style 1–99 relative-strength rank of blended 12/6/3/1-month return across the whole US market.",
+  fund: "FMP YoY revenue / EPS growth. ▲ = growth is accelerating quarter-over-quarter (the CANSLIM C+A).",
+  redflag: "Skeptical short-seller LLM contra-check: dilution, going-concern, pump pattern. Demotes false positives.",
+  pam: "Price Action (PAM) structure read on daily bars.",
+};
+
+const pct = (x?: number | null) =>
+  x == null ? "—" : `${x > 0 ? "+" : ""}${x.toFixed(1)}%`;
+const pctColor = (x?: number | null) =>
+  x == null ? "text-muted-foreground" : x >= 0 ? "text-emerald-400" : "text-red-400";
+
+export default function MultibaggerPage() {
+  const [track, setTrack] = useState<"all" | "A" | "B">("all");
+  const [tab, setTab] = useState<"candidates" | "performance">("candidates");
+
+  const { data, isLoading, error, refetch, isFetching } = useQuery<ScanResult>({
+    queryKey: ["multibagger-candidates", track],
+    queryFn: () => scannerApi.multibaggerCandidates(track),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: perf } = useQuery({
+    queryKey: ["multibagger-performance"],
+    queryFn: () => scannerApi.multibaggerPerformance(),
+    enabled: tab === "performance",
+    staleTime: 10 * 60 * 1000,
+  });
+
+  const regime = data?.regime;
+  const candidates = data?.candidates ?? [];
+
+  return (
+    <div className="space-y-4 max-w-[1200px] mx-auto">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-lg font-semibold flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-primary" /> Multibagger Scanner
+          </h1>
+          <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
+            Two-track full-US-market hunt — Track A rides confirmed leaders (Trend Template + RS); Track B
+            catches early-stage base/VCP breakouts with an RS-line new high. Fundamentally confirmed,
+            catalyst-aware, regime-adaptive.
+          </p>
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> Refresh
+        </button>
+      </div>
+
+      {/* ── Regime banner ── */}
+      {regime && (
+        <div className={`rounded-lg border px-3 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${REGIME_STYLE[regime.regime] ?? ""}`}>
+          <span className="font-semibold uppercase tracking-wide">
+            {regime.regime.replace("_", "-")}
+          </span>
+          <span className="opacity-80">score {regime.score}</span>
+          {regime.vix?.level != null && <span className="opacity-80">VIX {regime.vix.level} ({regime.vix.trend})</span>}
+          {regime.breadth_pct_above_200dma != null && (
+            <span className="opacity-80">breadth {regime.breadth_pct_above_200dma}% &gt;200d</span>
+          )}
+          {regime.spy_trend && <span className="opacity-80">SPY {regime.spy_trend}</span>}
+          {regime.leading_sectors && regime.leading_sectors.length > 0 && (
+            <span className="opacity-80">leaders: {regime.leading_sectors.join(", ")}</span>
+          )}
+          <span className="ml-auto opacity-70">
+            profile: {regime.scoring_profile} · favouring Track {regime.regime === "risk_off" ? "B" : "A"}
+          </span>
+        </div>
+      )}
+
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
+        {(["candidates", "performance"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
+              tab === t ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+            }`}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {tab === "candidates" && (
+        <>
+          {/* track toggle */}
+          <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
+            {([["all", "All"], ["A", "Track A · Leaders"], ["B", "Track B · Early"]] as const).map(([f, label]) => (
+              <button
+                key={f}
+                onClick={() => setTrack(f)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                  track === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
+          {error && <div className="card p-6 text-sm text-red-400">Failed to load candidates.</div>}
+
+          {data && (
+            <>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <span>{data.universe_size?.toLocaleString() ?? 0} scanned</span>
+                <span>· {data.pass1_survivors} survivors</span>
+                <span>· {candidates.length} candidates</span>
+                {data.matrix_end && <span>· as of {data.matrix_end}</span>}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
+                <span className="text-foreground/70 font-medium">Legend:</span>
+                <InfoTip label="Track" tip={TIPS.track} size={11} />
+                <InfoTip label="Composite" tip={TIPS.composite} size={11} />
+                <InfoTip label="RS" tip={TIPS.rs} size={11} />
+                <InfoTip label="Fund" tip={TIPS.fund} size={11} />
+                <InfoTip label="Flags" tip={TIPS.redflag} size={11} />
+                <InfoTip label="PAM" tip={TIPS.pam} size={11} />
+              </div>
+
+              <div className="card overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
+                      <th className="text-left p-2">#</th>
+                      <th className="text-left p-2">Ticker</th>
+                      <th className="text-center p-2" title={TIPS.track}>Trk</th>
+                      <th className="text-right p-2">Price</th>
+                      <th className="text-right p-2" title={TIPS.composite}>Score</th>
+                      <th className="text-right p-2" title={TIPS.rs}>RS</th>
+                      <th className="text-right p-2 hidden md:table-cell">12m</th>
+                      <th className="text-right p-2 hidden lg:table-cell">% from 52wH</th>
+                      <th className="text-right p-2 hidden lg:table-cell" title={TIPS.fund}>Fund</th>
+                      <th className="text-left p-2 hidden sm:table-cell">Theme</th>
+                      <th className="text-center p-2" title={TIPS.pam}>PAM</th>
+                      <th className="text-center p-2" title={TIPS.redflag}>Flags</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candidates.length === 0 && (
+                      <tr>
+                        <td colSpan={12} className="p-6 text-center text-muted-foreground">
+                          No candidates. The scanner needs a paid Polygon plan with
+                          {" "}<code className="text-[10px]">polygon_universe_enabled</code>.
+                        </td>
+                      </tr>
+                    )}
+                    {candidates.map((c) => (
+                      <tr key={c.ticker} className="border-b border-border/10 hover:bg-accent/40">
+                        <td className="p-2 text-muted-foreground font-mono">{c.rank}</td>
+                        <td className="p-2">
+                          <Link href={`/stock/${c.ticker}`} className="font-medium text-primary hover:underline">
+                            {c.ticker}
+                          </Link>
+                          {c.market_cap_band && (
+                            <span className="ml-1 text-[9px] text-muted-foreground uppercase">{c.market_cap_band}</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
+                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${
+                            c.track === "A" ? "bg-sky-400/15 text-sky-400" : "bg-violet-400/15 text-violet-400"
+                          }`}>{c.track}</span>
+                        </td>
+                        <td className="p-2 text-right font-mono">${c.price?.toFixed(2)}</td>
+                        <td className="p-2 text-right font-mono font-semibold text-foreground">{c.composite?.toFixed(1)}</td>
+                        <td className="p-2 text-right font-mono">{c.rs_rating}</td>
+                        <td className={`p-2 text-right font-mono hidden md:table-cell ${pctColor(c.ret_12m)}`}>{pct(c.ret_12m)}</td>
+                        <td className="p-2 text-right font-mono hidden lg:table-cell text-muted-foreground">{pct(c.pct_from_52w_high)}</td>
+                        <td className="p-2 text-right hidden lg:table-cell">
+                          {c.fundamentals?.rev_growth_yoy != null ? (
+                            <span className={pctColor(c.fundamentals.rev_growth_yoy)}>
+                              {pct(c.fundamentals.rev_growth_yoy)}
+                              {c.fundamentals.accelerating && <TrendingUp className="inline w-3 h-3 ml-0.5" />}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="p-2 hidden sm:table-cell text-muted-foreground">{c.theme_cluster ?? "—"}</td>
+                        <td className="p-2 text-center">
+                          {c.pam?.structure ? (
+                            <span
+                              title={`${c.pam.clarity ?? ""} clarity${c.pam.rsi != null ? ` · RSI ${c.pam.rsi}` : ""}${c.pam.near_pivot ? " · near pivot" : ""}`}
+                              className={`text-[10px] font-medium ${PAM_STYLE[c.pam.structure] ?? "text-muted-foreground"}`}
+                            >
+                              {c.pam.structure}
+                              {c.pam.near_pivot && "*"}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
+                          {c.redflags?.verdict ? (
+                            <span
+                              title={c.redflags.note || (c.redflags.redflags ?? []).join("; ")}
+                              className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${VERDICT_STYLE[c.redflags.verdict] ?? ""}`}
+                            >
+                              {c.redflags.verdict === "avoid" && <ShieldAlert className="w-3 h-3" />}
+                              {c.redflags.verdict}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[10px] text-muted-foreground">{data.method}</p>
+            </>
+          )}
+        </>
+      )}
+
+      {tab === "performance" && (
+        <div className="card p-4 text-xs space-y-3">
+          {!perf && <div className="text-muted-foreground">Loading scorecard…</div>}
+          {perf && perf.n_matured === 0 && (
+            <div className="text-muted-foreground">
+              {perf.note ?? "No matured candidates yet — forward returns fill in as history accrues."}
+            </div>
+          )}
+          {perf && perf.n_matured > 0 && (
+            <>
+              <div className="text-muted-foreground">
+                {perf.n_matured} matured of {perf.n_candidates} candidates · last {perf.lookback_days}d
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
+                    <th className="text-left p-2">Horizon</th>
+                    <th className="text-right p-2">n</th>
+                    <th className="text-right p-2">Hit&gt;0</th>
+                    <th className="text-right p-2">Hit 2x</th>
+                    <th className="text-right p-2">Median</th>
+                    <th className="text-right p-2">P90</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(["1m", "3m", "6m", "12m"] as const).map((h) => {
+                    const a = perf.by_horizon?.[h];
+                    if (!a) return null;
+                    return (
+                      <tr key={h} className="border-b border-border/10">
+                        <td className="p-2 font-medium">{h}</td>
+                        <td className="p-2 text-right font-mono">{a.n}</td>
+                        <td className="p-2 text-right font-mono">{a.hit_rate_pos_pct}%</td>
+                        <td className="p-2 text-right font-mono text-primary">{a.hit_rate_2x_pct}%</td>
+                        <td className={`p-2 text-right font-mono ${pctColor(a.median_ret_pct)}`}>{a.median_ret_pct}%</td>
+                        <td className="p-2 text-right font-mono text-emerald-400">{a.p90_ret_pct}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              {perf.factor_ic_3m && (
+                <div className="text-muted-foreground">
+                  Factor IC (3m): composite {perf.factor_ic_3m.composite ?? "—"} · RS {perf.factor_ic_3m.rs_rating ?? "—"}
+                </div>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                Survivorship-skewed: only names active when scanned are tracked.
+              </p>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}

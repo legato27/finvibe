@@ -366,6 +366,15 @@ export const scannerApi = {
   holdings: (etf: string) => api.get(`/api/scanner/holdings/${etf}`).then((r) => r.data),
   scan: (etf: string) =>
     api.get(`/api/scanner/scan/${etf}`, { timeout: 120_000 }).then((r) => r.data),
+  // ── Multibagger (two-track full-market scanner) ──────────────
+  multibaggerCandidates: (track: "all" | "A" | "B" = "all") =>
+    api.get(`/api/scanner/multibagger/candidates?track=${track}`).then((r) => r.data),
+  multibaggerRegime: () =>
+    api.get("/api/scanner/multibagger/regime").then((r) => r.data),
+  multibaggerScan: () =>
+    api.get("/api/scanner/multibagger/scan?refresh=true", { timeout: 300_000 }).then((r) => r.data),
+  multibaggerPerformance: () =>
+    api.get("/api/scanner/multibagger/performance").then((r) => r.data),
 };
 
 // ── BTC Market Maker ─────────────────────────────────────────
