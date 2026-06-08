@@ -59,6 +59,7 @@ export default function RankedBookPage() {
   const [filter, setFilter] = useState<"all" | "long" | "short">("all");
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [sort, setSort] = useState<"prob" | "z">("prob");
+  const [symbol, setSymbol] = useState("");
 
   const { data, isLoading, error } = useQuery<RankedBook>({
     queryKey: ["cross-sectional-ranked"],
@@ -85,9 +86,11 @@ export default function RankedBookPage() {
   // the chosen sort — prob-of-profit (default) or composite-z conviction.
   const sortKey = (r: RankedRow) =>
     sort === "prob" ? r.prob_profit_pct ?? -1 : r.composite_z;
+  const q = symbol.trim().toUpperCase();
   const visibleRows = (data?.ranked ?? [])
     .filter((r) => filter === "all" || r.bucket === filter)
     .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false))
+    .filter((r) => !q || r.ticker.toUpperCase().includes(q))
     .slice()
     .sort((a, b) => sortKey(b) - sortKey(a));
 
@@ -130,19 +133,27 @@ export default function RankedBookPage() {
             onSort={(s) => setSort(s as "prob" | "z")}
           />
 
-          {/* long / short / all */}
-          <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
-            {(["all", "long", "short"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
-                  filter === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
-                }`}
-              >
-                {f}
-              </button>
-            ))}
+          {/* long / short / all + symbol filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
+              {(["all", "long", "short"] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
+                    filter === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+                  }`}
+                >
+                  {f}
+                </button>
+              ))}
+            </div>
+            <input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Filter symbol…"
+              className="px-3 py-1.5 rounded-md text-xs bg-muted/50 border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary/50 w-40"
+            />
           </div>
 
           {/* legend (kept above the table — InfoTip cards would be clipped inside the scroll container) */}

@@ -132,6 +132,7 @@ export default function OptionsBookPage() {
   const [showTrack, setShowTrack] = useState(false);
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [sort, setSort] = useState<"pop" | "ann" | "score">("pop");
+  const [symbol, setSymbol] = useState("");
 
   const { data, isLoading, error } = useQuery<OptBook>({
     queryKey: ["options-ranked"],
@@ -149,9 +150,11 @@ export default function OptionsBookPage() {
       : sort === "ann"
         ? r.recommendation?.[profile]?.annualized_return_pct ?? -1
         : r.score;
+  const q = symbol.trim().toUpperCase();
   const visibleRows = (data?.ranked ?? [])
     .filter((r) => filter === "all" || r.strategy === filter)
     .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false))
+    .filter((r) => !q || r.ticker.toUpperCase().includes(q))
     .slice()
     .sort((a, b) => sortKey(b) - sortKey(a));
 
@@ -247,6 +250,12 @@ export default function OptionsBookPage() {
                 </button>
               ))}
             </div>
+            <input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Filter symbol…"
+              className="px-3 py-1.5 rounded-md text-xs bg-muted/50 border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary/50 w-40"
+            />
             {/* risk toggle */}
             <div className="flex items-center gap-2 ml-auto">
               <span className="text-[11px] text-muted-foreground">Risk</span>

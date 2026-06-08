@@ -62,8 +62,18 @@ export const stocksApi = {
     api.get(`/api/stocks/${ticker}/price-history?period=${period}&interval=${interval}`).then((r) => r.data),
   priceAction: (ticker: string) =>
     api.get(`/api/stocks/${ticker}/price-action`).then((r) => r.data),
-  refreshPrices: (tickers: string[]) =>
-    api.post("/api/stocks/prices/batch", { tickers }).then((r) => r.data),
+  // Backend caps /prices/batch at 100 tickers — chunk so large lists (e.g. the
+  // ~140-name ranked book) don't 400 and wipe out the whole price overlay.
+  refreshPrices: async (tickers: string[]) => {
+    if (!tickers?.length) return [];
+    const CHUNK = 100;
+    const chunks: string[][] = [];
+    for (let i = 0; i < tickers.length; i += CHUNK) chunks.push(tickers.slice(i, i + CHUNK));
+    const results = await Promise.all(
+      chunks.map((c) => api.post("/api/stocks/prices/batch", { tickers: c }).then((r) => r.data)),
+    );
+    return results.flat();
+  },
   pamBatch: (tickers: string[]) =>
     api.post("/api/stocks/pam/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),

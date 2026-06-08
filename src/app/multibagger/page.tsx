@@ -90,13 +90,16 @@ const VERDICT_STYLE: Record<string, string> = {
 };
 const TIPS = {
   track:
-    "A = confirmed leader (Minervini Trend Template + RS). B = early-stage base/VCP breakout with RS-line new high — the earlier multibagger entry.",
-  composite:
-    "0–100 blend: RS, gate completeness, fundamental acceleration, institutional footprint, PAM structure, catalyst, squeeze fuel, cap band & sector leadership. Regime-flexed.",
+    "Trk: A = confirmed leader (Minervini Trend Template + RS). B = early-stage base/VCP with a strong RS-line — the earlier multibagger entry.",
+  score:
+    "Composite 0–100: RS, gate completeness, fundamental acceleration, institutional footprint, PAM structure, catalyst, squeeze fuel, cap band & sector leadership. Regime-flexed.",
   rs: "IBD-style 1–99 relative-strength rank of blended 12/6/3/1-month return across the whole US market.",
-  fund: "FMP YoY revenue / EPS growth. ▲ = growth is accelerating quarter-over-quarter (the CANSLIM C+A).",
+  ret12m: "12-month price return.",
+  frm52h: "% below the 52-week high — how extended (Track A) or based (Track B) the name is.",
+  fund: "YoY revenue / EPS growth from Polygon financials (yfinance fallback). ▲ = accelerating quarter-over-quarter (CANSLIM C+A).",
+  theme: "Sector cohort — names in the same sector cluster (e.g. AI, energy) surface together.",
   redflag: "Skeptical short-seller LLM contra-check: dilution, going-concern, pump pattern. Demotes false positives.",
-  pam: "Price Action (PAM) structure read on daily bars.",
+  pam: "Price Action (PAM) structure read on daily bars (UC/DC/etc.); * = near pivot.",
 };
 
 const pct = (x?: number | null) =>
@@ -107,6 +110,7 @@ const pctColor = (x?: number | null) =>
 export default function MultibaggerPage() {
   const [track, setTrack] = useState<"all" | "A" | "B">("all");
   const [tab, setTab] = useState<"candidates" | "performance">("candidates");
+  const [symbol, setSymbol] = useState("");
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<ScanResult>({
     queryKey: ["multibagger-candidates", track],
@@ -122,7 +126,10 @@ export default function MultibaggerPage() {
   });
 
   const regime = data?.regime;
-  const candidates = data?.candidates ?? [];
+  const q = symbol.trim().toUpperCase();
+  const candidates = (data?.candidates ?? []).filter(
+    (c) => !q || c.ticker.toUpperCase().includes(q) || (c.name ?? "").toUpperCase().includes(q),
+  );
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto">
@@ -184,19 +191,27 @@ export default function MultibaggerPage() {
 
       {tab === "candidates" && (
         <>
-          {/* track toggle */}
-          <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
-            {([["all", "All"], ["A", "Track A · Leaders"], ["B", "Track B · Early"]] as const).map(([f, label]) => (
-              <button
-                key={f}
-                onClick={() => setTrack(f)}
-                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                  track === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+          {/* track toggle + symbol filter */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
+              {([["all", "All"], ["A", "Track A · Leaders"], ["B", "Track B · Early"]] as const).map(([f, label]) => (
+                <button
+                  key={f}
+                  onClick={() => setTrack(f)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                    track === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <input
+              value={symbol}
+              onChange={(e) => setSymbol(e.target.value)}
+              placeholder="Filter symbol…"
+              className="px-3 py-1.5 rounded-md text-xs bg-muted/50 border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary/50 w-40"
+            />
           </div>
 
           {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
@@ -213,12 +228,15 @@ export default function MultibaggerPage() {
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
                 <span className="text-foreground/70 font-medium">Legend:</span>
-                <InfoTip label="Track" tip={TIPS.track} size={11} />
-                <InfoTip label="Composite" tip={TIPS.composite} size={11} />
+                <InfoTip label="Trk" tip={TIPS.track} size={11} />
+                <InfoTip label="Score" tip={TIPS.score} size={11} />
                 <InfoTip label="RS" tip={TIPS.rs} size={11} />
+                <InfoTip label="12m" tip={TIPS.ret12m} size={11} />
+                <InfoTip label="% from 52wH" tip={TIPS.frm52h} size={11} />
                 <InfoTip label="Fund" tip={TIPS.fund} size={11} />
-                <InfoTip label="Flags" tip={TIPS.redflag} size={11} />
+                <InfoTip label="Theme" tip={TIPS.theme} size={11} />
                 <InfoTip label="PAM" tip={TIPS.pam} size={11} />
+                <InfoTip label="Flags" tip={TIPS.redflag} size={11} />
               </div>
 
               <div className="card overflow-x-auto">
@@ -229,7 +247,7 @@ export default function MultibaggerPage() {
                       <th className="text-left p-2">Ticker</th>
                       <th className="text-center p-2" title={TIPS.track}>Trk</th>
                       <th className="text-right p-2">Price</th>
-                      <th className="text-right p-2" title={TIPS.composite}>Score</th>
+                      <th className="text-right p-2" title={TIPS.score}>Score</th>
                       <th className="text-right p-2" title={TIPS.rs}>RS</th>
                       <th className="text-right p-2 hidden md:table-cell">12m</th>
                       <th className="text-right p-2 hidden lg:table-cell">% from 52wH</th>
