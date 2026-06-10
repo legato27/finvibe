@@ -11,6 +11,9 @@ import { InfoTip } from "@/components/shared/InfoTip";
 interface PamRead {
   structure?: string | null;
   clarity?: string | null;
+  timeframe?: string | null;
+  daily_fsb_bull?: boolean;
+  fsb_vol_confirmed?: boolean;
   rsi?: number | null;
   near_pivot?: boolean;
 }
@@ -53,6 +56,10 @@ interface Candidate {
   float_m?: number | null;
   short_interest_pct?: number | null;
   trend_template_passed?: number;
+  pivot?: number | null;
+  dist_to_pivot_pct?: number | null;
+  breakout_state?: string | null;
+  breakout_volume_confirmed?: boolean;
   fundamentals?: Fundamentals | null;
   catalyst?: { score: number; source: string } | null;
   pam?: PamRead | null;
@@ -99,7 +106,9 @@ const TIPS = {
   fund: "YoY revenue / EPS growth from Polygon financials (yfinance fallback). ▲ = accelerating quarter-over-quarter (CANSLIM C+A).",
   theme: "Sector cohort — names in the same sector cluster (e.g. AI, energy) surface together.",
   redflag: "Skeptical short-seller LLM contra-check: dilution, going-concern, pump pattern. Demotes false positives.",
-  pam: "Price Action (PAM) structure read on daily bars (UC/DC/etc.); * = near pivot.",
+  pam: "PAM structure on WEEKLY bars (the base timeframe); ⚡ = daily bullish Force Strike Bar (confirmation candle).",
+  status:
+    "Breakout state vs the 60-day pivot: Basing = pre-breakout watch; Breakout ✓ = crossed the pivot in the last 3 sessions on ≥1.5× volume (the entry); Breakout? = crossed without volume; Extended = >8% past the pivot (chase).",
 };
 
 const pct = (x?: number | null) =>
@@ -253,6 +262,7 @@ export default function MultibaggerPage() {
                       <th className="text-right p-2 hidden lg:table-cell">% from 52wH</th>
                       <th className="text-right p-2 hidden lg:table-cell" title={TIPS.fund}>Fund</th>
                       <th className="text-left p-2 hidden sm:table-cell">Theme</th>
+                      <th className="text-center p-2" title={TIPS.status}>Status</th>
                       <th className="text-center p-2" title={TIPS.pam}>PAM</th>
                       <th className="text-center p-2" title={TIPS.redflag}>Flags</th>
                     </tr>
@@ -260,7 +270,7 @@ export default function MultibaggerPage() {
                   <tbody>
                     {candidates.length === 0 && (
                       <tr>
-                        <td colSpan={12} className="p-6 text-center text-muted-foreground">
+                        <td colSpan={13} className="p-6 text-center text-muted-foreground">
                           No candidates. The scanner needs a paid Polygon plan with
                           {" "}<code className="text-[10px]">polygon_universe_enabled</code>.
                         </td>
@@ -299,13 +309,40 @@ export default function MultibaggerPage() {
                         </td>
                         <td className="p-2 hidden sm:table-cell text-muted-foreground">{c.theme_cluster ?? "—"}</td>
                         <td className="p-2 text-center">
+                          {c.breakout_state === "breakout_confirmed" ? (
+                            <span className="inline-flex items-center gap-0.5 rounded border border-signal-long/40 bg-signal-long-bg px-1.5 py-0.5 text-[10px] font-semibold text-signal-long"
+                                  title={`Pivot $${c.pivot?.toFixed(2)} crossed on volume`}>
+                              Breakout ✓
+                            </span>
+                          ) : c.breakout_state === "breakout_unconfirmed" ? (
+                            <span className="inline-flex items-center rounded border border-signal-caution/40 bg-signal-caution-bg px-1.5 py-0.5 text-[10px] font-semibold text-signal-caution"
+                                  title={`Pivot $${c.pivot?.toFixed(2)} crossed, volume weak`}>
+                              Breakout?
+                            </span>
+                          ) : c.breakout_state === "basing" ? (
+                            <span className="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                                  title={`Watching: ${c.dist_to_pivot_pct != null ? c.dist_to_pivot_pct + "% to" : "below"} pivot $${c.pivot?.toFixed(2)}`}>
+                              Basing {c.dist_to_pivot_pct != null ? `${c.dist_to_pivot_pct}%` : ""}
+                            </span>
+                          ) : c.breakout_state === "extended" ? (
+                            <span className="inline-flex items-center rounded border border-signal-short/40 bg-signal-short-bg px-1.5 py-0.5 text-[10px] text-signal-short">
+                              Extended
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-[10px]">{c.breakout_state === "above_pivot" ? "Above pivot" : "—"}</span>
+                          )}
+                        </td>
+                        <td className="p-2 text-center">
                           {c.pam?.structure ? (
                             <span
-                              title={`${c.pam.clarity ?? ""} clarity${c.pam.rsi != null ? ` · RSI ${c.pam.rsi}` : ""}${c.pam.near_pivot ? " · near pivot" : ""}`}
+                              title={`Weekly ${c.pam.structure} · ${c.pam.clarity ?? ""} clarity${c.pam.rsi != null ? ` · RSI ${c.pam.rsi}` : ""}${c.pam.near_pivot ? " · near pivot" : ""}${c.pam.daily_fsb_bull ? " · daily FSB ⚡" : ""}`}
                               className={`text-[10px] font-medium ${PAM_STYLE[c.pam.structure] ?? "text-muted-foreground"}`}
                             >
                               {c.pam.structure}
                               {c.pam.near_pivot && "*"}
+                              {c.pam.daily_fsb_bull && (
+                                <span title="Daily bullish Force Strike Bar — confirmation candle" aria-label="daily bullish force strike bar"> ⚡</span>
+                              )}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
