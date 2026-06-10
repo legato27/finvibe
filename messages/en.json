@@ -324,7 +324,15 @@
     "watchlistLoading": "Loading watchlist…",
     "watchlistPersonal": "Your personal watchlist",
     "watchlistSignInCta": "Sign in to get started",
-    "watchlistSignInPrompt": "Sign in to track stocks and build watchlists"
+    "watchlistSignInPrompt": "Sign in to track stocks and build watchlists",
+    "todaySignals": "Today — signals & changes",
+    "todaySignalsEmpty": "No new signals, verdict changes, or conflicts in the last two days.",
+    "newSetups": "New price-action triggers",
+    "gateQualified": "qualified",
+    "gateMeasuring": "measuring",
+    "verdictChanges": "Verdict changes",
+    "changedTo": "changed to",
+    "conflictsToReview": "Conflicts to review"
   },
   "errors": {
     "loadFailed": "Failed to load",
@@ -1451,7 +1459,8 @@
     "single": "Watchlist",
     "thoughtsAvailable": "FinVibe's Thoughts available",
     "title": "Watchlists",
-    "trend": "Trend"
+    "trend": "Trend",
+    "remove": "Remove from watchlist"
   },
   "verdict": {
     "title": "Unified verdict",
@@ -1533,5 +1542,21 @@
     "oiLadderTitle": "Open-interest walls",
     "unusualTitle": "Unusual open interest",
     "noUnusual": "No unusual concentrations detected."
+  },
+  "optionsScreener": {
+    "title": "Options screener",
+    "subtitle": "Watchlist names ranked by IV rank — real chain data, linked to each stock's full option chain.",
+    "tableCaption": "Options screener: watchlist stocks with verdict, IV rank, ATM implied volatility, expected move, put/call ratio, skew, and unusual open interest",
+    "colTicker": "Ticker",
+    "colVerdict": "Verdict",
+    "colIvRank": "IV Rank",
+    "colIvRankLong": "Implied volatility rank vs own 1-year history",
+    "colAtmIv": "ATM IV",
+    "colExpectedMove": "Move 30d",
+    "colPcr": "P/C OI",
+    "colSkew": "25Δ skew",
+    "colUnusual": "Unusual",
+    "colUnusualLong": "Unusual open-interest concentrations",
+    "empty": "No US names with chain data yet — the prefetch warms during market hours."
   }
 }

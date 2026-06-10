@@ -5,6 +5,7 @@ import { useAppStore } from "@/store/useAppStore";
 import { macroApi } from "@/lib/api";
 import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 import { TodayPanel } from "@/components/dashboard/TodayPanel";
+import { TodaySignalsPanel } from "@/components/dashboard/TodaySignalsPanel";
 import { MacroTape } from "@/components/dashboard/MacroTape";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { WatchlistGlance } from "@/components/dashboard/WatchlistGlance";
@@ -50,7 +51,10 @@ export function DashboardView() {
       </div>
 
       <Section title={t("sectionTodayTitle")} intro={t("sectionTodayIntro")}>
-        <TodayPanel />
+        <div className="space-y-3 sm:space-y-4">
+          <TodaySignalsPanel />
+          <TodayPanel />
+        </div>
       </Section>
 
       <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>

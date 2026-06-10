@@ -82,6 +82,7 @@ export const stocksApi = {
     api.post("/api/stocks/pam/batch", { tickers }).then((r) => r.data),
   verdict: (ticker: string) =>
     api.get(`/api/stocks/${ticker}/verdict`).then((r) => r.data),
+  signalsToday: () => api.get("/api/stocks/signals/today").then((r) => r.data),
   verdictBatch: (tickers: string[]) =>
     api.post("/api/stocks/verdict/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),

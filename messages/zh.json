@@ -324,7 +324,15 @@
     "watchlistLoading": "正在加载自选股…",
     "watchlistPersonal": "你的个人自选股",
     "watchlistSignInCta": "登录开始使用",
-    "watchlistSignInPrompt": "登录以追踪股票并建立自选股"
+    "watchlistSignInPrompt": "登录以追踪股票并建立自选股",
+    "todaySignals": "今日信号与变化",
+    "todaySignalsEmpty": "过去两天没有新信号、判定变化或冲突。",
+    "newSetups": "新触发的价格行为信号",
+    "gateQualified": "已验证",
+    "gateMeasuring": "统计中",
+    "verdictChanges": "判定变化",
+    "changedTo": "变为",
+    "conflictsToReview": "待复核的冲突"
   },
   "errors": {
     "loadFailed": "加载失败",
@@ -1451,7 +1459,8 @@
     "single": "Watchlist",
     "thoughtsAvailable": "FinVibe's Thoughts available",
     "title": "自选股",
-    "trend": "Trend"
+    "trend": "Trend",
+    "remove": "从自选中移除"
   },
   "verdict": {
     "title": "综合判定",
@@ -1533,5 +1542,21 @@
     "oiLadderTitle": "持仓量墙",
     "unusualTitle": "异常持仓",
     "noUnusual": "未检测到异常集中持仓。"
+  },
+  "optionsScreener": {
+    "title": "期权筛选",
+    "subtitle": "按 IV 排名排序的自选股——真实期权链数据，点击进入个股完整期权链。",
+    "tableCaption": "期权筛选：自选股的判定、IV 排名、平值隐含波动率、预期波动、认沽认购比、偏斜与异常持仓",
+    "colTicker": "代码",
+    "colVerdict": "判定",
+    "colIvRank": "IV 排名",
+    "colIvRankLong": "隐含波动率相对自身一年历史的排名",
+    "colAtmIv": "平值 IV",
+    "colExpectedMove": "30天波动",
+    "colPcr": "沽/购持仓",
+    "colSkew": "25Δ 偏斜",
+    "colUnusual": "异常",
+    "colUnusualLong": "异常持仓集中度",
+    "empty": "暂无美股期权链数据——预取在美股交易时段自动运行。"
   }
 }

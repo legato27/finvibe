@@ -1,10 +1,12 @@
 "use client";
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding, useRenameWatchlist } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
-import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
+import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
+import LivePrice from "@/components/ui/LivePrice";
 import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus, Pencil, Check } from "lucide-react";
 import { stocksApi } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -262,10 +264,11 @@ export default function WatchlistPage() {
     [livePrices],
   );
 
-  // PAM (price-action) setup per ticker for the badge.
-  const { data: pamMap } = useQuery<Record<string, PamSummary | null>>({
-    queryKey: ["wl-pam", activeTickers],
-    queryFn: () => stocksApi.pamBatch(activeTickers),
+  // Unified verdict per ticker — THE one signal shown on the row (PAM and the
+  // other sources live inside it as evidence; see VerdictCard on the stock page).
+  const { data: verdictMap } = useQuery<Record<string, VerdictJson | null>>({
+    queryKey: ["wl-verdicts", activeTickers],
+    queryFn: () => stocksApi.verdictBatch(activeTickers),
     enabled: activeTickers.length > 0,
     staleTime: 5 * 60_000,
   });
@@ -493,7 +496,7 @@ export default function WatchlistPage() {
                     const llm = llmMap?.[stock.ticker];
                     const livePrice = priceMap.get(stock.ticker) ?? null;
                     const shownPrice = livePrice ?? stock.last_price;
-                    const pam = pamMap?.[stock.ticker];
+                    const rowVerdict = verdictMap?.[stock.ticker];
                     const isEtf = stock.is_etf || stock.asset_type === "etf";
 
                     // Sector display logic
@@ -520,13 +523,19 @@ export default function WatchlistPage() {
                     return (
                       <div
                         key={item.id}
-                        className="flex items-center justify-between px-3 py-3 hover:bg-accent/50 transition-colors cursor-pointer group"
-                        onClick={() => router.push(`/stock/${stock.ticker}`)}
+                        className="relative flex items-center justify-between px-3 py-3 hover:bg-accent/50 focus-within:bg-accent/50 transition-colors group"
                       >
                         <div className="flex items-center gap-3 min-w-0">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
+                              {/* Row-stretched link: native keyboard + SR semantics
+                                  (replaces the old clickable-div onClick). */}
+                              <Link
+                                href={`/stock/${stock.ticker}`}
+                                className="font-mono text-sm font-bold text-primary after:absolute after:inset-0 after:content-['']"
+                              >
+                                {stock.ticker}
+                              </Link>
                               {moatRating && moatRating !== "None" && (
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${
                                   moatRating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
@@ -541,9 +550,9 @@ export default function WatchlistPage() {
                                 <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">{t("enriching")}</span>
                               )}
                               {llm?.thoughts_json && (
-                                <span title={t("thoughtsAvailable")}><Brain className="w-3 h-3 text-primary/50" /></span>
+                                <span title={t("thoughtsAvailable")}><Brain className="w-3 h-3 text-primary/50" aria-label={t("thoughtsAvailable")} /></span>
                               )}
-                              {pam && <PamBadge pam={pam} />}
+                              {rowVerdict?.state && <VerdictBadge state={rowVerdict.state} size="sm" />}
                             </div>
                             <div className="text-xs text-muted-foreground truncate max-w-[130px] sm:max-w-[250px]">
                               {stock.name || "—"}
@@ -564,10 +573,7 @@ export default function WatchlistPage() {
                         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
                           {shownPrice != null && shownPrice > 0 && (
                             <div className="text-right">
-                              <span className="font-mono text-sm text-foreground inline-flex items-center gap-1">
-                                ${shownPrice.toFixed(2)}
-                                {livePrice != null && <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />}
-                              </span>
+                              <LivePrice price={shownPrice} currency="$" live={livePrice != null} className="text-sm text-foreground" />
                               {livePrice == null && stock.last_price_updated_at && (
                                 <div className={`text-[10px] ${isStale(stock.last_price_updated_at) ? "text-amber-400/70" : "text-muted-foreground/40"}`}>
                                   {timeAgo(stock.last_price_updated_at)}
@@ -627,19 +633,21 @@ export default function WatchlistPage() {
                               e.stopPropagation();
                               setPortfolioModal({ ticker: stock.ticker, name: stock.name || null, price: stock.last_price ?? null });
                             }}
-                            className="p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                            className="relative p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
                             title={t("addToPortfolioTitle")}
+                            aria-label={t("addToPortfolioTitle")}
                           >
-                            <Briefcase className="w-4 h-4" />
+                            <Briefcase className="w-4 h-4" aria-hidden="true" />
                           </button>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: stock.id });
                             }}
-                            className="p-1.5 rounded text-muted-foreground hover:text-red-400 hover:bg-red-500/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                            className="relative p-1.5 rounded text-muted-foreground hover:text-signal-short hover:bg-signal-short-bg transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+                            aria-label={t("remove")}
                           >
-                            <X className="w-4 h-4" />
+                            <X className="w-4 h-4" aria-hidden="true" />
                           </button>
                         </div>
                       </div>
