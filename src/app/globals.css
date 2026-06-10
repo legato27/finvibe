@@ -11,10 +11,11 @@
     --card-foreground: 25 30% 14%;
     --border: 30 18% 82%;
     --input: 30 18% 82%;
-    /* Primary doubles as TEXT (links, active tabs) — 34% lightness clears
-       4.5:1 on the warm off-white background AND on its /20 tint. */
-    --ring: 28 72% 34%;
-    --primary: 28 72% 34%;
+    /* Primary doubles as TEXT (links, active tabs) — 30% lightness clears
+       4.5:1 on the warm off-white background AND on its own /20 tint
+       (active tab/filter chips render text-primary on bg-primary/20). */
+    --ring: 28 75% 30%;
+    --primary: 28 75% 30%;
     --primary-foreground: 35 30% 97%;
     --muted: 32 18% 88%;
     --muted-foreground: 25 16% 36%;
@@ -44,7 +45,7 @@
     --signal-neutral-bg: 215 16% 92%;
     --signal-conflict: 263 69% 42%;      /* violet-700 #6d28d9 — 7.0:1 */
     --signal-conflict-bg: 263 60% 94%;
-    --signal-caution: 41 96% 33%;        /* yellow-700 #a16207 — 5.0:1 */
+    --signal-caution: 35 92% 29%;        /* yellow-800 #854d0e — ≥4.5:1 on bg AND tint */
     --signal-caution-bg: 45 70% 92%;
   }
 

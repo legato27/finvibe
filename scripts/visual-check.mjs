@@ -1,0 +1,10 @@
+import { chromium } from "playwright";
+const browser = await chromium.launch();
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 1600 } });
+const page = await ctx.newPage();
+await page.goto("https://fin.vibelife.sg/stock/AAPL", { waitUntil: "networkidle", timeout: 60000 });
+await page.waitForTimeout(3000);
+const verdictText = await page.locator('section[aria-label]').first().innerText().catch(() => "NOT FOUND");
+console.log("verdict card text:", verdictText.slice(0, 400).replace(/\n/g, " | "));
+await page.screenshot({ path: "/tmp/stock-aapl.png", fullPage: false });
+await browser.close();

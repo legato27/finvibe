@@ -17,6 +17,7 @@ for (const path of pages) {
     await page.waitForTimeout(2500); // let react-query panels settle
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .exclude("iframe") // third-party TradingView ticker tape — not ours to fix
       .analyze();
     console.log(`\n=== ${path} — ${results.violations.length} violation types ===`);
     for (const v of results.violations) {

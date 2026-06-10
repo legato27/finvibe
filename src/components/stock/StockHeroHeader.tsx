@@ -34,7 +34,7 @@ export function StockHeroHeader({
       value: (llmData.intrinsic_value ?? llmData.llm_intrinsic_value) != null
         ? `$${Number(llmData.intrinsic_value ?? llmData.llm_intrinsic_value).toFixed(2)}` : null,
       sub: t('ai'),
-      color: "text-blue-400",
+      color: "text-sky-700 dark:text-sky-400",
     },
     {
       label: t('mos'),
@@ -125,10 +125,10 @@ export function StockHeroHeader({
             )}
 
             {detail?.enrichment_status === "pending" && (
-              <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">{t('statusPending')}</span>
+              <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-signal-caution rounded animate-pulse">{t('statusPending')}</span>
             )}
             {detail?.enrichment_status === "processing" && (
-              <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">{t('statusEnriching')}</span>
+              <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-sky-700 dark:text-sky-400 rounded animate-pulse">{t('statusEnriching')}</span>
             )}
           </div>
 
@@ -138,7 +138,7 @@ export function StockHeroHeader({
               {stats.map(({ label, value, sub, color }, i) => (
                 <div key={`${label}-${sub || i}`} className="text-center min-w-[60px]">
                   <div className="text-[10px] text-muted-foreground">
-                    {label}{sub ? <span className="text-blue-400/60 ml-0.5">({sub})</span> : null}
+                    {label}{sub ? <span className="text-sky-700/80 dark:text-sky-400/70 ml-0.5">({sub})</span> : null}
                   </div>
                   <div className={`font-mono text-sm font-semibold ${color || "text-foreground"}`}>{value}</div>
                 </div>

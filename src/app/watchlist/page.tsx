@@ -544,10 +544,10 @@ export default function WatchlistPage() {
                                 </span>
                               )}
                               {stock.enrichment_status === "pending" && (
-                                <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">{t("pending")}</span>
+                                <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-signal-caution rounded animate-pulse">{t("pending")}</span>
                               )}
                               {stock.enrichment_status === "processing" && (
-                                <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">{t("enriching")}</span>
+                                <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-sky-700 dark:text-sky-400 rounded animate-pulse">{t("enriching")}</span>
                               )}
                               {llm?.thoughts_json && (
                                 <span title={t("thoughtsAvailable")}><Brain className="w-3 h-3 text-primary/50" aria-label={t("thoughtsAvailable")} /></span>
@@ -601,8 +601,8 @@ export default function WatchlistPage() {
                           {/* AI Intrinsic Value */}
                           {llm?.llm_intrinsic_value != null && (
                             <div className="text-right hidden lg:block">
-                              <div className="text-[10px] text-blue-400/70">{t("intrinsicAi")}</div>
-                              <span className="font-mono text-xs text-blue-400">
+                              <div className="text-[10px] text-sky-700 dark:text-sky-400">{t("intrinsicAi")}</div>
+                              <span className="font-mono text-xs text-sky-700 dark:text-sky-400">
                                 ${Number(llm.llm_intrinsic_value).toFixed(2)}
                               </span>
                             </div>
@@ -610,7 +610,7 @@ export default function WatchlistPage() {
                           {/* AI MoS */}
                           {llm?.llm_margin_of_safety != null && (
                             <div className="text-right hidden lg:block">
-                              <div className="text-[10px] text-blue-400/70">{t("mosAi")}</div>
+                              <div className="text-[10px] text-sky-700 dark:text-sky-400">{t("mosAi")}</div>
                               <span className={`font-mono text-xs ${
                                 Number(llm.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400"
                               }`}>
