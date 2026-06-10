@@ -33,6 +33,22 @@ const config: Config = {
         },
         success: "hsl(var(--success))",
         danger: "hsl(var(--danger))",
+        // ── Signal tokens (AA-checked CSS vars; see globals.css). New
+        // components use ONLY these for directional/verdict coloring.
+        signal: {
+          long: "hsl(var(--signal-long))",
+          "long-bg": "hsl(var(--signal-long-bg))",
+          "long-strong": "hsl(var(--signal-long-strong))",
+          short: "hsl(var(--signal-short))",
+          "short-bg": "hsl(var(--signal-short-bg))",
+          "short-strong": "hsl(var(--signal-short-strong))",
+          neutral: "hsl(var(--signal-neutral))",
+          "neutral-bg": "hsl(var(--signal-neutral-bg))",
+          conflict: "hsl(var(--signal-conflict))",
+          "conflict-bg": "hsl(var(--signal-conflict-bg))",
+          caution: "hsl(var(--signal-caution))",
+          "caution-bg": "hsl(var(--signal-caution-bg))",
+        },
         bull: "#22c55e",
         bear: "#ef4444",
         neutral: "#94a3b8",

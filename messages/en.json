@@ -841,7 +841,11 @@
     "cardTitle": "Price Action Setup",
     "empty": "No price-action read available yet.",
     "status": "Status",
-    "statusVal": { "triggered": "Triggered", "watch": "Watch", "no_setup": "No setup" },
+    "statusVal": {
+      "triggered": "Triggered",
+      "watch": "Watch",
+      "no_setup": "No setup"
+    },
     "conviction": "Conviction",
     "sweetSpot": "Sweet-spot zone",
     "invalidation": "Invalidation",
@@ -856,7 +860,11 @@
     "targets": "Targets",
     "trigger": "Trigger",
     "inZone": "in zone",
-    "tf": { "daily": "Daily", "weekly": "Weekly", "monthly": "Monthly" },
+    "tf": {
+      "daily": "Daily",
+      "weekly": "Weekly",
+      "monthly": "Monthly"
+    },
     "disclaimer": "Pure price action — structure, sweet-spot, and Force Strike Bar trigger. Not financial advice; no risk/reward or sizing."
   },
   "sentiment": {
@@ -1439,5 +1447,52 @@
     "thoughtsAvailable": "FinVibe's Thoughts available",
     "title": "Watchlists",
     "trend": "Trend"
+  },
+  "verdict": {
+    "title": "Unified verdict",
+    "none": "No verdict yet",
+    "state": {
+      "STRONG_LONG": "Strong Long",
+      "LONG": "Long",
+      "NEUTRAL": "Stand Aside",
+      "SHORT": "Short",
+      "STRONG_SHORT": "Strong Short",
+      "CONFLICTING": "Conflicting — no edge"
+    },
+    "confidence": "Confidence",
+    "provisional": "provisional",
+    "why": "Why",
+    "levels": "Levels",
+    "entryZone": "Entry zone",
+    "invalidation": "Invalidation",
+    "target": "Target",
+    "lastClose": "Last close",
+    "score": "Score",
+    "agreement": "Agreement",
+    "sourcesUsed": "Sources",
+    "computedAt": "Computed",
+    "showDetails": "Show details",
+    "hideDetails": "Hide details",
+    "agrees": "agrees with the verdict",
+    "disagrees": "disagrees with the verdict",
+    "stale": "stale or unavailable",
+    "unavailable": "unavailable",
+    "conflictHeadline": "{a} and {b} point in opposite directions",
+    "source": {
+      "ensemble": "Quant ensemble",
+      "pam": "Price action",
+      "ranked": "Ranked book",
+      "sentiment": "Sentiment",
+      "llm": "FinVibe Thoughts"
+    },
+    "veto": {
+      "earnings_window": "Earnings imminent — capped to Stand Aside",
+      "high_vol_regime": "High-volatility regime — strong tier demoted",
+      "epistemic_uncertainty": "Models disagree — strong tier demoted",
+      "altman_distress": "Altman distress zone — strong long vetoed"
+    }
+  },
+  "a11y": {
+    "livePrice": "Live price, updates automatically"
   }
 }

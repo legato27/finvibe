@@ -841,7 +841,11 @@
     "cardTitle": "价格行为设置",
     "empty": "暂无价格行为分析。",
     "status": "状态",
-    "statusVal": { "triggered": "已触发", "watch": "观察", "no_setup": "无设置" },
+    "statusVal": {
+      "triggered": "已触发",
+      "watch": "观察",
+      "no_setup": "无设置"
+    },
     "conviction": "信心",
     "sweetSpot": "甜蜜区",
     "invalidation": "失效位",
@@ -856,7 +860,11 @@
     "targets": "目标",
     "trigger": "触发",
     "inZone": "在区内",
-    "tf": { "daily": "日线", "weekly": "周线", "monthly": "月线" },
+    "tf": {
+      "daily": "日线",
+      "weekly": "周线",
+      "monthly": "月线"
+    },
     "disclaimer": "纯价格行为——结构、甜蜜区与力打K线触发。非投资建议；不含风险回报或仓位。"
   },
   "sentiment": {
@@ -1439,5 +1447,52 @@
     "thoughtsAvailable": "FinVibe's Thoughts available",
     "title": "自选股",
     "trend": "Trend"
+  },
+  "verdict": {
+    "title": "综合判定",
+    "none": "暂无判定",
+    "state": {
+      "STRONG_LONG": "强烈看多",
+      "LONG": "看多",
+      "NEUTRAL": "观望",
+      "SHORT": "看空",
+      "STRONG_SHORT": "强烈看空",
+      "CONFLICTING": "信号冲突——暂无优势"
+    },
+    "confidence": "置信度",
+    "provisional": "暂定",
+    "why": "依据",
+    "levels": "关键价位",
+    "entryZone": "入场区间",
+    "invalidation": "失效位",
+    "target": "目标位",
+    "lastClose": "最新收盘",
+    "score": "评分",
+    "agreement": "一致性",
+    "sourcesUsed": "信号源",
+    "computedAt": "计算时间",
+    "showDetails": "展开详情",
+    "hideDetails": "收起详情",
+    "agrees": "与判定一致",
+    "disagrees": "与判定相悖",
+    "stale": "数据过期或不可用",
+    "unavailable": "不可用",
+    "conflictHeadline": "{a}与{b}方向相反",
+    "source": {
+      "ensemble": "量化集成",
+      "pam": "价格行为",
+      "ranked": "排名簿",
+      "sentiment": "市场情绪",
+      "llm": "FinVibe 观点"
+    },
+    "veto": {
+      "earnings_window": "临近财报——降级为观望",
+      "high_vol_regime": "高波动状态——强信号降级",
+      "epistemic_uncertainty": "模型分歧大——强信号降级",
+      "altman_distress": "Altman 危险区——否决强烈看多"
+    }
+  },
+  "a11y": {
+    "livePrice": "实时价格，自动更新"
   }
 }

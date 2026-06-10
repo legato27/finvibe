@@ -25,6 +25,23 @@
     --danger-bg: 4 50% 94%;
     --warning: 38 75% 42%;
     --warning-bg: 42 60% 92%;
+
+    /* ── Signal tokens (WCAG 2.1 AA: every fg ≥4.5:1 on background AND on its
+       own -bg tint). Signals are NEVER color-only — components pair these with
+       an icon + text label. Conflict gets a distinct violet hue: conflicting
+       evidence is a different statement than neutral. ─────────────────── */
+    --signal-long: 142 72% 29%;          /* green-700  #15803d — 4.8:1 on white */
+    --signal-long-bg: 141 50% 92%;
+    --signal-long-strong: 143 64% 24%;   /* green-800  #166534 */
+    --signal-short: 0 74% 42%;           /* red-700    #b91c1c — 5.9:1 */
+    --signal-short-bg: 0 60% 94%;
+    --signal-short-strong: 0 70% 35%;    /* red-800    #991b1b */
+    --signal-neutral: 215 19% 35%;       /* slate-600  #475569 — 7.6:1 */
+    --signal-neutral-bg: 215 16% 92%;
+    --signal-conflict: 263 69% 42%;      /* violet-700 #6d28d9 — 7.0:1 */
+    --signal-conflict-bg: 263 60% 94%;
+    --signal-caution: 41 96% 33%;        /* yellow-700 #a16207 — 5.0:1 */
+    --signal-caution-bg: 45 70% 92%;
   }
 
   /* ── Dark mode ────────────────────────────────────────── */
@@ -49,6 +66,20 @@
     --danger-bg: 0 63% 8%;
     --warning: 38 92% 50%;
     --warning-bg: 48 96% 8%;
+
+    /* Signal tokens — dark (every fg ≥4.5:1 on the #0b1120-class surface). */
+    --signal-long: 142 69% 58%;          /* green-400  #4ade80 */
+    --signal-long-bg: 142 76% 10%;
+    --signal-long-strong: 141 79% 75%;   /* green-300  #86efac */
+    --signal-short: 0 91% 71%;           /* red-400    #f87171 */
+    --signal-short-bg: 0 63% 11%;
+    --signal-short-strong: 0 94% 82%;    /* red-300    #fca5a5 */
+    --signal-neutral: 215 20% 65%;       /* slate-400  #94a3b8 */
+    --signal-neutral-bg: 215 25% 14%;
+    --signal-conflict: 253 95% 85%;      /* violet-300 #c4b5fd */
+    --signal-conflict-bg: 263 50% 16%;
+    --signal-caution: 43 96% 56%;        /* amber-400  #fbbf24 */
+    --signal-caution-bg: 45 80% 10%;
   }
 
   body {
@@ -57,6 +88,23 @@
 
   * {
     @apply border-border;
+  }
+
+  /* ── Accessibility base rules (WCAG 2.1 AA) ─────────────── */
+  /* Visible focus for every interactive element, keyboard-only (2.4.7). */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  /* Prices/percentages align in columns (readability, not a WCAG SC). */
+  .nums {
+    font-variant-numeric: tabular-nums;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-pulse, .animate-spin, .animate-pulse-slow, .animate-spin-slow {
+      animation: none !important;
+    }
   }
 
   /* Scrollbar styling */

@@ -80,6 +80,10 @@ export const stocksApi = {
   },
   pamBatch: (tickers: string[]) =>
     api.post("/api/stocks/pam/batch", { tickers }).then((r) => r.data),
+  verdict: (ticker: string) =>
+    api.get(`/api/stocks/${ticker}/verdict`).then((r) => r.data),
+  verdictBatch: (tickers: string[]) =>
+    api.post("/api/stocks/verdict/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),
   optionsInference: (ticker: string, body: Record<string, unknown>) =>
     api.post(`/api/stocks/${ticker}/options-inference`, body).then((r) => r.data),
@@ -89,6 +93,21 @@ export const stocksApi = {
       .then((r) => r.data),
   positionAdvice: (ticker: string, body: Record<string, unknown>) =>
     api.post(`/api/stocks/${ticker}/position-advice`, body).then((r) => r.data),
+};
+
+// ── Options chain (real Polygon chain data, 15-min delayed) ─────────────────
+
+export const optionsApi = {
+  expiries: (ticker: string) =>
+    api.get(`/api/options/${ticker}/expiries`).then((r) => r.data),
+  chain: (ticker: string, expiry?: string, strikes = 24) => {
+    const params = new URLSearchParams({ strikes: String(strikes) });
+    if (expiry) params.set("expiry", expiry);
+    return api.get(`/api/options/${ticker}/chain?${params.toString()}`).then((r) => r.data);
+  },
+  summary: (ticker: string) =>
+    api.get(`/api/options/${ticker}/summary`).then((r) => r.data),
+  screener: () => api.get("/api/options/screener").then((r) => r.data),
 };
 
 // ── FX ───────────────────────────────────────────────────────
