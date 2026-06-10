@@ -3,12 +3,16 @@
  */
 import axios, { AxiosInstance } from "axios";
 
-// Use the env var if explicitly set (e.g. pointing to a remote server).
-// Otherwise derive from the current page origin at runtime so the app works
-// from any host — LAN, Tailscale, localhost — without rebuilding.
-// nginx routes /api/* → api:8000, so the browser only needs to reach port 3000.
+// Use the env var ONLY if it is a well-formed absolute http(s) URL (e.g. a
+// remote server for self-hosted/LAN/Tailscale deploys). A bare host like
+// "api.vibelife.sg" (no scheme) is a misconfiguration — and on Vercel pointing
+// the browser at the Cloudflare-Access-gated backend directly always 403s since
+// the browser has no service token. In that case fall back to the page origin
+// so requests go same-origin through the server-side proxy (which holds the
+// CF-Access token). nginx/Vercel route /api/* → backend.
 const BASE_URL: string = (() => {
-  if (process.env.NEXT_PUBLIC_API_URL) return process.env.NEXT_PUBLIC_API_URL;
+  const envUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (envUrl && /^https?:\/\//.test(envUrl)) return envUrl;
   if (typeof window !== "undefined") return window.location.origin;
   return "";
 })();
