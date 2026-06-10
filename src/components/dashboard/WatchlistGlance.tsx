@@ -142,8 +142,8 @@ function AuthenticatedWatchlist() {
                     {hasMoat && (
                       <span className={`text-[9px] px-1 py-0 rounded ${
                         stock.moat_rating === "Wide"
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-yellow-500/20 text-yellow-400"
+                          ? "bg-signal-long-bg text-signal-long border border-signal-long/40"
+                          : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
                       }`}>
                         {stock.moat_rating}
                       </span>

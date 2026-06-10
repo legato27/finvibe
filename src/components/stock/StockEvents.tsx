@@ -22,7 +22,7 @@ function CountdownBadge({ days }: { days: number }) {
   return (
     <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${
       urgent ? "bg-orange-500/20 text-orange-400" :
-      soon   ? "bg-yellow-500/20 text-yellow-400" :
+      soon   ? "bg-signal-caution-bg text-signal-caution border border-signal-caution/40" :
                "bg-muted text-muted-foreground"
     }`}>
       {days === 0 ? t("today") : days < 0 ? t("daysAgo", { n: Math.abs(days) }) : t("inDays", { n: days })}

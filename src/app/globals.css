@@ -11,11 +11,13 @@
     --card-foreground: 25 30% 14%;
     --border: 30 18% 82%;
     --input: 30 18% 82%;
-    --ring: 28 70% 42%;
-    --primary: 28 70% 42%;
+    /* Primary doubles as TEXT (links, active tabs) — 34% lightness clears
+       4.5:1 on the warm off-white background AND on its /20 tint. */
+    --ring: 28 72% 34%;
+    --primary: 28 72% 34%;
     --primary-foreground: 35 30% 97%;
     --muted: 32 18% 88%;
-    --muted-foreground: 25 14% 42%;
+    --muted-foreground: 25 16% 36%;
     --accent: 32 18% 88%;
     --accent-foreground: 25 30% 14%;
     /* Semantic colors */
@@ -30,9 +32,11 @@
        own -bg tint). Signals are NEVER color-only — components pair these with
        an icon + text label. Conflict gets a distinct violet hue: conflicting
        evidence is a different statement than neutral. ─────────────────── */
-    --signal-long: 142 72% 29%;          /* green-700  #15803d — 4.8:1 on white */
+    /* NB: light surfaces are warm OFF-white (#f2eee9), not #fff — tokens are
+       checked against that. green-700 only hits 4.39:1 there; use green-800. */
+    --signal-long: 143 64% 24%;          /* green-800  #166534 — 6.1:1 on #f2eee9 */
     --signal-long-bg: 141 50% 92%;
-    --signal-long-strong: 143 64% 24%;   /* green-800  #166534 */
+    --signal-long-strong: 144 61% 20%;   /* green-900  #14532d */
     --signal-short: 0 74% 42%;           /* red-700    #b91c1c — 5.9:1 */
     --signal-short-bg: 0 60% 94%;
     --signal-short-strong: 0 70% 35%;    /* red-800    #991b1b */

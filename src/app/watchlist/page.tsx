@@ -538,7 +538,7 @@ export default function WatchlistPage() {
                               </Link>
                               {moatRating && moatRating !== "None" && (
                                 <span className={`text-[9px] px-1.5 py-0.5 rounded ${
-                                  moatRating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                                  moatRating === "Wide" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
                                 }`}>
                                   {moatRating}{moatIsAi ? " (AI)" : ""}
                                 </span>

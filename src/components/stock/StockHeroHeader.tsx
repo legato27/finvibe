@@ -41,14 +41,14 @@ export function StockHeroHeader({
       value: formatMoS(detail?.margin_of_safety),
       sub: t('dcf'),
       color: detail?.margin_of_safety != null
-        ? (detail.margin_of_safety > 0 ? "text-green-400" : "text-red-400") : undefined,
+        ? (detail.margin_of_safety > 0 ? "text-signal-long" : "text-signal-short") : undefined,
     },
     {
       label: t('mos'),
       value: formatMoS(llmData.margin_of_safety ?? llmData.llm_margin_of_safety),
       sub: t('ai'),
       color: (llmData.margin_of_safety ?? llmData.llm_margin_of_safety) != null
-        ? (Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400") : undefined,
+        ? (Number(llmData.margin_of_safety ?? llmData.llm_margin_of_safety) > 0 ? "text-signal-long" : "text-signal-short") : undefined,
     },
     {
       label: t('fiftyTwoWeekRangeShort'),
@@ -61,8 +61,9 @@ export function StockHeroHeader({
   return (
     <div className="card p-5">
       <div className="flex items-start gap-4">
-        <Link href={backHref} className="text-muted-foreground hover:text-primary mt-1 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
+        <Link href={backHref} aria-label="Back to watchlist"
+              className="text-muted-foreground hover:text-primary mt-1 transition-colors">
+          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </Link>
 
         <div className="flex-1 min-w-0">
@@ -72,14 +73,14 @@ export function StockHeroHeader({
             <span className="text-lg text-foreground/80 truncate">{detail?.name || "—"}</span>
             {detail?.moat_rating && detail.moat_rating !== "None" && (
               <span className={`text-[10px] px-2 py-0.5 rounded ${
-                detail.moat_rating === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                detail.moat_rating === "Wide" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
               }`}>
                 {t('moatLabel', { rating: detail.moat_rating })}
               </span>
             )}
             {!detail?.moat_rating && llmData.moat && llmData.moat !== "None" && (
               <span className={`text-[10px] px-2 py-0.5 rounded ${
-                llmData.moat === "Wide" ? "bg-green-500/20 text-green-400" : "bg-yellow-500/20 text-yellow-400"
+                llmData.moat === "Wide" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
               }`}>
                 {t('moatLabelAi', { rating: llmData.moat })}
               </span>
@@ -115,9 +116,9 @@ export function StockHeroHeader({
 
             {verdict && (
               <span className={`text-xs font-bold uppercase px-3 py-1 rounded-full ${
-                verdict === "buy" ? "bg-green-500/15 text-green-400 border border-green-500/30" :
-                verdict === "avoid" ? "bg-red-500/15 text-red-400 border border-red-500/30" :
-                "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30"
+                verdict === "buy" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" :
+                verdict === "avoid" ? "bg-signal-short-bg text-signal-short border border-signal-short/40" :
+                "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
               }`}>
                 {verdict} · {conviction || t('convictionMedium')}
               </span>

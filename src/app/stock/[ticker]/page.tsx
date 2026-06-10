@@ -180,7 +180,7 @@ export default function StockDetailPage() {
             key={tab.id}
             role="tab"
             aria-selected={activeTab === tab.id}
-            aria-controls={`tabpanel-${tab.id}`}
+            aria-controls={activeTab === tab.id ? `tabpanel-${tab.id}` : undefined}
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${
               activeTab === tab.id
@@ -200,14 +200,14 @@ export default function StockDetailPage() {
           ═══════════════════════════════════════════════════ */}
 
       {activeTab === "chart" && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="tabpanel-chart" className="space-y-4">
           <PriceChart ticker={ticker} priceAction={priceAction} />
           <PriceActionAnalysis ticker={ticker} />
         </div>
       )}
 
       {activeTab === "analysis" && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="tabpanel-analysis" className="space-y-4">
           <DcfScenarios dcf={detail.dcf_detail} />
           <FinVibeThoughts
             ticker={ticker}
@@ -233,11 +233,13 @@ export default function StockDetailPage() {
       )}
 
       {activeTab === "quant" && (
-        <ModelCards ticker={ticker} />
+        <div role="tabpanel" id="tabpanel-quant">
+          <ModelCards ticker={ticker} />
+        </div>
       )}
 
       {activeTab === "news" && (
-        <div className="space-y-4">
+        <div role="tabpanel" id="tabpanel-news" className="space-y-4">
           <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-4">
             <SentimentPanel ticker={ticker} />
             <RealtimeNewsFeed tickers={[ticker]} />

@@ -131,8 +131,8 @@ export default function RankedBookPage() {
         <>
           <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
             <span>{data.universe_size} names</span>
-            <span className="flex items-center gap-1 text-emerald-400/90">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="flex items-center gap-1 text-signal-long">
+              <span aria-hidden="true" className="w-1.5 h-1.5 rounded-full bg-signal-long animate-pulse" />
               live prices · 60s
             </span>
             <span>·</span>
