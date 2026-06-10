@@ -69,7 +69,8 @@ export default function StockDetailPage() {
     queryFn: () => stocksApi.priceAction(ticker),
     enabled: !!ticker,
     staleTime: 5 * 60 * 1000,
-    retry: false,
+    retry: 2,
+    refetchOnWindowFocus: true,
   });
 
   // Refresh live price on mount — updates DB so detail query stays fresh

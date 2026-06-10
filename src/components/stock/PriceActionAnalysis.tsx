@@ -74,7 +74,10 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
     queryKey: ["price-action", ticker],
     queryFn: () => stocksApi.priceAction(ticker),
     staleTime: 5 * 60 * 1000,
-    retry: false,
+    // retry: a single failed fetch (e.g. mid-deploy) used to blank this panel
+    // while the verdict card still showed the persisted PAM read.
+    retry: 2,
+    refetchOnWindowFocus: true,
   });
 
   if (isLoading) return <div className="card animate-pulse h-48" />;
