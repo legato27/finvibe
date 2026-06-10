@@ -36,7 +36,7 @@ export function ScopeSortControls({
           disabled={!hasMine}
           title={hasMine ? "Only names in your watchlist" : "Log in and add names to your watchlist to use this"}
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-            scope === "mine" && hasMine ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+            scope === "mine" && hasMine ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground/80"
           }`}
         >
           My watchlist{hasMine && mineCount != null ? ` (${mineCount})` : ""}
@@ -44,7 +44,7 @@ export function ScopeSortControls({
         <button
           onClick={() => onScope("all")}
           className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-            scope === "all" || !hasMine ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+            scope === "all" || !hasMine ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground/80"
           }`}
         >
           All

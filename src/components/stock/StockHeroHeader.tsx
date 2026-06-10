@@ -138,7 +138,7 @@ export function StockHeroHeader({
               {stats.map(({ label, value, sub, color }, i) => (
                 <div key={`${label}-${sub || i}`} className="text-center min-w-[60px]">
                   <div className="text-[10px] text-muted-foreground">
-                    {label}{sub ? <span className="text-sky-700/80 dark:text-sky-400/70 ml-0.5">({sub})</span> : null}
+                    {label}{sub ? <span className="text-sky-700 dark:text-sky-400 ml-0.5">({sub})</span> : null}
                   </div>
                   <div className={`font-mono text-sm font-semibold ${color || "text-foreground"}`}>{value}</div>
                 </div>

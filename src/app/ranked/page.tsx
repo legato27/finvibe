@@ -161,7 +161,7 @@ export default function RankedBookPage() {
                   key={f}
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
-                    filter === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+                    filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground/80"
                   }`}
                 >
                   {f}
