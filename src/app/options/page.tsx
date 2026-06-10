@@ -12,6 +12,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { optionsApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
+import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 
@@ -40,6 +41,7 @@ function fmt(v: number | null | undefined, digits = 1, suffix = ""): string {
 export default function OptionsScreenerPage() {
   const t = useTranslations("optionsChain");
   const ts = useTranslations("optionsScreener");
+  const tg = useTranslations("optionsGuide");
 
   const { data, isLoading } = useQuery<{ count: number; rows: ScreenerRow[] }>({
     queryKey: ["options-screener"],
@@ -153,6 +155,24 @@ export default function OptionsScreenerPage() {
         <h1 className="text-lg font-bold text-foreground">{ts("title")}</h1>
         <p className="text-sm text-muted-foreground">{ts("subtitle")}</p>
       </header>
+
+      <GuideCard
+        title={tg("screenerTitle")}
+        intro={tg("screenerIntro")}
+        sections={[
+          {
+            title: tg("sellTitle"),
+            tone: "long",
+            steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`sellSteps.${k}`)),
+          },
+          {
+            title: tg("buyTitle"),
+            tone: "short",
+            steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`buySteps.${k}`)),
+          },
+        ]}
+        footnote={tg("screenerFootnote")}
+      />
 
       {isLoading ? (
         <div className="card p-8 text-center text-sm text-muted-foreground" role="status">

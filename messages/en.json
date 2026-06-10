@@ -1558,5 +1558,42 @@
     "colUnusual": "Unusual",
     "colUnusualLong": "Unusual open-interest concentrations",
     "empty": "No US names with chain data yet — the prefetch warms during market hours."
+  },
+  "optionsGuide": {
+    "screenerTitle": "How to find a trade with this screener",
+    "screenerIntro": "Sorted by IV Rank — where each stock's option prices sit vs its own 1-year history. High rank = expensive options (sell premium); low rank = cheap options (buy direction). Always read the Verdict first: it is the system's one arbitrated signal.",
+    "sellTitle": "Sell premium (income) — high IV Rank",
+    "sellSteps": {
+      "s1": "Sort by IV Rank (default) and look at names with rank ≥ 70 (amber).",
+      "s2": "Only act where the Verdict agrees with the trade: LONG verdict → sell puts below the market; SHORT → sell calls above; Stand Aside / Conflicting → skip.",
+      "s3": "Click the ticker to open its chain, and check the IV term structure: if only the front expiry is pumped, it's an earnings event — either trade past the event expiry or skip.",
+      "s4": "Sell a strike OUTSIDE the expected move (±%) and behind a big open-interest wall — walls act as support/resistance magnets.",
+      "s5": "Use the Verdict card's invalidation level as your exit signal on the underlying: structure broken = close the short option, don't wait."
+    },
+    "buyTitle": "Buy direction (leverage) — low IV Rank",
+    "buySteps": {
+      "s1": "Look for IV Rank ≤ 30 on names with a Strong Long / Long (or Short) verdict — you are buying direction while options are cheap.",
+      "s2": "Open the chain and compare the Verdict's target with the expected move per expiry: pick an expiry whose ±move actually reaches your target.",
+      "s3": "Buy a strike near the money (delta 0.45–0.60) — far OTM lottery strikes need the move AND the timing to be right.",
+      "s4": "Check theta: shorter expiries decay fastest; give the structural setup (weekly timeframe) at least 30–45 DTE.",
+      "s5": "Exit on the Verdict invalidation level or when IV Rank spikes (your option got expensive — sell it to the premium sellers)."
+    },
+    "screenerFootnote": "Data is 15-min delayed (Polygon Starter). P/C OI above ~1.2 = put-heavy positioning; 25Δ skew = downside-protection premium; the Unusual column flags strikes with abnormal open interest worth inspecting on the chain.",
+    "chainTitle": "How to pick a strike & expiry on this chain",
+    "chainIntro": "Everything here is real market data (greeks, open interest, volume — 15-min delayed). Work top-down: direction → expiry → strike → exit plan.",
+    "chainDirTitle": "1 · Direction & timing",
+    "chainDirSteps": {
+      "s1": "Take direction from the Verdict card above — not from the chain. Conflicting / Stand Aside means no options trade today.",
+      "s2": "Read the IV term structure: a spike in one expiry marks an event (earnings). Decide deliberately whether you trade through it or around it.",
+      "s3": "IV Rank chip: ≥70 favours selling premium, ≤30 favours buying it."
+    },
+    "chainStrikeTitle": "2 · Strike, size & exit",
+    "chainStrikeSteps": {
+      "s1": "The expected move per expiry (under the term chart) is the market's ±range — sellers go outside it, buyers need their target inside it.",
+      "s2": "Use the OI bars and the OI-walls panel: big walls below spot = support (put-sell anchors); above = resistance (call-sell anchors / long targets).",
+      "s3": "Greeks sanity-check: delta ≈ assignment odds for sellers (~0.30 is standard); theta is your daily cost as a buyer.",
+      "s4": "Check Unusual OI — a fresh concentrated position at one strike is flow information; don't sell straight into it.",
+      "s5": "Plan the exit before entry: the PAM invalidation level on the Verdict card is the structural stop for the underlying — option positions die with the structure."
+    }
   }
 }

@@ -15,6 +15,7 @@ import {
   Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
 import { optionsApi } from "@/lib/api";
+import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import StatChip from "@/components/ui/StatChip";
 
@@ -69,6 +70,7 @@ function SideCells({ side, maxOi }: { side?: ChainSide; maxOi: number }) {
 
 export default function OptionsChainTab({ ticker }: { ticker: string }) {
   const t = useTranslations("optionsChain");
+  const tg = useTranslations("optionsGuide");
   const [expiry, setExpiry] = useState<string | undefined>(undefined);
 
   const { data: summary, isLoading: summaryLoading, isError: summaryError } = useQuery({
@@ -111,6 +113,21 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
 
   return (
     <div className="space-y-4">
+      <GuideCard
+        title={tg("chainTitle")}
+        intro={tg("chainIntro")}
+        sections={[
+          {
+            title: tg("chainDirTitle"),
+            steps: ["s1", "s2", "s3"].map((k) => tg(`chainDirSteps.${k}`)),
+          },
+          {
+            title: tg("chainStrikeTitle"),
+            steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`chainStrikeSteps.${k}`)),
+          },
+        ]}
+      />
+
       {/* ── Summary strip ── */}
       <section aria-label={t("summaryTitle")} className="card">
         <div className="flex flex-wrap items-center gap-2">
