@@ -161,7 +161,7 @@ export default function StockDetailPage() {
           {isLongDesc && (
             <button
               onClick={() => setDescExpanded(!descExpanded)}
-              className="flex items-center gap-1 text-xs text-primary/70 hover:text-primary mt-1 transition-colors"
+              className="flex items-center gap-1 text-xs text-primary hover:underline mt-1 transition-colors"
             >
               {descExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               {descExpanded ? "Less" : "More"}
@@ -184,7 +184,7 @@ export default function StockDetailPage() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${
               activeTab === tab.id
-                ? "bg-primary/20 text-primary shadow-sm"
+                ? "bg-primary text-primary-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground/80 hover:bg-accent/50"
             }`}
           >

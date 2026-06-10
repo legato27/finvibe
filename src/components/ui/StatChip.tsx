@@ -30,7 +30,7 @@ export default function StatChip({
     <span
       className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 text-xs ${TONES[tone]} ${className}`}
     >
-      <span className="opacity-80">{label}</span>
+      <span>{label}</span>
       <span className="nums font-mono font-semibold">{value}</span>
     </span>
   );

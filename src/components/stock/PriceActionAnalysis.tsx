@@ -51,9 +51,9 @@ interface PriceActionData {
 
 /* ── Helpers ── */
 function dirColor(direction: string | null) {
-  if (direction === "long") return { text: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/30" };
-  if (direction === "short") return { text: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/30" };
-  return { text: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/30" };
+  if (direction === "long") return { text: "text-signal-long", bg: "bg-green-500/10", border: "border-green-500/30" };
+  if (direction === "short") return { text: "text-signal-short", bg: "bg-red-500/10", border: "border-red-500/30" };
+  return { text: "text-signal-caution", bg: "bg-yellow-500/10", border: "border-yellow-500/30" };
 }
 function structDir(type: string): "long" | "short" | null {
   if (type === "UC" || type.startsWith("UR")) return "long";
@@ -124,11 +124,11 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
         </div>
         <div>
           <div className="text-[10px] text-muted-foreground mb-0.5">{t("invalidation")}</div>
-          <div className="font-mono text-red-400">{fmt(kl.invalidation)}</div>
+          <div className="font-mono text-signal-short">{fmt(kl.invalidation)}</div>
         </div>
         <div>
           <div className="text-[10px] text-muted-foreground mb-0.5">{t("structuralTarget")}</div>
-          <div className="font-mono text-green-400">{fmt(kl.structural_target)}</div>
+          <div className="font-mono text-signal-long">{fmt(kl.structural_target)}</div>
         </div>
         <div>
           <div className="text-[10px] text-muted-foreground mb-0.5">{t("lastClose")}</div>

@@ -92,7 +92,7 @@ export function StockMetrics({
                 ? t('moatConfidence', { pct: (moatConfidence * 100).toFixed(0) })
                 : undefined
             }
-            color={displayMoat === "Wide" ? "text-green-400" : "text-yellow-400"}
+            color={displayMoat === "Wide" ? "text-signal-long" : "text-signal-caution"}
           />
         )}
 
@@ -116,7 +116,7 @@ export function StockMetrics({
           <MetricCard
             label={t('marginOfSafetyDcf')}
             value={`${(marginOfSafety * 100).toFixed(0)}%`}
-            color={marginOfSafety > 0 ? "text-green-400" : "text-red-400"}
+            color={marginOfSafety > 0 ? "text-signal-long" : "text-signal-short"}
           />
         )}
 
@@ -124,7 +124,7 @@ export function StockMetrics({
           <MetricCard
             label={t('marginOfSafetyAi')}
             value={`${(llmMarginOfSafety * 100).toFixed(0)}%`}
-            color={llmMarginOfSafety > 0 ? "text-green-400" : "text-red-400"}
+            color={llmMarginOfSafety > 0 ? "text-signal-long" : "text-signal-short"}
           />
         )}
       </div>
