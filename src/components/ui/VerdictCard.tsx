@@ -49,7 +49,17 @@ function AgreeMark({ s, score }: { s: SourceEvidence; score: number }) {
       </span>
     );
   }
-  const agrees = (s.direction ?? 0) * score >= 0 || Math.abs(s.direction ?? 0) < 0.15;
+  // A near-zero direction is a neutral stance — show it as such, not as
+  // agreement (a NEUTRAL ensemble doesn't "agree" with a LONG verdict).
+  if (Math.abs(s.direction ?? 0) < 0.15) {
+    return (
+      <span className="text-signal-neutral" title={t("neutralStance")}>
+        <span aria-hidden="true">–</span>
+        <span className="sr-only">{t("neutralStance")}</span>
+      </span>
+    );
+  }
+  const agrees = (s.direction ?? 0) * score >= 0;
   return agrees ? (
     <span className="text-signal-long" title={t("agrees")}>
       <span aria-hidden="true">✓</span>
@@ -145,6 +155,14 @@ export default function VerdictCard({ verdict }: { verdict: VerdictJson | null |
               <span className={s.available ? "text-foreground" : "text-muted-foreground"}>
                 {s.available ? sourceLine(name, s) : t("unavailable")}
               </span>
+              {name === "llm" && Boolean(s["echo_discounted"]) && (
+                <span
+                  title={t("echoDiscounted")}
+                  className="rounded border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground"
+                >
+                  {t("echoShort")}
+                </span>
+              )}
             </li>
           );
         })}

@@ -1504,7 +1504,10 @@
       "high_vol_regime": "High-volatility regime — strong tier demoted",
       "epistemic_uncertainty": "Models disagree — strong tier demoted",
       "altman_distress": "Altman distress zone — strong long vetoed"
-    }
+    },
+    "neutralStance": "neutral stance",
+    "echoDiscounted": "echoes the quant inputs it read — counted at reduced weight",
+    "echoShort": "echo · reduced weight"
   },
   "a11y": {
     "livePrice": "Live price, updates automatically"

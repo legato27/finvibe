@@ -1504,7 +1504,10 @@
       "high_vol_regime": "高波动状态——强信号降级",
       "epistemic_uncertainty": "模型分歧大——强信号降级",
       "altman_distress": "Altman 危险区——否决强烈看多"
-    }
+    },
+    "neutralStance": "中性立场",
+    "echoDiscounted": "与其读取的量化输入一致——按折减权重计入",
+    "echoShort": "回声 · 权重折减"
   },
   "a11y": {
     "livePrice": "实时价格，自动更新"
