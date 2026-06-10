@@ -3,15 +3,31 @@
  * through the Cloudflare Tunnel with Access service token headers.
  */
 
-const DGX_API_URL = process.env.DGX_API_URL!;
 const CF_ACCESS_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID;
 const CF_ACCESS_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET;
+
+// Normalize DGX_API_URL: tolerate a schemeless value ("api.vibelife.sg") by
+// assuming https, and strip any trailing slash so `${base}${path}` is clean.
+// Returns "" if unset so callers can fail with a clear message instead of
+// fetch("undefined/...") throwing an opaque "Failed to parse URL" → 502.
+function resolveDgxBase(): string {
+  const raw = (process.env.DGX_API_URL || "").trim().replace(/\/+$/, "");
+  if (!raw) return "";
+  return /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+}
 
 export async function proxyToDgx(
   path: string,
   request: Request
 ): Promise<Response> {
-  const url = `${DGX_API_URL}${path}`;
+  const base = resolveDgxBase();
+  if (!base) {
+    return new Response(
+      JSON.stringify({ error: "DGX_API_URL is not configured on the server" }),
+      { status: 502, headers: { "Content-Type": "application/json" } }
+    );
+  }
+  const url = `${base}${path}`;
 
   const headers = new Headers();
   headers.set("Content-Type", request.headers.get("Content-Type") || "application/json");
