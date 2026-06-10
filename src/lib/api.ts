@@ -83,6 +83,7 @@ export const stocksApi = {
   verdict: (ticker: string) =>
     api.get(`/api/stocks/${ticker}/verdict`).then((r) => r.data),
   signalsToday: () => api.get("/api/stocks/signals/today").then((r) => r.data),
+  // (ranked-book honesty stat lives on modelsApi.rankedBookPerformance)
   verdictBatch: (tickers: string[]) =>
     api.post("/api/stocks/verdict/batch", { tickers }).then((r) => r.data),
   events: (ticker: string) => api.get(`/api/stocks/${ticker}/events`).then((r) => r.data),
@@ -200,6 +201,7 @@ export const modelsApi = {
   taskStatus: (taskId: string) => api.get(`/api/models/tasks/${taskId}/status`).then((r) => r.data),
   lastRun: (ticker: string) => api.get(`/api/models/${ticker}/last-run`).then((r) => r.data),
   crossSectional: () => api.get(`/api/models/cross-sectional/ranked`).then((r) => r.data),
+  rankedBookPerformance: () => api.get(`/api/models/ranked-book/performance`).then((r) => r.data),
   optionsRanked: () => api.get(`/api/models/options-ranked`).then((r) => r.data),
   optionsRecoScorecard: (window = 60) =>
     api.get(`/api/models/options-reco/scorecard?window=${window}`).then((r) => r.data),

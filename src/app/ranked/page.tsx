@@ -6,7 +6,8 @@ import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { modelsApi, stocksApi } from "@/lib/api";
 import { useMyWatchlistTickers } from "@/lib/supabase/hooks";
-import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
+import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
+import LivePrice from "@/components/ui/LivePrice";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScopeSortControls } from "@/components/shared/ScopeSortControls";
 
@@ -20,7 +21,7 @@ interface RankedRow {
   factors: Record<string, number>;
   factors_used: number;
   prob_profit_pct?: number | null;
-  pam?: PamSummary | null;
+  pam?: unknown | null;
 }
 interface RankedBook {
   universe_size: number;
@@ -31,8 +32,8 @@ interface RankedBook {
 }
 
 const BUCKET_STYLE: Record<string, string> = {
-  long: "text-emerald-400",
-  short: "text-red-400",
+  long: "text-signal-long",
+  short: "text-signal-short",
   neutral: "text-muted-foreground",
 };
 const TIPS = {
@@ -43,7 +44,7 @@ const TIPS = {
   percentile:
     "Rank percentile (0–100) within the universe — 100 = top-ranked composite-z conviction.",
   signal: "Top quintile → Long, bottom quintile → Short, middle → Neutral.",
-  pam: "Price Action (PAM) setup: monthly trend → weekly timing → daily trigger, coloured by direction.",
+  verdict: "The unified verdict — ensemble, price action, ranking, sentiment and FinVibe Thoughts arbitrated into one conflict-aware state.",
   price: "Live price, refreshed every 60s.",
 };
 
@@ -81,6 +82,25 @@ export default function RankedBookPage() {
     staleTime: 55_000,
   });
   const priceMap = new Map((livePrices ?? []).map((p) => [p.ticker, p.price]));
+
+  // Unified verdict per name (replaces the standalone PAM badge column).
+  const { data: verdictMap } = useQuery<Record<string, VerdictJson | null>>({
+    queryKey: ["ranked-verdicts", tickers.length],
+    queryFn: () => stocksApi.verdictBatch(tickers),
+    enabled: tickers.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  // Honesty stat: realized forward returns by bucket (fills as snapshots mature).
+  const { data: perf } = useQuery<{
+    tracking_since: string | null;
+    buckets: Record<string, { n_resolved: number; avg_fwd_5d_pct: number | null; avg_fwd_21d_pct: number | null }>;
+  }>({
+    queryKey: ["ranked-performance"],
+    queryFn: () => modelsApi.rankedBookPerformance(),
+    staleTime: 60 * 60_000,
+    retry: 1,
+  });
 
   // Backend rank (the `rank` column) reflects composite-z; display order follows
   // the chosen sort — prob-of-profit (default) or composite-z conviction.
@@ -164,22 +184,22 @@ export default function RankedBookPage() {
             <InfoTip label="Composite z" tip={TIPS.composite} size={11} />
             <InfoTip label="%ile" tip={TIPS.percentile} size={11} />
             <InfoTip label="Signal" tip={TIPS.signal} size={11} />
-            <InfoTip label="PAM" tip={TIPS.pam} size={11} />
+            <InfoTip label="Verdict" tip={TIPS.verdict} size={11} />
           </div>
 
           <div className="card overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
                 <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
-                  <th className="text-left p-2">#</th>
-                  <th className="text-left p-2">Ticker</th>
-                  <th className="text-right p-2" title={TIPS.price}>Price</th>
-                  <th className="text-right p-2" title={TIPS.prob}>Prob</th>
-                  <th className="text-left p-2 hidden sm:table-cell">Sector</th>
-                  <th className="text-right p-2" title={TIPS.composite}>Composite z</th>
-                  <th className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>%ile</th>
-                  <th className="text-center p-2" title={TIPS.signal}>Signal</th>
-                  <th className="text-center p-2" title={TIPS.pam}>PAM</th>
+                  <th scope="col" className="text-left p-2">#</th>
+                  <th scope="col" className="text-left p-2">Ticker</th>
+                  <th scope="col" className="text-right p-2" title={TIPS.price}>Price</th>
+                  <th scope="col" className="text-right p-2" title={TIPS.prob}>Prob</th>
+                  <th scope="col" className="text-left p-2 hidden sm:table-cell">Sector</th>
+                  <th scope="col" className="text-right p-2" title={TIPS.composite}>Composite z</th>
+                  <th scope="col" className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>%ile</th>
+                  <th scope="col" className="text-center p-2" title={TIPS.signal}>Signal</th>
+                  <th scope="col" className="text-center p-2" title={TIPS.verdict}>Verdict</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,19 +221,16 @@ export default function RankedBookPage() {
                           {r.ticker}
                         </Link>
                       </td>
-                      <td className="p-2 text-right font-mono">
-                        <span className="inline-flex items-center justify-end gap-1">
-                          {usd(live)}
-                          {live != null && <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />}
-                        </span>
+                      <td className="p-2 text-right">
+                        <LivePrice price={live} currency="$" live={live != null} className="text-xs" />
                       </td>
                       <td className={`p-2 text-right font-mono ${
-                        r.prob_profit_pct == null ? "text-muted-foreground" : r.prob_profit_pct >= 50 ? "text-emerald-400" : "text-red-400"
+                        r.prob_profit_pct == null ? "text-muted-foreground" : r.prob_profit_pct >= 50 ? "text-signal-long" : "text-signal-short"
                       }`}>
                         {r.prob_profit_pct == null ? "—" : `${r.prob_profit_pct.toFixed(0)}%`}
                       </td>
                       <td className="p-2 text-muted-foreground hidden sm:table-cell">{r.sector ?? "—"}</td>
-                      <td className={`p-2 text-right font-mono ${r.composite_z >= 0 ? "text-emerald-400" : "text-red-400"}`}>
+                      <td className={`p-2 text-right font-mono ${r.composite_z >= 0 ? "text-signal-long" : "text-signal-short"}`}>
                         {r.composite_z >= 0 ? "+" : ""}
                         {r.composite_z.toFixed(2)}
                       </td>
@@ -227,7 +244,7 @@ export default function RankedBookPage() {
                         </span>
                       </td>
                       <td className="p-2 text-center">
-                        <PamBadge pam={r.pam} />
+                        <VerdictBadge state={verdictMap?.[r.ticker]?.state} size="sm" />
                       </td>
                     </tr>
                   );
@@ -236,7 +253,31 @@ export default function RankedBookPage() {
             </table>
           </div>
 
-          <p className="text-[10px] text-muted-foreground">{data.method}</p>
+          {perf?.tracking_since && (
+            <div className="card px-4 py-3 text-xs">
+              <span className="font-semibold text-foreground/80 mr-2">Realized bucket returns</span>
+              {Object.keys(perf.buckets).length === 0 ? (
+                <span className="text-muted-foreground">
+                  tracking since {perf.tracking_since} — first 21-day returns resolve in ~4 weeks.
+                </span>
+              ) : (
+                <span className="space-x-3">
+                  {(["long", "neutral", "short"] as const).map((b) => {
+                    const s = perf.buckets[b];
+                    if (!s) return null;
+                    return (
+                      <span key={b} className="nums font-mono">
+                        <span className="capitalize text-muted-foreground">{b}</span>{" "}
+                        21d {s.avg_fwd_21d_pct != null ? `${s.avg_fwd_21d_pct > 0 ? "+" : ""}${s.avg_fwd_21d_pct}%` : "—"}{" "}
+                        <span className="text-muted-foreground">(n={s.n_resolved})</span>
+                      </span>
+                    );
+                  })}
+                </span>
+              )}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">{data.method}</p>
         </>
       )}
     </div>
