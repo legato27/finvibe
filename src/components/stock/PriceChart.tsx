@@ -390,7 +390,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
         <div className="flex items-center gap-3">
           <span className="card-title text-sm">{t('priceChart')}</span>
           {periodChg !== null && (
-            <span className={`text-sm font-mono font-semibold ${isPositive ? "text-green-400" : "text-red-400"}`}>
+            <span className={`text-sm font-mono font-semibold ${isPositive ? "text-signal-long" : "text-signal-short"}`}>
               {isPositive ? "+" : ""}{periodChg.toFixed(2)}%
             </span>
           )}
@@ -405,21 +405,21 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
           <button
             onClick={() => setDrawMode((m) => !m)}
             title={t('drawHLineTitle')}
-            className={`p-1 rounded transition-colors ${drawMode ? "text-amber-400 bg-amber-400/10" : "text-slate-500 hover:text-primary"}`}
+            className={`p-1 rounded transition-colors ${drawMode ? "text-amber-400 bg-amber-400/10" : "text-muted-foreground hover:text-primary"}`}
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={clearDrawings}
             title={t('clearDrawingsTitle')}
-            className="p-1 rounded text-slate-500 hover:text-red-400 transition-colors"
+            className="p-1 rounded text-muted-foreground hover:text-signal-short transition-colors"
           >
             <X className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={saveChart}
             title={t('savePngTitle')}
-            className="p-1 rounded text-slate-500 hover:text-primary transition-colors"
+            className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
           </button>
@@ -427,7 +427,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
       </div>
 
       {/* ── OHLCV crosshair readout ────────────────────────── */}
-      <div className="h-4 flex gap-3 px-1 mb-1 text-[10px] font-mono text-slate-500">
+      <div className="h-4 flex gap-3 px-1 mb-1 text-[10px] font-mono text-muted-foreground">
         {ohlcv ? (
           <>
             <span className="text-slate-400">{ohlcv.time}</span>
