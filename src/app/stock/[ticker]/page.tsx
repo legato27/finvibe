@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi, sentimentApi } from "@/lib/api";
 import { useLLMAnalysis } from "@/lib/supabase/hooks";
@@ -10,8 +10,9 @@ import { SentimentPanel } from "@/components/stock/SentimentPanel";
 import { FinVibeThoughts } from "@/components/stock/FinVibeThoughts";
 import { DcfScenarios } from "@/components/stock/DcfScenarios";
 import { ModelCards } from "@/components/stock/ModelCards";
-import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
+import OptionsChainTab from "@/components/stock/OptionsChainTab";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
+import VerdictCard from "@/components/ui/VerdictCard";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import { OsintFeed } from "@/components/shared/OsintFeed";
 import {
@@ -23,9 +24,15 @@ type Tab = "chart" | "analysis" | "options" | "quant" | "news";
 
 export default function StockDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const ticker = (params.ticker as string)?.toUpperCase();
   const [descExpanded, setDescExpanded] = useState(false);
-  const [activeTab, setActiveTab] = useState<Tab>("chart");
+  const initialTab = (["chart", "analysis", "options", "quant", "news"] as Tab[]).includes(
+    searchParams.get("tab") as Tab,
+  )
+    ? (searchParams.get("tab") as Tab)
+    : "chart";
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   // ── Data fetching ──────────────────────────────────────
   const { data: detail, isLoading: detailLoading } = useQuery({
@@ -137,6 +144,11 @@ export default function StockDetailPage() {
       />
 
       {/* ═══════════════════════════════════════════════════
+          UNIFIED VERDICT — the one arbitrated signal, with evidence
+          ═══════════════════════════════════════════════════ */}
+      <VerdictCard verdict={detail.verdict} />
+
+      {/* ═══════════════════════════════════════════════════
           DESCRIPTION
           ═══════════════════════════════════════════════════ */}
       {description && (
@@ -161,12 +173,16 @@ export default function StockDetailPage() {
       {/* ═══════════════════════════════════════════════════
           TABS
           ═══════════════════════════════════════════════════ */}
-      <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30">
+      <div role="tablist" aria-label="Stock analysis sections"
+           className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30">
         {tabs.map((tab) => (
           <button
             key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            aria-controls={`tabpanel-${tab.id}`}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-xs font-medium transition-all flex-1 justify-center ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${
               activeTab === tab.id
                 ? "bg-primary/20 text-primary shadow-sm"
                 : "text-muted-foreground hover:text-foreground/80 hover:bg-accent/50"
@@ -174,6 +190,7 @@ export default function StockDetailPage() {
           >
             {tab.icon}
             <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sr-only sm:hidden">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -210,12 +227,9 @@ export default function StockDetailPage() {
       )}
 
       {activeTab === "options" && (
-        <OptionsStrategyRecommendation
-          ticker={ticker}
-          currentPrice={currentPrice || 0}
-          stockInfo={stockInfo}
-          thoughts={thoughts}
-        />
+        <div role="tabpanel" id="tabpanel-options">
+          <OptionsChainTab ticker={ticker} />
+        </div>
       )}
 
       {activeTab === "quant" && (

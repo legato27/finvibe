@@ -245,6 +245,26 @@ export function FinVibeThoughts({
         )}
       </div>
 
+      {/* Devil's advocate — adversarial second pass over this report */}
+      {thoughts.critique_note && (
+        <section
+          aria-label={t("devilsAdvocate")}
+          className="mb-4 rounded-lg border border-signal-conflict/40 bg-signal-conflict-bg p-4"
+        >
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-signal-conflict">
+              {t("devilsAdvocate")}
+            </span>
+            {thoughts.critique_stance_change && thoughts.critique_stance_change !== "none" && (
+              <span className="rounded border border-signal-conflict/40 px-1.5 py-0.5 text-xs text-signal-conflict">
+                {t(`critiqueStance.${thoughts.critique_stance_change}`)}
+              </span>
+            )}
+          </div>
+          <p className="text-sm leading-relaxed text-foreground/90">{thoughts.critique_note}</p>
+        </section>
+      )}
+
       {/* Price Action setup (PAM — pure price action, no R:R) */}
       {thoughts.price_action && typeof thoughts.price_action === "object" && (
         <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">

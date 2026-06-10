@@ -1328,7 +1328,12 @@
     "winRate": "胜率",
     "yearly": "年度",
     "yes": "是",
-    "yieldLabel": "股息率"
+    "yieldLabel": "股息率",
+    "devilsAdvocate": "反方观点",
+    "critiqueStance": {
+      "soften": "信心已下调",
+      "reverse": "论点受质疑"
+    }
   },
   "trades": {
     "ai": "AI:",
@@ -1494,5 +1499,39 @@
   },
   "a11y": {
     "livePrice": "实时价格，自动更新"
+  },
+  "optionsChain": {
+    "summaryTitle": "期权概览",
+    "loading": "正在加载期权链…",
+    "noChain": "{ticker} 暂无期权链数据（仅限美股）。",
+    "ivRank": "IV 排名",
+    "ivHistoryTitle": "平值 IV 历史（90天）",
+    "atmIv": "平值 IV",
+    "expectedMove": "30天预期波动",
+    "pcr": "认沽/认购持仓比",
+    "maxPain": "最大痛点",
+    "skew": "25Δ 偏斜",
+    "delayedNote": "Polygon 真实期权链数据，延迟15分钟",
+    "termTitle": "IV 期限结构与预期波动",
+    "chainTitle": "期权链",
+    "chainCaption": "{ticker} 期权链：各行权价的认购/认沽报价、隐含波动率、希腊值、持仓量与成交量",
+    "expirySelector": "选择到期日",
+    "spot": "现价",
+    "calls": "认购",
+    "puts": "认沽",
+    "strike": "行权价",
+    "callLabel": "认购",
+    "putLabel": "认沽",
+    "col": {
+      "bidAsk": "买/卖",
+      "iv": "IV",
+      "delta": "Δ",
+      "theta": "Θ",
+      "oi": "持仓",
+      "vol": "成交"
+    },
+    "oiLadderTitle": "持仓量墙",
+    "unusualTitle": "异常持仓",
+    "noUnusual": "未检测到异常集中持仓。"
   }
 }

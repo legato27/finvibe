@@ -1328,7 +1328,12 @@
     "winRate": "胜率",
     "yearly": "Yearly",
     "yes": "是",
-    "yieldLabel": "股息率"
+    "yieldLabel": "股息率",
+    "devilsAdvocate": "Devil's advocate",
+    "critiqueStance": {
+      "soften": "conviction softened",
+      "reverse": "thesis challenged"
+    }
   },
   "trades": {
     "ai": "AI:",
@@ -1494,5 +1499,39 @@
   },
   "a11y": {
     "livePrice": "Live price, updates automatically"
+  },
+  "optionsChain": {
+    "summaryTitle": "Options summary",
+    "loading": "Loading option chain…",
+    "noChain": "No option chain available for {ticker} (US equities only).",
+    "ivRank": "IV Rank",
+    "ivHistoryTitle": "ATM IV history (90 days)",
+    "atmIv": "ATM IV",
+    "expectedMove": "Exp. move 30d",
+    "pcr": "Put/Call OI",
+    "maxPain": "Max pain",
+    "skew": "25Δ skew",
+    "delayedNote": "Real chain data via Polygon, 15-min delayed",
+    "termTitle": "IV term structure & expected moves",
+    "chainTitle": "Option chain",
+    "chainCaption": "Option chain for {ticker}: strikes with call and put quotes, implied volatility, greeks, open interest and volume",
+    "expirySelector": "Choose expiry",
+    "spot": "Spot",
+    "calls": "Calls",
+    "puts": "Puts",
+    "strike": "Strike",
+    "callLabel": "Call",
+    "putLabel": "Put",
+    "col": {
+      "bidAsk": "Bid/Ask",
+      "iv": "IV",
+      "delta": "Δ",
+      "theta": "Θ",
+      "oi": "OI",
+      "vol": "Vol"
+    },
+    "oiLadderTitle": "Open-interest walls",
+    "unusualTitle": "Unusual open interest",
+    "noUnusual": "No unusual concentrations detected."
   }
 }
