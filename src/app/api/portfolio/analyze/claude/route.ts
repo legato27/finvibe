@@ -19,10 +19,20 @@ type Body = {
   risk_context?: unknown;
 };
 
+// Cloudflare Access service-token headers for the gated DGX backend.
+// Mirrors src/lib/proxy.ts so the machine-to-machine hop authenticates when
+// api.vibelife.sg sits behind Access. No-ops if the env vars are unset.
+function dgxAccessHeaders(): Record<string, string> {
+  const h: Record<string, string> = { "content-type": "application/json" };
+  if (process.env.CF_ACCESS_CLIENT_ID) h["CF-Access-Client-Id"] = process.env.CF_ACCESS_CLIENT_ID;
+  if (process.env.CF_ACCESS_CLIENT_SECRET) h["CF-Access-Client-Secret"] = process.env.CF_ACCESS_CLIENT_SECRET;
+  return h;
+}
+
 async function fetchRiskContext(holdings: HoldingSnapshot[]): Promise<unknown> {
   const resp = await fetch(`${DGX_API_URL}/api/portfolio/risk-context`, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: dgxAccessHeaders(),
     body: JSON.stringify({ holdings }),
     signal: AbortSignal.timeout(60_000),
   });
