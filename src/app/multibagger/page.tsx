@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, Sparkles, ShieldAlert, RefreshCw } from "lucide-react";
-import { scannerApi } from "@/lib/api";
+import { scannerApi, stocksApi } from "@/lib/api";
+import LivePrice from "@/components/ui/LivePrice";
 import { InfoTip } from "@/components/shared/InfoTip";
 
 // Scanner emits a lighter PAM read than the watchlist PamSummary.
@@ -126,6 +127,18 @@ export default function MultibaggerPage() {
     queryFn: () => scannerApi.multibaggerCandidates(track),
     staleTime: 5 * 60 * 1000,
   });
+
+  // Live price overlay (60s) — scan prices are end-of-day; without this the
+  // table reads stale all session (chunked: backend caps /prices/batch at 100).
+  const candTickers = (data?.candidates ?? []).map((c) => c.ticker);
+  const { data: livePrices } = useQuery<Array<{ ticker: string; price: number | null }>>({
+    queryKey: ["mb-live-prices", candTickers.length],
+    queryFn: () => stocksApi.refreshPrices(candTickers),
+    enabled: candTickers.length > 0,
+    refetchInterval: 60_000,
+    staleTime: 55_000,
+  });
+  const livePriceMap = new Map((livePrices ?? []).map((x) => [x.ticker, x.price]));
 
   const { data: perf } = useQuery({
     queryKey: ["multibagger-performance"],
@@ -292,7 +305,14 @@ export default function MultibaggerPage() {
                             c.track === "A" ? "bg-sky-400/15 text-sky-400" : "bg-violet-400/15 text-violet-400"
                           }`}>{c.track}</span>
                         </td>
-                        <td className="p-2 text-right font-mono">${c.price?.toFixed(2)}</td>
+                        <td className="p-2 text-right">
+                          <LivePrice
+                            price={livePriceMap.get(c.ticker) ?? c.price}
+                            currency="$"
+                            live={livePriceMap.get(c.ticker) != null}
+                            className="text-xs"
+                          />
+                        </td>
                         <td className="p-2 text-right font-mono font-semibold text-foreground">{c.composite?.toFixed(1)}</td>
                         <td className="p-2 text-right font-mono">{c.rs_rating}</td>
                         <td className={`p-2 text-right font-mono hidden md:table-cell ${pctColor(c.ret_12m)}`}>{pct(c.ret_12m)}</td>
