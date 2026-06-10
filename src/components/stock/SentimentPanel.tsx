@@ -38,7 +38,7 @@ export function SentimentPanel({ ticker }: Props) {
     <div className="card">
       <div className="card-header">
         <span className="card-title">{t("title")}</span>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-muted-foreground">
           {data.composite_score >= 0 ? "+" : ""}{(data.composite_score * 100).toFixed(0)} {t("composite")}
         </span>
       </div>
@@ -57,13 +57,13 @@ export function SentimentPanel({ ticker }: Props) {
             <span className="text-xl font-bold font-mono" style={{ color }}>
               {data.composite_score >= 0 ? "+" : ""}{(data.composite_score * 100).toFixed(0)}
             </span>
-            <span className="text-xs text-slate-500">{t("gaugeLabel")}</span>
+            <span className="text-xs text-muted-foreground">{t("gaugeLabel")}</span>
           </div>
         </div>
 
         {/* Source breakdown */}
         <div className="flex-1">
-          <div className="text-xs text-slate-500 mb-2">{t("bySource")}</div>
+          <div className="text-xs text-muted-foreground mb-2">{t("bySource")}</div>
           <div className="h-28">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={sources} layout="vertical" margin={{ left: 0, right: 20 }}>
@@ -82,12 +82,12 @@ export function SentimentPanel({ ticker }: Props) {
         {/* StockTwits extra */}
         {data.stocktwits_bull_pct !== undefined && (
           <div className="flex-shrink-0 text-center">
-            <div className="text-xs text-slate-500 mb-1">{t("stBullPct")}</div>
-            <div className="text-2xl font-bold font-mono text-green-400">
+            <div className="text-xs text-muted-foreground mb-1">{t("stBullPct")}</div>
+            <div className="text-2xl font-bold font-mono text-signal-long">
               {(data.stocktwits_bull_pct * 100).toFixed(0)}%
             </div>
             {data.message_volume && (
-              <div className="text-xs text-slate-500">{t("watchers", { count: data.message_volume.toLocaleString() })}</div>
+              <div className="text-xs text-muted-foreground">{t("watchers", { count: data.message_volume.toLocaleString() })}</div>
             )}
           </div>
         )}
@@ -106,7 +106,7 @@ export function SentimentPanel({ ticker }: Props) {
               </span>
             )}
             {data.polygon_articles ? (
-              <span className="text-[11px] text-slate-500">
+              <span className="text-[11px] text-muted-foreground">
                 {t("polygonInsights", { count: data.polygon_articles })}
               </span>
             ) : null}

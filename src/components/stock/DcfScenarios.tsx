@@ -26,7 +26,7 @@ const pct = (x?: number | null) => (x == null ? "n/a" : `${(x * 100).toFixed(1)}
 const usd = (x?: number | null) => (x == null ? "n/a" : `$${x.toFixed(2)}`);
 
 const SCEN = [
-  { key: "bear", label: "Bear", color: "text-red-400" },
+  { key: "bear", label: "Bear", color: "text-signal-short" },
   { key: "base", label: "Base", color: "text-foreground" },
   { key: "bull", label: "Bull", color: "text-emerald-400" },
 ];
@@ -126,7 +126,7 @@ export function DcfScenarios({ dcf }: { dcf: DcfDetail | null | undefined }) {
                           <td
                             key={j}
                             className={`p-1 text-center ${
-                              v == null ? "text-muted-foreground" : above ? "text-emerald-400" : "text-red-400"
+                              v == null ? "text-muted-foreground" : above ? "text-emerald-400" : "text-signal-short"
                             }`}
                           >
                             {v == null ? "—" : `$${v.toFixed(0)}`}

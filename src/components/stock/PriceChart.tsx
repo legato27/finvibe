@@ -523,13 +523,13 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
             <button
               key={key}
               onClick={toggle}
-              className="text-[11px] px-2 py-0.5 rounded border transition-all"
-              style={
-                show
-                  ? { color, borderColor: color + "88", backgroundColor: color + "18" }
-                  : { color: "#475569", borderColor: "#1e293b" }
-              }
+              aria-pressed={show}
+              className={`text-[11px] px-2 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
+                show ? "text-foreground" : "text-muted-foreground border-border"
+              }`}
+              style={show ? { borderColor: color + "88", backgroundColor: color + "18" } : undefined}
             >
+              <span aria-hidden="true" className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
               {label}
             </button>
           ))}

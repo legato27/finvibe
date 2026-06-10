@@ -35,7 +35,7 @@ export function MarketDirectionCard({ horizon, direction, priceAction }: MarketD
         <span className="text-xs text-muted-foreground uppercase tracking-wider">{horizon}</span>
         <div
           className={`flex items-center gap-1 text-xs font-semibold ${
-            isBullish ? "text-green-400" : isBearish ? "text-red-400" : "text-muted-foreground"
+            isBullish ? "text-signal-long" : isBearish ? "text-signal-short" : "text-muted-foreground"
           }`}
         >
           {isBullish ? (

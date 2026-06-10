@@ -32,7 +32,7 @@ export function WatchlistGlance() {
     return (
       <div className="card h-full">
         <div className="card-header"><span className="card-title">{t("watchlist")}</span></div>
-        <div className="text-slate-500 text-sm animate-pulse py-8 text-center">{tc("loading")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse py-8 text-center">{tc("loading")}</div>
       </div>
     );
   }
@@ -51,7 +51,7 @@ function PublicWatchlist() {
       <div className="card-header">
         <span className="card-title">{t("watchlist")}</span>
       </div>
-      <div className="flex flex-col items-center justify-center py-12 text-slate-500">
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Lock className="w-8 h-8 mb-3 opacity-30" />
         <p className="text-sm font-medium text-slate-400">{t("watchlistPersonal")}</p>
         <p className="text-xs text-slate-600 mt-1 mb-4">{t("watchlistSignInPrompt")}</p>
@@ -75,7 +75,7 @@ function AuthenticatedWatchlist() {
     return (
       <div className="card h-full">
         <div className="card-header"><span className="card-title">{t("watchlist")}</span></div>
-        <div className="text-slate-500 text-sm animate-pulse py-8 text-center">{t("watchlistLoading")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse py-8 text-center">{t("watchlistLoading")}</div>
       </div>
     );
   }
@@ -93,7 +93,7 @@ function AuthenticatedWatchlist() {
             {t("manage")} <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
-        <div className="flex flex-col items-center justify-center py-8 text-slate-500">
+        <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
           <Eye className="w-8 h-8 mb-2 opacity-40" />
           <p className="text-sm">{t("watchlistEmpty")}</p>
           <Link href="/watchlist" className="text-xs text-primary mt-1 hover:underline">
@@ -155,7 +155,7 @@ function AuthenticatedWatchlist() {
                       <span className="text-[9px] text-amber-400 animate-pulse">{t("statusEnriching")}</span>
                     )}
                   </div>
-                  <div className="text-[10px] text-slate-500 truncate max-w-[120px]">
+                  <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">
                     {stock.name || stock.sector || ""}
                   </div>
                 </div>
@@ -169,7 +169,7 @@ function AuthenticatedWatchlist() {
                 )}
                 {stock.margin_of_safety != null && (
                   <span className={`font-mono text-[10px] flex items-center gap-0.5 ${
-                    mosPositive ? "text-green-400" : "text-red-400"
+                    mosPositive ? "text-signal-long" : "text-signal-short"
                   }`}>
                     {mosPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                     {formatMoS(stock.margin_of_safety)}
@@ -183,7 +183,7 @@ function AuthenticatedWatchlist() {
 
       {items.length > 10 && (
         <div className="pt-2 border-t border-border/30 mt-1 flex-shrink-0">
-          <Link href="/watchlist" className="text-xs text-slate-500 hover:text-primary transition-colors">
+          <Link href="/watchlist" className="text-xs text-muted-foreground hover:text-primary transition-colors">
             {t("moreStocks", { count: items.length - 10 })}
           </Link>
         </div>

@@ -36,7 +36,7 @@ export function StockHeader({
         <div className="flex items-start gap-4">
           <Link
             href="/watchlist"
-            className="mt-1 text-slate-500 hover:text-primary transition-colors"
+            className="mt-1 text-muted-foreground hover:text-primary transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Link>
@@ -87,10 +87,10 @@ export function StockHeader({
               <span
                 className={`text-xs flex items-center gap-0.5 ${
                   quarterlyTrend === "up"
-                    ? "text-green-400"
+                    ? "text-signal-long"
                     : quarterlyTrend === "down"
-                    ? "text-red-400"
-                    : "text-slate-500"
+                    ? "text-signal-short"
+                    : "text-muted-foreground"
                 }`}
               >
                 {quarterlyTrend === "up" ? (
@@ -107,10 +107,10 @@ export function StockHeader({
               <span
                 className={`text-xs flex items-center gap-0.5 ${
                   yearlyTrend === "up"
-                    ? "text-green-400"
+                    ? "text-signal-long"
                     : yearlyTrend === "down"
-                    ? "text-red-400"
-                    : "text-slate-500"
+                    ? "text-signal-short"
+                    : "text-muted-foreground"
                 }`}
               >
                 {yearlyTrend === "up" ? (

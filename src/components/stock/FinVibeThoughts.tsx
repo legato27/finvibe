@@ -142,20 +142,20 @@ export function FinVibeThoughts({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {verdict === "buy" ? (
-              <Target className="w-5 h-5 text-green-400" />
+              <Target className="w-5 h-5 text-signal-long" />
             ) : verdict === "avoid" ? (
-              <AlertTriangle className="w-5 h-5 text-red-400" />
+              <AlertTriangle className="w-5 h-5 text-signal-short" />
             ) : (
-              <Shield className="w-5 h-5 text-yellow-400" />
+              <Shield className="w-5 h-5 text-signal-caution" />
             )}
             <div>
               <span
                 className={`text-sm font-bold uppercase ${
                   verdict === "buy"
-                    ? "text-green-400"
+                    ? "text-signal-long"
                     : verdict === "avoid"
-                    ? "text-red-400"
-                    : "text-yellow-400"
+                    ? "text-signal-short"
+                    : "text-signal-caution"
                 }`}
               >
                 {verdict}
@@ -169,7 +169,7 @@ export function FinVibeThoughts({
             {llmIntrinsicValue != null && (
               <div className="text-right">
                 <div className="text-[10px] text-muted-foreground">{t('intrinsicAi')}</div>
-                <span className="font-mono text-sm text-blue-400">
+                <span className="font-mono text-sm text-sky-700 dark:text-sky-400">
                   ${llmIntrinsicValue.toFixed(2)}
                 </span>
               </div>
@@ -179,7 +179,7 @@ export function FinVibeThoughts({
                 <div className="text-[10px] text-muted-foreground">{t('mosAi')}</div>
                 <span
                   className={`font-mono text-sm ${
-                    llmMarginOfSafety > 0 ? "text-green-400" : "text-red-400"
+                    llmMarginOfSafety > 0 ? "text-signal-long" : "text-signal-short"
                   }`}
                 >
                   {Number(llmMarginOfSafety).toFixed(1)}%
@@ -220,9 +220,9 @@ export function FinVibeThoughts({
         {thoughts.bull_case && (
           <div className="border border-green-500/20 bg-green-500/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-green-400 uppercase tracking-wider">{t('bullCase')}</span>
+              <span className="text-xs font-semibold text-signal-long uppercase tracking-wider">{t('bullCase')}</span>
               {thoughts.bull_case.price_target_12m != null && (
-                <span className="font-mono text-xs text-green-400">
+                <span className="font-mono text-xs text-signal-long">
                   {t('priceTargetShort', { value: Number(thoughts.bull_case.price_target_12m).toFixed(2) })}
                 </span>
               )}
@@ -233,9 +233,9 @@ export function FinVibeThoughts({
         {thoughts.bear_case && (
           <div className="border border-red-500/20 bg-red-500/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-red-400 uppercase tracking-wider">{t('bearCase')}</span>
+              <span className="text-xs font-semibold text-signal-short uppercase tracking-wider">{t('bearCase')}</span>
               {thoughts.bear_case.price_target_12m != null && (
-                <span className="font-mono text-xs text-red-400">
+                <span className="font-mono text-xs text-signal-short">
                   {t('priceTargetShort', { value: Number(thoughts.bear_case.price_target_12m).toFixed(2) })}
                 </span>
               )}
@@ -291,7 +291,7 @@ export function FinVibeThoughts({
             {typeof thoughts.price_action.invalidation === "number" && thoughts.price_action.invalidation > 0 && (
               <div>
                 <div className="text-[10px] text-muted-foreground mb-0.5">{tpa('invalidation')}</div>
-                <div className="font-mono text-red-400">
+                <div className="font-mono text-signal-short">
                   ${thoughts.price_action.invalidation.toLocaleString(undefined, { maximumFractionDigits: 2 })}
                 </div>
               </div>
@@ -299,7 +299,7 @@ export function FinVibeThoughts({
             {Array.isArray(thoughts.price_action.targets) && thoughts.price_action.targets.length > 0 && (
               <div>
                 <div className="text-[10px] text-muted-foreground mb-0.5">{tpa('targets')}</div>
-                <div className="font-mono text-green-400">
+                <div className="font-mono text-signal-long">
                   {thoughts.price_action.targets
                     .filter((x: any) => typeof x === "number" && x > 0)
                     .map((x: number) => `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`)

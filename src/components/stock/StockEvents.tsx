@@ -116,7 +116,7 @@ export function StockEvents({ ticker }: { ticker: string }) {
       {/* Dividends */}
       <div className="card p-4">
         <div className="flex items-center gap-2 mb-3">
-          <DollarSign className="w-4 h-4 text-green-400" />
+          <DollarSign className="w-4 h-4 text-signal-long" />
           <span className="text-sm font-semibold">{t("dividends")}</span>
         </div>
         {hasDividend ? (
@@ -125,13 +125,13 @@ export function StockEvents({ ticker }: { ticker: string }) {
               {data?.dividend_rate != null && (
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("annualRate")}</div>
-                  <div className="text-sm font-mono font-semibold text-green-400">${data.dividend_rate.toFixed(2)}</div>
+                  <div className="text-sm font-mono font-semibold text-signal-long">${data.dividend_rate.toFixed(2)}</div>
                 </div>
               )}
               {data?.dividend_yield != null && (
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("yield")}</div>
-                  <div className="text-sm font-mono font-semibold text-green-400">
+                  <div className="text-sm font-mono font-semibold text-signal-long">
                     {(data.dividend_yield * 100).toFixed(2)}%
                   </div>
                 </div>
