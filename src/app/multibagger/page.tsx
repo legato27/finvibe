@@ -7,6 +7,8 @@ import { TrendingUp, Sparkles, ShieldAlert, RefreshCw } from "lucide-react";
 import { scannerApi, stocksApi } from "@/lib/api";
 import LivePrice from "@/components/ui/LivePrice";
 import { InfoTip } from "@/components/shared/InfoTip";
+import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { WatchlistStar } from "@/components/shared/WatchlistStar";
 
 // Scanner emits a lighter PAM read than the watchlist PamSummary.
 interface PamRead {
@@ -155,6 +157,7 @@ export default function MultibaggerPage() {
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto">
+      <ScreenerTabs />
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold flex items-center gap-2">
@@ -293,12 +296,15 @@ export default function MultibaggerPage() {
                       <tr key={c.ticker} className="border-b border-border/10 hover:bg-accent/40">
                         <td className="p-2 text-muted-foreground font-mono">{c.rank}</td>
                         <td className="p-2">
-                          <Link href={`/stock/${c.ticker}`} className="font-medium text-primary hover:underline">
-                            {c.ticker}
-                          </Link>
-                          {c.market_cap_band && (
-                            <span className="ml-1 text-[9px] text-muted-foreground uppercase">{c.market_cap_band}</span>
-                          )}
+                          <span className="flex items-center gap-0.5">
+                            <Link href={`/stock/${c.ticker}`} className="font-medium text-primary hover:underline">
+                              {c.ticker}
+                            </Link>
+                            <WatchlistStar ticker={c.ticker} />
+                            {c.market_cap_band && (
+                              <span className="text-[9px] text-muted-foreground uppercase">{c.market_cap_band}</span>
+                            )}
+                          </span>
                         </td>
                         <td className="p-2 text-center">
                           <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${

@@ -10,6 +10,8 @@ import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 import LivePrice from "@/components/ui/LivePrice";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScopeSortControls } from "@/components/shared/ScopeSortControls";
+import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { WatchlistStar } from "@/components/shared/WatchlistStar";
 
 interface RankedRow {
   ticker: string;
@@ -116,6 +118,7 @@ export default function RankedBookPage() {
 
   return (
     <div className="space-y-4 max-w-[1100px] mx-auto">
+      <ScreenerTabs />
       <div>
         <h1 className="text-lg font-semibold">Ranked Book</h1>
         <p className="text-xs text-muted-foreground mt-1">
@@ -217,9 +220,12 @@ export default function RankedBookPage() {
                     <tr key={r.ticker} className="border-b border-border/10 hover:bg-accent/40">
                       <td className="p-2 text-muted-foreground font-mono">{r.rank}</td>
                       <td className="p-2">
-                        <Link href={`/stock/${r.ticker}`} className="font-medium text-primary hover:underline">
-                          {r.ticker}
-                        </Link>
+                        <span className="flex items-center gap-0.5">
+                          <Link href={`/stock/${r.ticker}`} className="font-medium text-primary hover:underline">
+                            {r.ticker}
+                          </Link>
+                          <WatchlistStar ticker={r.ticker} />
+                        </span>
                       </td>
                       <td className="p-2 text-right">
                         <LivePrice price={live} currency="$" live={live != null} className="text-xs" />

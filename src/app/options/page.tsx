@@ -15,6 +15,8 @@ import DataTable, { Column } from "@/components/ui/DataTable";
 import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
+import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { WatchlistStar } from "@/components/shared/WatchlistStar";
 
 interface ScreenerRow {
   ticker: string;
@@ -62,6 +64,18 @@ export default function OptionsScreenerPage() {
           <span className="ml-2 hidden text-xs text-muted-foreground lg:inline">{r.name}</span>
         </span>
       ),
+    },
+    {
+      // Star toggle lives outside the first cell — that one carries the
+      // row-stretched link, and a button can't nest inside it.
+      key: "watch",
+      header: (
+        <>
+          <span aria-hidden="true">★</span>
+          <span className="sr-only">Watchlist</span>
+        </>
+      ),
+      cell: (r) => <WatchlistStar ticker={r.ticker} />,
     },
     {
       key: "verdict",
@@ -151,6 +165,7 @@ export default function OptionsScreenerPage() {
 
   return (
     <div className="mx-auto max-w-[1200px] space-y-4">
+      <ScreenerTabs />
       <header>
         <h1 className="text-lg font-bold text-foreground">{ts("title")}</h1>
         <p className="text-sm text-muted-foreground">{ts("subtitle")}</p>

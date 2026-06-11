@@ -608,7 +608,8 @@
     "settings": "设置",
     "trades": "交易",
     "watchlist": "自选股",
-    "optionsBook": "期权卖方榜"
+    "optionsBook": "期权卖方榜",
+    "screeners": "榜单"
   },
   "options": {
     "adjustment": "调整计划",
@@ -1406,6 +1407,8 @@
   "watchlist": {
     "addAnyway": "仍然添加 {query}",
     "addStock": "添加股票",
+    "addToWatchlistAction": "将 {ticker} 加入自选股",
+    "removeFromWatchlistAction": "将 {ticker} 从自选股移除",
     "addStocks": "Add stocks",
     "addToPortfolio": "Add to Portfolio",
     "addToPortfolioTitle": "Add to portfolio",

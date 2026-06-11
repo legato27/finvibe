@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, DollarSign, Settings, ListOrdered, Coins, Rocket } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, DollarSign, Settings, ListOrdered } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { useTranslations } from "next-intl";
@@ -53,12 +53,12 @@ export default function Navbar() {
     : theme === "dark" ? tCommon("themeDark")
     : tCommon("themeAuto");
 
-  const navItems = [
+  const navItems: { href: string; label: string; icon: typeof BarChart2; public: boolean; match?: string[] }[] = [
     { href: "/", label: tNav("dashboard"), icon: BarChart2, public: true },
     { href: "/watchlist", label: tNav("watchlist"), icon: BookOpen, public: false },
-    { href: "/ranked", label: tNav("ranked"), icon: ListOrdered, public: true },
-    { href: "/multibagger", label: "Multibagger", icon: Rocket, public: true },
-    { href: "/options", label: tNav("optionsBook"), icon: Coins, public: true },
+    // Ranked Book / Multibagger / Options Book share one entry; the
+    // ScreenerTabs bar on those pages is the second-level navigation.
+    { href: "/ranked", label: tNav("screeners"), icon: ListOrdered, public: true, match: ["/ranked", "/multibagger", "/options"] },
     { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
     { href: "/trades", label: tNav("trades"), icon: DollarSign, public: false },
   ];
@@ -79,12 +79,12 @@ export default function Navbar() {
 
         {/* Nav */}
         <nav className="flex gap-1">
-          {visibleItems.map(({ href, label, icon: Icon }) => (
+          {visibleItems.map(({ href, label, icon: Icon, match }) => (
             <Link
               key={href}
               href={href}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                pathname === href
+                (match ?? [href]).includes(pathname)
                   ? "bg-primary/20 text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent"
               }`}

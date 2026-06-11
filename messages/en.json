@@ -608,7 +608,8 @@
     "settings": "Settings",
     "trades": "Trades",
     "watchlist": "Watchlists",
-    "optionsBook": "Options Book"
+    "optionsBook": "Options Book",
+    "screeners": "Screeners"
   },
   "options": {
     "adjustment": "Adjustment plan",
@@ -1406,6 +1407,8 @@
   "watchlist": {
     "addAnyway": "Add {query} anyway",
     "addStock": "Add stock",
+    "addToWatchlistAction": "Add {ticker} to watchlist",
+    "removeFromWatchlistAction": "Remove {ticker} from watchlist",
     "addStocks": "Add stocks",
     "addToPortfolio": "Add to Portfolio",
     "addToPortfolioTitle": "Add to portfolio",

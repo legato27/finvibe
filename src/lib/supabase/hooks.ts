@@ -251,6 +251,84 @@ export function useAddStock() {
   });
 }
 
+/** One-click star toggle used by the screener tables (ranked / multibagger /
+ *  options). Adds the ticker to the user's default (first) watchlist —
+ *  creating "My Watchlist" on first use — or removes it from every list it's
+ *  in when already starred. RLS scopes watchlist_items to the user. */
+export function useToggleWatchlistTicker() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ticker: string) => {
+      const upper = ticker.toUpperCase();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+
+      const { data: stock } = await supabase
+        .from("stock_catalog")
+        .select("id")
+        .eq("ticker", upper)
+        .maybeSingle();
+
+      // Already starred → remove from all of my lists.
+      if (stock) {
+        const { data: items } = await supabase
+          .from("watchlist_items")
+          .select("id")
+          .eq("stock_id", stock.id);
+        if (items?.length) {
+          const { error } = await supabase
+            .from("watchlist_items")
+            .delete()
+            .in("id", items.map((i) => i.id));
+          if (error) throw error;
+          return { ticker: upper, added: false };
+        }
+      }
+
+      // Target list: default first, else oldest, else create one.
+      const { data: lists } = await supabase
+        .from("watchlists")
+        .select("id")
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true })
+        .limit(1);
+      let listId = lists?.[0]?.id as number | undefined;
+      if (!listId) {
+        const { data: created, error } = await supabase
+          .from("watchlists")
+          .insert({ user_id: user.id, name: "My Watchlist" })
+          .select("id")
+          .single();
+        if (error) throw error;
+        listId = created.id;
+      }
+
+      let stockId = stock?.id as number | undefined;
+      if (!stockId) {
+        const { data: newStock, error } = await supabase
+          .from("stock_catalog")
+          .insert({ ticker: upper, enrichment_status: "pending" })
+          .select("id")
+          .single();
+        if (error) throw error;
+        stockId = newStock.id;
+      }
+
+      const { error } = await supabase
+        .from("watchlist_items")
+        .insert({ watchlist_id: listId, stock_id: stockId });
+      if (error) throw error;
+      return { ticker: upper, added: true };
+    },
+    onSuccess: ({ ticker, added }) => {
+      qc.invalidateQueries({ queryKey: ["my-watchlist-tickers"] });
+      qc.invalidateQueries({ queryKey: ["watchlists"] });
+      // New names go through the same DGX enrichment path as the watchlist add.
+      if (added) void kickEnrich({ tickers: [ticker] }).catch(() => null);
+    },
+  });
+}
+
 export function useRemoveStock() {
   const qc = useQueryClient();
   return useMutation({
