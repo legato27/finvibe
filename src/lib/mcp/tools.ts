@@ -250,7 +250,135 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       ok(await market.priceHistory(args.ticker, args.period, args.interval)),
   );
 
+  server.registerTool(
+    "get_price_action",
+    {
+      ...meta("get_price_action"),
+      inputSchema: { ticker: z.string().min(1) },
+    },
+    async (args) => ok(await market.priceAction(args.ticker)),
+  );
+
+  server.registerTool(
+    "get_today_signals",
+    { ...meta("get_today_signals"), inputSchema: {} },
+    async () => ok(await market.signalsToday()),
+  );
+
+  server.registerTool(
+    "get_macro_today",
+    { ...meta("get_macro_today"), inputSchema: {} },
+    async () => ok(await market.macroToday()),
+  );
+
+  server.registerTool(
+    "get_fx_rates",
+    {
+      ...meta("get_fx_rates"),
+      inputSchema: { base: z.string().length(3).optional() },
+    },
+    async (args) => ok(await market.fxRates(args.base)),
+  );
+
+  // ── Options ──────────────────────────────────────────────
+  server.registerTool(
+    "get_option_expiries",
+    {
+      ...meta("get_option_expiries"),
+      inputSchema: { ticker: z.string().min(1) },
+    },
+    async (args) => ok(await market.optionExpiries(args.ticker)),
+  );
+
+  server.registerTool(
+    "get_option_chain",
+    {
+      ...meta("get_option_chain"),
+      inputSchema: {
+        ticker: z.string().min(1),
+        expiry: z
+          .string()
+          .regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD")
+          .optional(),
+        strikes: z.number().int().min(4).max(80).optional(),
+      },
+    },
+    async (args) =>
+      ok(await market.optionChain(args.ticker, args.expiry, args.strikes)),
+  );
+
+  server.registerTool(
+    "get_options_summary",
+    {
+      ...meta("get_options_summary"),
+      inputSchema: { ticker: z.string().min(1) },
+    },
+    async (args) => ok(await market.optionsSummary(args.ticker)),
+  );
+
+  server.registerTool(
+    "get_options_screener",
+    { ...meta("get_options_screener"), inputSchema: {} },
+    async () => ok(await market.optionsScreener()),
+  );
+
+  // ── News & sentiment ─────────────────────────────────────
+  server.registerTool(
+    "get_stock_news",
+    {
+      ...meta("get_stock_news"),
+      inputSchema: {
+        tickers: z.array(z.string().min(1)).optional(),
+        limit: z.number().int().positive().max(200).optional(),
+        source_kind: z.string().optional(),
+      },
+    },
+    async (args) =>
+      ok(await market.newsFeed(args.tickers, args.limit, args.source_kind)),
+  );
+
+  server.registerTool(
+    "get_stock_sentiment",
+    {
+      ...meta("get_stock_sentiment"),
+      inputSchema: { ticker: z.string().min(1) },
+    },
+    async (args) => ok(await market.tickerSentiment(args.ticker)),
+  );
+
+  server.registerTool(
+    "get_osint_events",
+    {
+      ...meta("get_osint_events"),
+      inputSchema: {
+        ticker: z.string().min(1),
+        since_hours: z.number().int().min(1).max(720).optional(),
+        limit: z.number().int().positive().max(200).optional(),
+      },
+    },
+    async (args) =>
+      ok(await market.osintEvents(args.ticker, args.since_hours, args.limit)),
+  );
+
   // ── AI ───────────────────────────────────────────────────
+  server.registerTool(
+    "get_multibagger_candidates",
+    {
+      ...meta("get_multibagger_candidates"),
+      inputSchema: { track: z.enum(["all", "A", "B"]).optional() },
+    },
+    async (args) => ok(await market.multibaggerCandidates(args.track)),
+  );
+
+  server.registerTool(
+    "get_stock_verdict",
+    {
+      ...meta("get_stock_verdict"),
+      inputSchema: { ticker: z.string().min(1) },
+    },
+    async (args) => ok(await market.verdict(args.ticker)),
+  );
+
   server.registerTool(
     "get_llm_thoughts",
     {

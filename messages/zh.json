@@ -446,7 +446,9 @@
     "transport": "传输方式",
     "transportBody": "Streamable HTTP（当前的 MCP 规范，2025 年 3 月修订版）。无状态 —— 每个请求独立，无需会话恢复。",
     "url": "URL",
-    "yes": "是"
+    "yes": "是",
+    "groupOptions": "期权",
+    "groupNews": "新闻与情绪"
   },
   "models": {
     "blurb": {

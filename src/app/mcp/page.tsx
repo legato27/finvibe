@@ -18,6 +18,8 @@ const GROUP_ORDER: ToolGroup[] = [
   "Holdings",
   "Sales",
   "Market data",
+  "Options",
+  "News & sentiment",
   "AI",
 ];
 
@@ -28,6 +30,8 @@ const GROUP_KEY: Record<ToolGroup, string> = {
   Holdings: "groupHoldings",
   Sales: "groupSales",
   "Market data": "groupMarketData",
+  Options: "groupOptions",
+  "News & sentiment": "groupNews",
   AI: "groupAI",
 };
 
@@ -110,6 +114,8 @@ export default async function McpDocsPage() {
     Holdings: [],
     Sales: [],
     "Market data": [],
+    Options: [],
+    "News & sentiment": [],
     AI: [],
   };
   for (const tool of TOOL_CATALOG) grouped[tool.group].push(tool);

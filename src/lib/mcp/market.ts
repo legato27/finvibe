@@ -56,6 +56,64 @@ export const market = {
       `/api/stocks/${encodeURIComponent(ticker)}/price-history` +
         `?period=${encodeURIComponent(period)}&interval=${encodeURIComponent(interval)}`,
     ),
+  // Top-down PAM price-action read: daily/weekly/monthly structure (UC/DC/
+  // UR/DR), setup variant, sweet-spot zone, FSB trigger, divergence. Served
+  // from the DGX nightly blob (Redis → persisted → live compute on miss).
+  priceAction: (ticker: string) =>
+    dgxJson<unknown>(`/api/stocks/${encodeURIComponent(ticker)}/price-action`),
+  // Unified, conflict-aware verdict from the verdict engine (nightly blob).
+  verdict: (ticker: string) =>
+    dgxJson<unknown>(`/api/stocks/${encodeURIComponent(ticker)}/verdict`),
+  // Options (Polygon chain data, 15-min delayed).
+  optionExpiries: (ticker: string) =>
+    dgxJson<unknown>(`/api/options/${encodeURIComponent(ticker)}/expiries`),
+  optionChain: (ticker: string, expiry?: string, strikes?: number) => {
+    const params = new URLSearchParams();
+    if (expiry) params.set("expiry", expiry);
+    if (strikes) params.set("strikes", String(strikes));
+    const qs = params.toString();
+    return dgxJson<unknown>(
+      `/api/options/${encodeURIComponent(ticker)}/chain${qs ? `?${qs}` : ""}`,
+    );
+  },
+  optionsSummary: (ticker: string) =>
+    dgxJson<unknown>(`/api/options/${encodeURIComponent(ticker)}/summary`),
+  // Watchlist-wide options screener: persisted daily summaries, no live fetches.
+  optionsScreener: () => dgxJson<unknown>(`/api/options/screener`),
+  // Watchlist digest: new PAM triggers, verdict state changes, conflicts.
+  signalsToday: () => dgxJson<unknown>(`/api/stocks/signals/today`),
+  // Latest cached multibagger scan; track filters A (confirmed) / B (early).
+  multibaggerCandidates: (track?: "all" | "A" | "B") =>
+    dgxJson<unknown>(
+      `/api/scanner/multibagger/candidates?track=${encodeURIComponent(track ?? "all")}`,
+    ),
+  // Synthesized macro decision surface — regime, risk score, positioning.
+  macroToday: () => dgxJson<unknown>(`/api/macro/today`),
+  fxRates: (base?: string) =>
+    dgxJson<unknown>(
+      `/api/fx/rates?base=${encodeURIComponent((base ?? "USD").toUpperCase())}`,
+    ),
+  // News + sentiment (sentiment_cache ∪ osint_articles on DGX).
+  newsFeed: (tickers?: string[], limit?: number, sourceKind?: string) => {
+    const params = new URLSearchParams();
+    if (tickers?.length)
+      params.set("tickers", tickers.map((t) => t.toUpperCase()).join(","));
+    if (limit) params.set("limit", String(limit));
+    if (sourceKind) params.set("source_kind", sourceKind);
+    const qs = params.toString();
+    return dgxJson<unknown>(`/api/sentiment/news-feed${qs ? `?${qs}` : ""}`);
+  },
+  tickerSentiment: (ticker: string) =>
+    dgxJson<unknown>(`/api/sentiment/${encodeURIComponent(ticker)}`),
+  osintEvents: (ticker: string, sinceHours?: number, limit?: number) => {
+    const params = new URLSearchParams();
+    if (sinceHours) params.set("since_hours", String(sinceHours));
+    if (limit) params.set("limit", String(limit));
+    const qs = params.toString();
+    return dgxJson<unknown>(
+      `/api/osint/events/for-ticker/${encodeURIComponent(ticker)}${qs ? `?${qs}` : ""}`,
+    );
+  },
   generateThoughts: (ticker: string) =>
     dgxJson<unknown>(
       `/api/stocks/${encodeURIComponent(ticker)}/generate-thoughts`,

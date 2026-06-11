@@ -446,7 +446,9 @@
     "transport": "Transport",
     "transportBody": "Streamable HTTP (the current MCP spec, March 2025 revision). Stateless — each request stands alone, no session resumption required.",
     "url": "URL",
-    "yes": "yes"
+    "yes": "yes",
+    "groupOptions": "Options",
+    "groupNews": "News & sentiment"
   },
   "models": {
     "blurb": {
