@@ -51,16 +51,13 @@ export function DashboardView() {
       </div>
 
       <Section title={t("sectionTodayTitle")} intro={t("sectionTodayIntro")}>
-        <div className="space-y-3 sm:space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 items-start">
           <TodaySignalsPanel />
           <TodayPanel />
         </div>
       </Section>
 
-      <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
-        <MacroTape />
-      </Section>
-
+      {/* Your markets — watchlist + broad overview, surfaced near the top */}
       <Section title={t("sectionMarketsTitle")} intro={t("sectionMarketsIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3 sm:gap-4">
           <div className="card-3d min-h-[420px]"><MarketOverview /></div>
@@ -74,6 +71,11 @@ export function DashboardView() {
           <div className="card-3d min-h-[340px]"><GexCard /></div>
           <div className="card-3d min-h-[340px]"><SwarmIndicator /></div>
         </div>
+      </Section>
+
+      {/* Macro context below the actionable blocks */}
+      <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
+        <MacroTape />
       </Section>
 
       <Section title={t("sectionCycleTitle")} intro={t("sectionCycleIntro")}>
