@@ -1,10 +1,10 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import { CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { AuthShell, authInputClass, authLabelClass } from "@/components/auth/AuthShell";
 
 export default function RegisterPage() {
   const t = useTranslations("auth");
@@ -14,9 +14,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
-  void router;
 
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
@@ -43,83 +41,93 @@ export default function RegisterPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="card max-w-sm w-full mx-4 p-8 text-center">
-          <div className="flex justify-center mb-6">
-            <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={240} height={96} priority />
-          </div>
-          <div className="p-4 rounded-lg bg-green-950/50 border border-green-800 text-green-400 text-sm">
+      <AuthShell title={t("signUpTitle")}>
+        <div className="p-4 rounded-lg bg-[hsl(var(--success-bg))] border border-[hsl(var(--success))]/40 text-sm text-foreground flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))] flex-shrink-0 mt-0.5" />
+          <span>
             {t("checkEmail")}{" "}
-            <Link href="/login" className="underline">{t("signInLink")}</Link>.
-          </div>
+            <Link href="/login" className="text-primary font-medium underline">
+              {t("signInLink")}
+            </Link>
+            .
+          </span>
         </div>
-      </div>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center">
-      <div className="card max-w-sm w-full mx-4 p-8">
-        <div className="flex justify-center mb-6">
-          <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={240} height={96} priority />
+    <AuthShell title={t("signUpTitle")} subtitle={t("signUpSubtitle")}>
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 p-3 rounded-lg bg-[hsl(var(--danger-bg))] border border-[hsl(var(--danger))]/40 text-[hsl(var(--danger))] text-xs"
+        >
+          {error}
         </div>
+      )}
 
-        <h2 className="text-center text-sm text-slate-400 mb-6">{t("signUpTitle")}</h2>
+      <form onSubmit={handleRegister} className="space-y-4">
+        <div>
+          <label htmlFor="fullName" className={authLabelClass}>
+            {t("fullName")}
+          </label>
+          <input
+            id="fullName"
+            type="text"
+            autoComplete="name"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className={authInputClass}
+            placeholder={t("fullName")}
+          />
+        </div>
+        <div>
+          <label htmlFor="email" className={authLabelClass}>
+            {t("email")}
+          </label>
+          <input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={authInputClass}
+            placeholder="you@example.com"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="password" className={authLabelClass}>
+            {t("password")}
+          </label>
+          <input
+            id="password"
+            type="password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={authInputClass}
+            placeholder="••••••••"
+            minLength={6}
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full py-2.5 bg-primary text-primary-foreground font-semibold rounded-lg hover:opacity-90 transition-all hover:scale-[1.01] shadow-lg shadow-primary/20 disabled:opacity-50 disabled:hover:scale-100 text-sm"
+        >
+          {loading ? `${t("signUpButton")}…` : t("signUpButton")}
+        </button>
+      </form>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-lg bg-red-950/50 border border-red-800 text-red-400 text-xs">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">{t("fullName")}</label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder={t("fullName")}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">{t("email")}</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="you@example.com"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-slate-400 mb-1">{t("password")}</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-              placeholder="••••••••"
-              minLength={6}
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 bg-primary text-primary-foreground font-medium rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50 text-sm"
-          >
-            {loading ? `${t("signUpButton")}…` : t("signUpButton")}
-          </button>
-        </form>
-
-        <p className="text-center text-xs text-slate-500 mt-6">
-          {t("hasAccount")}{" "}
-          <Link href="/login" className="text-primary hover:underline">{t("signInLink")}</Link>
-        </p>
-      </div>
-    </div>
+      <p className="text-center text-xs text-muted-foreground mt-6">
+        {t("hasAccount")}{" "}
+        <Link href="/login" className="text-primary font-medium hover:underline">
+          {t("signInLink")}
+        </Link>
+      </p>
+    </AuthShell>
   );
 }

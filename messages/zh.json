@@ -17,7 +17,10 @@
     "signInSubtitle": "欢迎回来",
     "signInTitle": "登录 vibefin",
     "signUpButton": "创建账户",
-    "signUpTitle": "创建账户"
+    "signUpTitle": "创建账户",
+    "tagline": "让市场一目了然。",
+    "continueWithGitHub": "使用 GitHub 继续",
+    "signUpSubtitle": "免费注册——无需信用卡"
   },
   "common": {
     "add": "添加",
@@ -406,7 +409,21 @@
     "step3Title": "聚焦重点",
     "whatsInsideEyebrow": "功能一览",
     "whatsInsideIntro": "机构级数据,为普通投资者重新呈现。无需 Bloomberg 终端。",
-    "whatsInsideTitle": "每个值得关注的信号。"
+    "whatsInsideTitle": "每个值得关注的信号。",
+    "liveBadge": "实时",
+    "sampleBadge": "示例",
+    "statRegime": "市场状态",
+    "statBreadth": "市场广度",
+    "statCrowd": "拥挤度",
+    "statCrowdDetail": "群体动能指数",
+    "above50dma": "高于50日均线",
+    "terminalUpdated": "更新于 {time}",
+    "terminalHint": "注册免费账户查看完整解读",
+    "lockedEyebrow": "会员专享",
+    "lockedTitle": "注册即可解锁深度面板。",
+    "lockedDesc": "板块轮动、做市商伽马、AI 观察清单评级与 OSINT 资讯流全部免费——只需一个账户。",
+    "lockedPanelWatchlist": "AI 观察清单评级",
+    "unlockCta": "免费注册解锁"
   },
   "mcpDocs": {
     "authBodyMid": " 发送。在登录状态下前往",

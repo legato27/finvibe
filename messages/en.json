@@ -17,7 +17,10 @@
     "signInSubtitle": "Welcome back",
     "signInTitle": "Sign in to vibefin",
     "signUpButton": "Create account",
-    "signUpTitle": "Create your account"
+    "signUpTitle": "Create your account",
+    "tagline": "The market, in plain English.",
+    "continueWithGitHub": "Continue with GitHub",
+    "signUpSubtitle": "Free to start — no credit card"
   },
   "common": {
     "add": "Add",
@@ -406,7 +409,21 @@
     "step3Title": "Find what's moving",
     "whatsInsideEyebrow": "What's inside",
     "whatsInsideIntro": "Every tile is built to answer one question, fast — no jargon, no chart-walls.",
-    "whatsInsideTitle": "Eight signals. One dashboard."
+    "whatsInsideTitle": "Eight signals. One dashboard.",
+    "liveBadge": "LIVE",
+    "sampleBadge": "SAMPLE",
+    "statRegime": "Regime",
+    "statBreadth": "Breadth",
+    "statCrowd": "Crowding",
+    "statCrowdDetail": "Crowd momentum index",
+    "above50dma": "above 50-DMA",
+    "terminalUpdated": "updated {time}",
+    "terminalHint": "create a free account for the full read",
+    "lockedEyebrow": "Members see more",
+    "lockedTitle": "The deep panels are one sign-up away.",
+    "lockedDesc": "Sector rotation, dealer gamma, AI watchlist verdicts and the OSINT feed are free — they just need an account.",
+    "lockedPanelWatchlist": "AI watchlist verdicts",
+    "unlockCta": "Unlock with a free account"
   },
   "mcpDocs": {
     "authBodyMid": ". Generate one at",

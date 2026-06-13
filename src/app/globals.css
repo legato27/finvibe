@@ -314,3 +314,24 @@
     animation: none !important;
   }
 }
+
+/* ── Landing terminal (LiveTerminal / AuthShell) ───────────── */
+@keyframes term-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.term-cursor {
+  animation: term-blink 1.1s steps(1) infinite;
+}
+@keyframes term-line-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.term-line {
+  animation: term-line-in 0.4s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .term-cursor, .term-line {
+    animation: none !important;
+  }
+}
