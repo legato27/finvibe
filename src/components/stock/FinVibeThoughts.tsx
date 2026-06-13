@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Brain, RefreshCw, ChevronDown, ChevronUp, Shield, Target, AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { MarketDirectionCard } from "./MarketDirectionCard";
@@ -50,6 +51,15 @@ export function FinVibeThoughts({
 }: FinVibeThoughtsProps) {
   const t = useTranslations('stock');
   const tpa = useTranslations('priceAction');
+  // Live PAM read — same queryKey as the chart panel, so react-query serves
+  // both from a single request and the two cards can never diverge.
+  const { data: pamLive } = useQuery<any>({
+    queryKey: ["price-action", ticker],
+    queryFn: () => stocksApi.priceAction(ticker),
+    enabled: !!ticker,
+    staleTime: 5 * 60 * 1000,
+    retry: 2,
+  });
   const [localGenerating, setLocalGenerating] = useState(false);
   // generatedAt at the moment generation started. Completion = a NEWER timestamp arrives.
   // The old `!thoughts` check never cleared the spinner when re-generating an analysis that
@@ -265,63 +275,133 @@ export function FinVibeThoughts({
         </section>
       )}
 
-      {/* Price Action setup (PAM — pure price action, no R:R) */}
-      {thoughts.price_action && typeof thoughts.price_action === "object" && (
-        <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
-              {tpa('cardTitle')}
+      {/* Price Action setup — rendered from the LIVE PAM read (same query as
+          the chart panel) so both always show the same signal. The stored LLM
+          blob is only a fallback when the live read is unavailable. */}
+      {(() => {
+        const llmPa =
+          thoughts.price_action && typeof thoughts.price_action === "object" ? thoughts.price_action : null;
+        const syn = pamLive?.synthesis ?? null;
+        if (!llmPa && !syn) return null;
+
+        const kl = syn?.key_levels ?? {};
+        const sweet = kl.sweet_spot;
+        const setup: string | null = syn?.setup_code ?? llmPa?.setup ?? null;
+        const structure: string | null = syn?.headline ?? llmPa?.structure ?? null;
+        const entryZone: string | null = syn
+          ? sweet && syn.status !== "no_setup"
+            ? `${sweet.low}–${sweet.high}`
+            : tpa("noCleanSetup")
+          : llmPa?.entry_zone ?? null;
+        const invalidation: number | null = syn ? kl.invalidation ?? null : llmPa?.invalidation ?? null;
+        const targets: number[] = (
+          syn ? [kl.structural_target] : Array.isArray(llmPa?.targets) ? llmPa.targets : []
+        ).filter((x: any) => typeof x === "number" && x > 0);
+        const conviction: string | null = syn ? syn.confidence : llmPa?.conviction ?? null;
+        const plan = syn?.trade_plan ?? llmPa?.trade_plan ?? null;
+        const stale = Boolean(syn && llmPa?.setup && llmPa.setup !== syn.setup_code);
+
+        return (
+          <div className="mb-4 bg-accent/30 border border-border/30 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-semibold text-foreground/80 uppercase tracking-wider">
+                  {tpa("cardTitle")}
+                </div>
+                {syn && (
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/80 border border-primary/20">
+                    {tpa("liveSync")}
+                  </span>
+                )}
+              </div>
+              {setup && (
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+                  {String(setup)}
+                </span>
+              )}
             </div>
-            {thoughts.price_action.setup && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
-                {String(thoughts.price_action.setup)}
-              </span>
+            {structure && <p className="text-xs text-foreground/80 mb-3">{String(structure)}</p>}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
+              {entryZone && (
+                <div className="col-span-2 md:col-span-1">
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{tpa("entryZone")}</div>
+                  <div className="font-mono text-foreground/90">{String(entryZone)}</div>
+                </div>
+              )}
+              {typeof invalidation === "number" && invalidation > 0 && (
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{tpa("invalidation")}</div>
+                  <div className="font-mono text-signal-short">
+                    ${invalidation.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </div>
+                </div>
+              )}
+              {targets.length > 0 && (
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{tpa("targets")}</div>
+                  <div className="font-mono text-signal-long">
+                    {targets.map((x: number) => `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`).join(" · ")}
+                  </div>
+                </div>
+              )}
+              {conviction && (
+                <div>
+                  <div className="text-[10px] text-muted-foreground mb-0.5">{tpa("conviction")}</div>
+                  <div className="font-mono text-foreground/90 capitalize">{String(conviction)}</div>
+                </div>
+              )}
+            </div>
+            {plan && plan.action && (
+              <div
+                className={`mt-3 rounded-md border p-2.5 ${
+                  plan.action.startsWith("enter")
+                    ? "border-green-500/30 bg-green-500/5"
+                    : plan.action.startsWith("wait")
+                    ? "border-yellow-500/30 bg-yellow-500/5"
+                    : "border-border/40 bg-accent/20"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span
+                    className={`text-xs font-semibold ${
+                      plan.action.startsWith("enter")
+                        ? "text-signal-long"
+                        : plan.action.startsWith("wait")
+                        ? "text-signal-caution"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {tpa(`planAction.${plan.action}`)}
+                  </span>
+                  {plan.reward_risk != null && (
+                    <span className="font-mono text-[11px] text-foreground/80">
+                      {tpa("rewardRisk")} {Number(plan.reward_risk).toFixed(2)}:1
+                    </span>
+                  )}
+                </div>
+                {plan.note && <p className="text-[11px] text-muted-foreground mt-1">{String(plan.note)}</p>}
+              </div>
+            )}
+            {!plan && llmPa?.trigger && (
+              <p className="text-xs text-muted-foreground leading-relaxed mt-3">
+                <span className="text-foreground/70">{tpa("trigger")}: </span>
+                {String(llmPa.trigger)}
+              </p>
+            )}
+            {llmPa?.analyst_note && (
+              <p className="text-[11px] text-muted-foreground leading-relaxed mt-2">
+                <span className="text-foreground/70">{tpa("analystNote")}: </span>
+                {String(llmPa.analyst_note)}
+              </p>
+            )}
+            {stale && (
+              <p className="text-[10px] text-signal-caution mt-2">
+                {tpa("staleNote", { old: String(llmPa.setup), new: String(syn.setup_code) })}
+              </p>
             )}
           </div>
-          {thoughts.price_action.structure && (
-            <p className="text-xs text-foreground/80 mb-3">{String(thoughts.price_action.structure)}</p>
-          )}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-xs">
-            {thoughts.price_action.entry_zone != null && thoughts.price_action.entry_zone !== "" && (
-              <div className="col-span-2 md:col-span-1">
-                <div className="text-[10px] text-muted-foreground mb-0.5">{tpa('entryZone')}</div>
-                <div className="font-mono text-foreground/90">{String(thoughts.price_action.entry_zone)}</div>
-              </div>
-            )}
-            {typeof thoughts.price_action.invalidation === "number" && thoughts.price_action.invalidation > 0 && (
-              <div>
-                <div className="text-[10px] text-muted-foreground mb-0.5">{tpa('invalidation')}</div>
-                <div className="font-mono text-signal-short">
-                  ${thoughts.price_action.invalidation.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-                </div>
-              </div>
-            )}
-            {Array.isArray(thoughts.price_action.targets) && thoughts.price_action.targets.length > 0 && (
-              <div>
-                <div className="text-[10px] text-muted-foreground mb-0.5">{tpa('targets')}</div>
-                <div className="font-mono text-signal-long">
-                  {thoughts.price_action.targets
-                    .filter((x: any) => typeof x === "number" && x > 0)
-                    .map((x: number) => `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`)
-                    .join(" · ")}
-                </div>
-              </div>
-            )}
-            {thoughts.price_action.conviction && (
-              <div>
-                <div className="text-[10px] text-muted-foreground mb-0.5">{tpa('conviction')}</div>
-                <div className="font-mono text-foreground/90 capitalize">{String(thoughts.price_action.conviction)}</div>
-              </div>
-            )}
-          </div>
-          {thoughts.price_action.trigger && (
-            <p className="text-xs text-muted-foreground leading-relaxed mt-3">
-              <span className="text-foreground/70">{tpa('trigger')}: </span>
-              {String(thoughts.price_action.trigger)}
-            </p>
-          )}
-        </div>
-      )}
+        );
+      })()}
 
       {/* Competitive Advantages */}
       {thoughts.competitive_advantages && typeof thoughts.competitive_advantages === "object" && (

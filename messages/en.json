@@ -871,12 +871,25 @@
     "targets": "Targets",
     "trigger": "Trigger",
     "inZone": "in zone",
+    "tradePlan": "Trade plan",
+    "rewardRisk": "R:R",
+    "planAction": {
+      "enter_long": "Enter long",
+      "enter_short": "Enter short",
+      "wait_long": "Wait — stalk long entry",
+      "wait_short": "Wait — stalk short entry",
+      "stand_aside": "Stand aside"
+    },
+    "noCleanSetup": "No clean setup — watchlist",
+    "liveSync": "Synced with chart PAM",
+    "staleNote": "PAM read has updated since this analysis was generated ({old} → {new}) — showing live levels. Regenerate the analysis to refresh the narrative.",
+    "analystNote": "Analyst note",
     "tf": {
       "daily": "Daily",
       "weekly": "Weekly",
       "monthly": "Monthly"
     },
-    "disclaimer": "Pure price action — structure, sweet-spot, and Force Strike Bar trigger. Not financial advice; no risk/reward or sizing."
+    "disclaimer": "Pure price action — structure, sweet-spot, and Force Strike Bar trigger. Reward:risk is derived from structural levels only. Not financial advice; no sizing."
   },
   "sentiment": {
     "bearish": "Bearish",

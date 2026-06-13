@@ -37,6 +37,14 @@ interface Synthesis {
     structural_target: number | null;
     support_resistance: Record<string, number>;
   };
+  trade_plan?: {
+    action: string;
+    entry_zone: { low: number; high: number } | null;
+    stop: number | null;
+    target: number | null;
+    reward_risk: number | null;
+    note: string;
+  } | null;
   invalidation: string;
   divergence: { status: string; implication: string; rsi_now: number };
   accum_dist: { present: string; notes: string } | null;
@@ -138,6 +146,41 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
           <div className="font-mono text-foreground/90">{fmt(syn.last_close)}</div>
         </div>
       </div>
+
+      {/* Trade plan — deterministic recommendation from the structural levels */}
+      {syn.trade_plan?.action && (
+        <div
+          className={`rounded-lg border p-3 mb-3 ${
+            syn.trade_plan.action.startsWith("enter")
+              ? "border-green-500/30 bg-green-500/5"
+              : syn.trade_plan.action.startsWith("wait")
+              ? "border-yellow-500/30 bg-yellow-500/5"
+              : "border-border/40 bg-accent/20"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span
+              className={`text-xs font-semibold ${
+                syn.trade_plan.action.startsWith("enter")
+                  ? "text-signal-long"
+                  : syn.trade_plan.action.startsWith("wait")
+                  ? "text-signal-caution"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {t("tradePlan")}: {t(`planAction.${syn.trade_plan.action}`)}
+            </span>
+            {syn.trade_plan.reward_risk != null && (
+              <span className="font-mono text-[11px] text-foreground/80">
+                {t("rewardRisk")} {Number(syn.trade_plan.reward_risk).toFixed(2)}:1
+              </span>
+            )}
+          </div>
+          {syn.trade_plan.note && (
+            <p className="text-[11px] text-muted-foreground mt-1">{syn.trade_plan.note}</p>
+          )}
+        </div>
+      )}
 
       {/* Divergence + accumulation/distribution */}
       {(syn.divergence?.status && syn.divergence.status !== "None") ||
