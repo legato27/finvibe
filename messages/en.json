@@ -1553,24 +1553,24 @@
   },
   "optionsGuide": {
     "screenerTitle": "How to find a trade with this screener",
-    "screenerIntro": "Sorted by IV Rank — where each stock's option prices sit vs its own 1-year history. High rank = expensive options (sell premium); low rank = cheap options (buy direction). Always read the Verdict first: it is the system's one arbitrated signal.",
-    "sellTitle": "Sell premium (income) — high IV Rank",
+    "screenerIntro": "Two columns do the homework for you. Strategy is the system's premium-selling call — sell puts / sell calls / sell strangle — blended from the quant ensemble and the price-action read, with its conviction %. Best trade is the concrete balanced-profile idea: strike · days-to-expiry · probability of profit · annualized return. The table is still sorted by IV Rank (where options are richest vs their own year); the Verdict is the one arbitrated direction — read it first.",
+    "sellTitle": "Sell premium (income) — use the Strategy & Best-trade columns",
     "sellSteps": {
-      "s1": "Sort by IV Rank (default) and look at names with rank ≥ 70 (amber).",
-      "s2": "Only act where the Verdict agrees with the trade: LONG verdict → sell puts below the market; SHORT → sell calls above; Stand Aside / Conflicting → skip.",
-      "s3": "Click the ticker to open its chain, and check the IV term structure: if only the front expiry is pumped, it's an earnings event — either trade past the event expiry or skip.",
-      "s4": "Sell a strike OUTSIDE the expected move (±%) and behind a big open-interest wall — walls act as support/resistance magnets.",
-      "s5": "Use the Verdict card's invalidation level as your exit signal on the underlying: structure broken = close the short option, don't wait."
+      "s1": "Sort by Strategy (conviction) or Best trade (annualized return). Favour names with IV Rank ≥ 70 (amber) AND conviction above ~50% — rich premium plus a real directional edge.",
+      "s2": "Read the Best-trade cell: higher POP = safer (further OTM), higher annualized = richer. A 70%+ POP with a double-digit annualized return is the sweet spot; ignore thin-premium rows.",
+      "s3": "Cross-check the Verdict: Sell puts wants a Long verdict, Sell calls a Short, Sell strangle a neutral / Conflicting one. If Strategy and Verdict fight, skip — the blend is uncertain.",
+      "s4": "Click the ticker to open the chain and confirm: the suggested strike sits outside the expected move (±%) and behind a big open-interest wall, and the IV term structure isn't just a front-month earnings pump — trade past the event or skip.",
+      "s5": "Plan the exit before entry — the Verdict card's invalidation level is the structural stop on the underlying; structure broken = close the short, don't wait. (Conservative and aggressive variants of each trade live on the stock's Options tab.)"
     },
     "buyTitle": "Buy direction (leverage) — low IV Rank",
     "buySteps": {
-      "s1": "Look for IV Rank ≤ 30 on names with a Strong Long / Long (or Short) verdict — you are buying direction while options are cheap.",
+      "s1": "Strategy / Best trade is a premium-seller's book; to BUY direction instead, look for IV Rank ≤ 30 on names with a Strong Long / Long (or Short) verdict — cheap options, clear direction.",
       "s2": "Open the chain and compare the Verdict's target with the expected move per expiry: pick an expiry whose ±move actually reaches your target.",
       "s3": "Buy a strike near the money (delta 0.45–0.60) — far OTM lottery strikes need the move AND the timing to be right.",
       "s4": "Check theta: shorter expiries decay fastest; give the structural setup (weekly timeframe) at least 30–45 DTE.",
       "s5": "Exit on the Verdict invalidation level or when IV Rank spikes (your option got expensive — sell it to the premium sellers)."
     },
-    "screenerFootnote": "Data is 15-min delayed (Polygon Starter). P/C OI above ~1.2 = put-heavy positioning; 25Δ skew = downside-protection premium; the Unusual column flags strikes with abnormal open interest worth inspecting on the chain.",
+    "screenerFootnote": "Strategy and Best trade come from the daily ranked book (balanced risk profile); conviction blends the quant ensemble with the price-action signal, and “—” means a low-volatility name the book skipped. Data is 15-min delayed (Polygon Starter). P/C OI above ~1.2 = put-heavy positioning; 25Δ skew = downside-protection premium; the Unusual column flags strikes with abnormal open interest worth inspecting on the chain.",
     "chainTitle": "How to pick a strike & expiry on this chain",
     "chainIntro": "Everything here is real market data (greeks, open interest, volume — 15-min delayed). Work top-down: direction → expiry → strike → exit plan.",
     "chainDirTitle": "1 · Direction & timing",
