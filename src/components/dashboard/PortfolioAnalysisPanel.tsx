@@ -18,6 +18,7 @@ import {
   useDeletePortfolioAnalysis,
   type PortfolioAnalysis,
 } from "@/lib/supabase/hooks";
+import { useAppStore } from "@/store/useAppStore";
 
 const ReactMarkdown = ReactMarkdownRaw as unknown as React.FC<{
   children: string;
@@ -241,6 +242,7 @@ function AnalysisBlock({
   onDelete: () => void;
 }) {
   const t = useTranslations("dashboard");
+  const hideBalances = useAppStore((s) => s.hideBalances);
   const dt = useMemo(() => new Date(analysis.created_at), [analysis.created_at]);
   const snapshot = analysis.holdings_snapshot || [];
   const providerLabel =
@@ -292,7 +294,7 @@ function AnalysisBlock({
           </span>
           {analysis.total_value != null && (
             <span className="text-[10px] text-muted-foreground truncate">
-              · ${Math.round(analysis.total_value).toLocaleString()} ·{" "}
+              · {hideBalances ? "••••" : `$${Math.round(analysis.total_value).toLocaleString()}`} ·{" "}
               {t("positionsCount", { count: snapshot.length })}
             </span>
           )}
@@ -344,7 +346,7 @@ function AnalysisBlock({
                             : "—"}
                         </td>
                         <td className="px-2.5 py-1.5 text-right font-mono">
-                          ${Math.round(h.mkt_value).toLocaleString()}
+                          {hideBalances ? "••••" : `$${Math.round(h.mkt_value).toLocaleString()}`}
                         </td>
                         <td className="px-2.5 py-1.5 text-right font-mono font-semibold">
                           {h.weight_pct.toFixed(1)}%

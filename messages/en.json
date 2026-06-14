@@ -824,6 +824,8 @@
     "errEnterShares": "Enter a valid number of shares",
     "errNoPortfolioSelected": "No portfolio selected",
     "gainLoss": "Gain / Loss",
+    "hideBalances": "Hide balances",
+    "showBalances": "Show balances",
     "holdings": "Holdings",
     "latestNewsFor": "Latest News — {ticker}",
     "loading": "Loading portfolios...",

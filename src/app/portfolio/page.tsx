@@ -16,8 +16,9 @@ import {
 } from "@/lib/supabase/hooks";
 import {
   Plus, Trash2, X, Briefcase, TrendingUp, TrendingDown,
-  Loader2, Clock, FolderOpen, Search, RefreshCw,
+  Loader2, Clock, FolderOpen, Search, RefreshCw, Eye, EyeOff,
 } from "lucide-react";
+import { useAppStore } from "@/store/useAppStore";
 import { PortfolioAnalysisPanel } from "@/components/dashboard/PortfolioAnalysisPanel";
 import {
   SUPPORTED_CURRENCIES,
@@ -125,6 +126,10 @@ function TickerInput({
 export default function PortfolioPage() {
   const t = useTranslations("portfolio");
   const tc = useTranslations("common");
+  const hideBalances = useAppStore((s) => s.hideBalances);
+  const toggleHideBalances = useAppStore((s) => s.toggleHideBalances);
+  // Mask any already-formatted monetary string when balances are hidden.
+  const mask = (s: string) => (hideBalances ? "••••" : s);
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
@@ -266,6 +271,15 @@ export default function PortfolioPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">{t("title")}</h1>
         <div className="flex items-center gap-2">
+          <button
+            onClick={toggleHideBalances}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-muted-foreground rounded-lg hover:text-foreground transition-colors"
+            title={hideBalances ? t("showBalances") : t("hideBalances")}
+            aria-pressed={hideBalances}
+          >
+            {hideBalances ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{hideBalances ? t("showBalances") : t("hideBalances")}</span>
+          </button>
           {activePortfolio && positions.length ? (
             <button
               onClick={handleRefreshPrices}
@@ -370,13 +384,13 @@ export default function PortfolioPage() {
                 <span className="text-[9px] text-muted-foreground/70 font-mono">{defaultCurrency}</span>
               </div>
               <div className="stat-value text-lg">
-                {formatCurrency(totalValue, defaultCurrency, { decimals: 0 })}
+                {mask(formatCurrency(totalValue, defaultCurrency, { decimals: 0 }))}
               </div>
             </div>
             <div className="card p-3">
               <div className="stat-label">{t("totalCost")}</div>
               <div className="stat-value text-lg">
-                {formatCurrency(totalCost, defaultCurrency, { decimals: 0 })}
+                {mask(formatCurrency(totalCost, defaultCurrency, { decimals: 0 }))}
               </div>
             </div>
             <div className="card p-3">
@@ -385,7 +399,9 @@ export default function PortfolioPage() {
                 totalGainLoss >= 0 ? "text-green-500" : "text-red-500"
               }`}>
                 {totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {totalGainLoss >= 0 ? "+" : ""}{formatCurrency(Math.abs(totalGainLoss), defaultCurrency, { decimals: 0 })}
+                {hideBalances
+                  ? "••••"
+                  : `${totalGainLoss >= 0 ? "+" : ""}${formatCurrency(Math.abs(totalGainLoss), defaultCurrency, { decimals: 0 })}`}
                 <span className="text-xs ml-1">
                   ({totalReturnPct >= 0 ? "+" : ""}{totalReturnPct.toFixed(1)}%)
                 </span>
@@ -591,7 +607,7 @@ export default function PortfolioPage() {
                             )}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
-                            {formatCurrency(pos.avgCostBasis, nativeCcy)}
+                            {mask(formatCurrency(pos.avgCostBasis, nativeCcy))}
                           </td>
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
                             <div className="flex items-center justify-end gap-1">
@@ -604,8 +620,8 @@ export default function PortfolioPage() {
                           <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
                             {price > 0 ? (
                               <div className="flex flex-col items-end">
-                                <span>{formatCurrency(mktValue, nativeCcy, { decimals: 0 })}</span>
-                                {showConversion && (
+                                <span>{mask(formatCurrency(mktValue, nativeCcy, { decimals: 0 }))}</span>
+                                {showConversion && !hideBalances && (
                                   <span className="text-[9px] text-muted-foreground/70">
                                     ≈ {formatCurrency(mktValueDefault, defaultCurrency, { decimals: 0 })}
                                   </span>
@@ -619,8 +635,9 @@ export default function PortfolioPage() {
                             {price > 0 ? (
                               <div className="flex flex-col items-end">
                                 <span>
-                                  {gainLoss >= 0 ? "+" : ""}
-                                  {formatCurrency(Math.abs(gainLossDefault), defaultCurrency, { decimals: 0 })}
+                                  {hideBalances
+                                    ? "••••"
+                                    : `${gainLoss >= 0 ? "+" : ""}${formatCurrency(Math.abs(gainLossDefault), defaultCurrency, { decimals: 0 })}`}
                                 </span>
                                 <span className="text-[10px] sm:hidden">{returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%</span>
                               </div>

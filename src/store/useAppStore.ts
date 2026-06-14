@@ -97,6 +97,21 @@ interface AppState {
   setSelectedTicker: (ticker: string | null) => void;
   wsConnected: boolean;
   setWsConnected: (connected: boolean) => void;
+  // Privacy — hide monetary balances across the portfolio UI. Persisted to
+  // localStorage so the choice survives reloads (mirrors the theme pattern).
+  hideBalances: boolean;
+  toggleHideBalances: () => void;
+}
+
+const HIDE_BALANCES_KEY = "vibefin-hide-balances";
+
+function readHideBalances(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(HIDE_BALANCES_KEY) === "1";
+  } catch {
+    return false;
+  }
 }
 
 export const useAppStore = create<AppState>()(
@@ -149,6 +164,17 @@ export const useAppStore = create<AppState>()(
       setSelectedTicker: (ticker) => set({ selectedTicker: ticker }),
       wsConnected: false,
       setWsConnected: (connected) => set({ wsConnected: connected }),
+      hideBalances: readHideBalances(),
+      toggleHideBalances: () =>
+        set((state) => {
+          const next = !state.hideBalances;
+          try {
+            window.localStorage.setItem(HIDE_BALANCES_KEY, next ? "1" : "0");
+          } catch {
+            // ignore — privacy toggle just won't persist
+          }
+          return { hideBalances: next };
+        }),
     }),
     { name: "StockResearchStore" }
   )

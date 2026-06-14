@@ -824,6 +824,8 @@
     "errEnterShares": "Enter a valid number of shares",
     "errNoPortfolioSelected": "No portfolio selected",
     "gainLoss": "Gain / Loss",
+    "hideBalances": "隐藏金额",
+    "showBalances": "显示金额",
     "holdings": "Holdings",
     "latestNewsFor": "最新新闻 — {ticker}",
     "loading": "Loading portfolios...",

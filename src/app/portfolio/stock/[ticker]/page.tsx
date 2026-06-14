@@ -15,11 +15,13 @@ import {
   TrendingUp, TrendingDown, Loader2,
   Calendar, DollarSign, Briefcase, Brain, ReceiptText,
 } from "lucide-react";
+import { useAppStore } from "@/store/useAppStore";
 
 type Tab = "analysis" | "events_news" | "options" | "transactions";
 
 export default function PortfolioStockPage() {
   const t = useTranslations("portfolio");
+  const hideBalances = useAppStore((s) => s.hideBalances);
   const params = useParams();
   const ticker = (params.ticker as string)?.toUpperCase();
   const [activeTab, setActiveTab] = useState<Tab>("analysis");
@@ -139,7 +141,7 @@ export default function PortfolioStockPage() {
             <div>
               <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t("columnMktValue")}</div>
               <div className="text-lg font-mono font-bold">
-                {currentPrice > 0 ? `$${mktValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "—"}
+                {currentPrice > 0 ? (hideBalances ? "••••" : `$${mktValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}`) : "—"}
               </div>
             </div>
             <div>
@@ -147,7 +149,7 @@ export default function PortfolioStockPage() {
               {currentPrice > 0 ? (
                 <div className={`flex items-center gap-1 text-lg font-mono font-bold ${isUnderwater ? "text-red-500" : "text-green-500"}`}>
                   {isUnderwater ? <TrendingDown className="w-4 h-4" /> : <TrendingUp className="w-4 h-4" />}
-                  {gainLoss >= 0 ? "+" : ""}${Math.abs(gainLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                  {hideBalances ? "••••" : `${gainLoss >= 0 ? "+" : ""}$${Math.abs(gainLoss).toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
                   <span className="text-xs">({returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%)</span>
                 </div>
               ) : <div className="text-lg font-mono font-bold text-muted-foreground">—</div>}
