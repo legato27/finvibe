@@ -1536,7 +1536,20 @@
     "colSkew": "25Δ 偏斜",
     "colUnusual": "异常",
     "colUnusualLong": "异常持仓集中度",
-    "empty": "暂无美股期权链数据——预取在美股交易时段自动运行。"
+    "empty": "暂无美股期权链数据——预取在美股交易时段自动运行。",
+    "colStrategy": "策略",
+    "colStrategyLong": "来自量化 + 价格行为排行榜的卖方权利金策略与信心",
+    "colTrade": "最佳交易",
+    "colTradeLong": "平衡型行权价、到期天数、盈利概率与年化回报",
+    "convShort": "{pct}% 信心",
+    "popShort": "{pct}% 盈利概率",
+    "annShort": "{pct}% 年化",
+    "noReco": "未进入排行榜（波动率偏低）",
+    "strat": {
+      "sell_puts": "卖出看跌",
+      "sell_calls": "卖出看涨",
+      "sell_strangle": "卖出宽跨式"
+    }
   },
   "optionsGuide": {
     "screenerTitle": "如何用此筛选器寻找交易机会",

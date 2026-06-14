@@ -1536,7 +1536,20 @@
     "colSkew": "25Δ skew",
     "colUnusual": "Unusual",
     "colUnusualLong": "Unusual open-interest concentrations",
-    "empty": "No US names with chain data yet — the prefetch warms during market hours."
+    "empty": "No US names with chain data yet — the prefetch warms during market hours.",
+    "colStrategy": "Strategy",
+    "colStrategyLong": "Premium-selling strategy and conviction from the quant + price-action ranked book",
+    "colTrade": "Best trade",
+    "colTradeLong": "Balanced-profile strike, days to expiry, probability of profit and annualized return",
+    "convShort": "{pct}% conv",
+    "popShort": "{pct}% POP",
+    "annShort": "{pct}% ann",
+    "noReco": "Not in the ranked book (low volatility)",
+    "strat": {
+      "sell_puts": "Sell puts",
+      "sell_calls": "Sell calls",
+      "sell_strangle": "Sell strangle"
+    }
   },
   "optionsGuide": {
     "screenerTitle": "How to find a trade with this screener",

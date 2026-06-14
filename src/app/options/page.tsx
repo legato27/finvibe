@@ -34,11 +34,32 @@ interface ScreenerRow {
   skew_25d_pp: number | null;
   n_unusual_oi: number | null;
   summary_date: string | null;
+  reco: OptionReco | null;
+}
+
+interface OptionReco {
+  strategy: "sell_puts" | "sell_calls" | "sell_strangle" | null;
+  conviction: number | null; // 0–1
+  score: number | null;
+  rank: number | null;
+  best_dte: number | null;
+  side: "put" | "call" | null;
+  strike: number | null;
+  strikes: { put: number; call: number } | null;
+  pop: number | null; // 0–1
+  annualized_return_pct: number | null;
+  agreement: "agree" | "mixed" | "conflict" | null;
 }
 
 function fmt(v: number | null | undefined, digits = 1, suffix = ""): string {
   return v == null ? "—" : `${v.toFixed(digits)}${suffix}`;
 }
+
+const STRATEGY_TONE: Record<string, string> = {
+  sell_puts: "text-signal-long",
+  sell_calls: "text-signal-short",
+  sell_strangle: "text-signal-caution",
+};
 
 export default function OptionsScreenerPage() {
   const t = useTranslations("optionsChain");
@@ -83,6 +104,58 @@ export default function OptionsScreenerPage() {
       sortable: true,
       sortValue: (r) => r.verdict ?? "",
       cell: (r) => <VerdictBadge state={r.verdict as VerdictState} size="sm" />,
+    },
+    {
+      key: "strategy",
+      header: ts("colStrategy"),
+      ariaLabel: ts("colStrategyLong"),
+      sortable: true,
+      // Sort by conviction; names without a ranked-book reco sink to the bottom.
+      sortValue: (r) => r.reco?.conviction ?? -1,
+      cell: (r) => {
+        const rc = r.reco;
+        if (!rc?.strategy) return <span className="text-muted-foreground" title={ts("noReco")}>—</span>;
+        const conv = rc.conviction != null ? Math.round(rc.conviction * 100) : null;
+        return (
+          <span className="inline-flex flex-col items-start leading-tight">
+            <span className={`text-xs font-semibold ${STRATEGY_TONE[rc.strategy] ?? ""}`}>
+              {ts(`strat.${rc.strategy}`)}
+            </span>
+            {conv != null && (
+              <span className="nums text-[10px] text-muted-foreground">{ts("convShort", { pct: conv })}</span>
+            )}
+          </span>
+        );
+      },
+    },
+    {
+      key: "trade",
+      header: ts("colTrade"),
+      ariaLabel: ts("colTradeLong"),
+      sortable: true,
+      sortValue: (r) => r.reco?.annualized_return_pct ?? -1,
+      align: "right",
+      hideBelow: "lg",
+      cell: (r) => {
+        const rc = r.reco;
+        if (!rc?.strategy) return <span className="text-muted-foreground">—</span>;
+        const strikeTxt =
+          rc.strategy === "sell_strangle" && rc.strikes
+            ? `${rc.strikes.put}p/${rc.strikes.call}c`
+            : rc.strike != null
+            ? `$${rc.strike}${rc.side === "call" ? "c" : "p"}`
+            : "—";
+        return (
+          <span className="nums font-mono text-xs text-foreground/80">
+            {strikeTxt}
+            {rc.best_dte != null && <span className="text-muted-foreground"> · {rc.best_dte}d</span>}
+            {rc.pop != null && <span className="text-muted-foreground"> · {ts("popShort", { pct: Math.round(rc.pop * 100) })}</span>}
+            {rc.annualized_return_pct != null && (
+              <span className="text-signal-long"> · {ts("annShort", { pct: rc.annualized_return_pct.toFixed(0) })}</span>
+            )}
+          </span>
+        );
+      },
     },
     {
       key: "iv_rank",
