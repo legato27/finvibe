@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, SlidersHorizontal, ChevronDown, ChevronUp } from "lucide-react";
 import { modelsApi, stocksApi } from "@/lib/api";
 import { useMyWatchlistTickers } from "@/lib/supabase/hooks";
 import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 import LivePrice from "@/components/ui/LivePrice";
+import GuideCard from "@/components/ui/GuideCard";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScopeSortControls } from "@/components/shared/ScopeSortControls";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
@@ -38,11 +39,27 @@ const BUCKET_STYLE: Record<string, string> = {
   short: "text-signal-short",
   neutral: "text-muted-foreground",
 };
+// Six ranking factors (keys mirror the backend cross_sectional engine). The
+// composite is a weighted average of a name's available factor z-scores; weights
+// are applied client-side so the table re-ranks instantly without a recompute.
+const FACTOR_META: { key: string; label: string; desc: string }[] = [
+  { key: "momentum", label: "Momentum", desc: "12-1 month price trend (last year's return, skipping the latest month)" },
+  { key: "ensemble", label: "Forecast", desc: "ML ensemble predicted 3-month return" },
+  { key: "quality", label: "Quality", desc: "Piotroski F-score — 9-point fundamental-health checklist" },
+  { key: "value", label: "Value", desc: "DCF margin of safety (intrinsic value vs price)" },
+  { key: "moat", label: "Moat", desc: "Confidence in the company's competitive moat" },
+  { key: "low_vol", label: "Low vol", desc: "GARCH volatility forecast, scored inverted (calmer = better)" },
+];
+const FACTOR_KEYS = FACTOR_META.map((f) => f.key);
+// Equal default weights reproduce the engine's equal-weighted composite.
+const DEFAULT_WEIGHTS: Record<string, number> = Object.fromEntries(FACTOR_KEYS.map((k) => [k, 50]));
+const WEIGHTS_KEY = "vibefin-ranked-weights";
+
 const TIPS = {
   prob:
     "Ensemble model's probability that the name is profitable over its 3-month horizon. Sort by this for highest-probability names on top.",
   composite:
-    "Cross-sectional composite z-score blending momentum, value (margin of safety), moat and other factors vs the whole universe. Higher = stronger relative rank.",
+    "Cross-sectional composite z-score blending the six factors (by your weights) vs the whole universe. Higher = stronger relative rank.",
   percentile:
     "Rank percentile (0–100) within the universe — 100 = top-ranked composite-z conviction.",
   signal: "Top quintile → Long, bottom quintile → Short, middle → Neutral.",
@@ -63,6 +80,28 @@ export default function RankedBookPage() {
   const [scope, setScope] = useState<"mine" | "all">("mine");
   const [sort, setSort] = useState<"prob" | "z">("prob");
   const [symbol, setSymbol] = useState("");
+  const [weightsOpen, setWeightsOpen] = useState(false);
+
+  // Factor weights — personal lens, persisted to localStorage. Equal defaults
+  // reproduce the backend's equal-weighted composite.
+  const [weights, setWeights] = useState<Record<string, number>>(() => {
+    if (typeof window === "undefined") return DEFAULT_WEIGHTS;
+    try {
+      const raw = window.localStorage.getItem(WEIGHTS_KEY);
+      if (raw) return { ...DEFAULT_WEIGHTS, ...JSON.parse(raw) };
+    } catch {
+      // ignore
+    }
+    return DEFAULT_WEIGHTS;
+  });
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(WEIGHTS_KEY, JSON.stringify(weights));
+    } catch {
+      // ignore — weights just won't persist
+    }
+  }, [weights]);
+  const isDefaultWeights = FACTOR_KEYS.every((k) => weights[k] === DEFAULT_WEIGHTS[k]);
 
   const { data, isLoading, error } = useQuery<RankedBook>({
     queryKey: ["cross-sectional-ranked"],
@@ -70,12 +109,42 @@ export default function RankedBookPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // Re-weight client-side: recompute composite (weighted mean of available
+  // factor z-scores), then re-sort / re-rank / re-percentile / re-bucket. Equal
+  // weights == the backend result; zeroing a factor drops it from the blend.
+  const rankedRows = useMemo(() => {
+    const rows = data?.ranked ?? [];
+    if (!rows.length) return [] as RankedRow[];
+    const scored = rows.map((r) => {
+      let num = 0;
+      let den = 0;
+      for (const k of FACTOR_KEYS) {
+        const z = r.factors?.[k];
+        const w = weights[k] ?? 0;
+        if (typeof z === "number" && w > 0) {
+          num += w * z;
+          den += w;
+        }
+      }
+      const composite = den > 0 ? num / den : r.composite_z;
+      return { ...r, composite_z: Math.round(composite * 1000) / 1000 };
+    });
+    scored.sort((a, b) => b.composite_z - a.composite_z);
+    const n = scored.length;
+    scored.forEach((r, i) => {
+      r.rank = i + 1;
+      r.percentile = Math.round(((n - i) / n) * 1000) / 10;
+      r.bucket = i < n * 0.2 ? "long" : i >= n * 0.8 ? "short" : "neutral";
+    });
+    return scored;
+  }, [data, weights]);
+
   const { data: myTickers } = useMyWatchlistTickers();
   const hasMine = (myTickers?.size ?? 0) > 0;
   const useMine = scope === "mine" && hasMine;
 
   // Live prices (the ranking is cached; overlay realtime quotes for all names).
-  const tickers = data?.ranked.map((r) => r.ticker) ?? [];
+  const tickers = rankedRows.map((r) => r.ticker);
   const { data: livePrices } = useQuery<Array<{ ticker: string; price: number | null }>>({
     queryKey: ["ranked-live-prices", tickers.length],
     queryFn: () => stocksApi.refreshPrices(tickers),
@@ -109,7 +178,7 @@ export default function RankedBookPage() {
   const sortKey = (r: RankedRow) =>
     sort === "prob" ? r.prob_profit_pct ?? -1 : r.composite_z;
   const q = symbol.trim().toUpperCase();
-  const visibleRows = (data?.ranked ?? [])
+  const visibleRows = rankedRows
     .filter((r) => filter === "all" || r.bucket === filter)
     .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false))
     .filter((r) => !q || r.ticker.toUpperCase().includes(q))
@@ -127,6 +196,36 @@ export default function RankedBookPage() {
         </p>
       </div>
 
+      <GuideCard
+        title="How the Ranked Book works"
+        intro="Every watchlist stock is scored against every other stock on six factors, blended into one composite z-score. The top quintile is the Long bucket, the bottom quintile is Short. Use the factor weights below to tilt the blend toward what you care about."
+        sections={[
+          {
+            title: "The six factors",
+            tone: "plain",
+            steps: [
+              "Momentum — 12-1 month price trend (last year's return, skipping the most recent month).",
+              "Forecast — the ML ensemble's predicted 3-month return.",
+              "Quality — Piotroski F-score, a 9-point fundamental-health checklist.",
+              "Value — DCF margin of safety (intrinsic value vs price).",
+              "Moat — confidence in the company's competitive moat.",
+              "Low volatility — GARCH volatility forecast, scored inverted (calmer = better).",
+            ],
+          },
+          {
+            title: "How the score is built",
+            tone: "plain",
+            steps: [
+              "Each factor becomes a cross-sectional z-score: how many standard deviations a name sits above/below the universe average, capped at ±3 so outliers can't dominate.",
+              "The composite is the weighted average of a name's available z-scores (a stock needs at least 3 of the 6 factors to be ranked).",
+              "Sorted by composite: top 20% = Long, bottom 20% = Short, the middle 60% = Neutral.",
+              "The Verdict column is separate — it arbitrates the rank with price action, sentiment, the ensemble and FinVibe Thoughts, and is NOT changed by your weights.",
+            ],
+          },
+        ]}
+        footnote="Recomputed nightly after the quant refresh. Factor weights are applied in your browser and re-rank the table instantly — they personalise your view without changing the underlying data or the system Verdict."
+      />
+
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">Computing cross-sectional ranking…</div>}
       {error && <div className="card p-6 text-sm text-red-400">Failed to load ranking.</div>}
 
@@ -141,6 +240,70 @@ export default function RankedBookPage() {
             <span>·</span>
             <span>factors: {data.factors.join(", ")}</span>
           </div>
+
+          {/* Factor weights — personal lens, re-ranks the book client-side */}
+          <section aria-label="Factor weights" className="card">
+            <button
+              type="button"
+              aria-expanded={weightsOpen}
+              onClick={() => setWeightsOpen((o) => !o)}
+              className="flex w-full items-center justify-between gap-2 text-left"
+            >
+              <span className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
+                <SlidersHorizontal className="h-4 w-4 text-primary" aria-hidden="true" />
+                Factor weights
+                {!isDefaultWeights && (
+                  <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-normal text-primary">customised</span>
+                )}
+              </span>
+              {weightsOpen ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              )}
+            </button>
+
+            {weightsOpen && (
+              <div className="mt-3 space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Tilt how much each factor counts toward the composite. Re-ranks the table instantly (your view only — the
+                  system Verdict is unchanged). Set a factor to 0 to ignore it.
+                </p>
+                <div className="grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2">
+                  {FACTOR_META.map((f) => (
+                    <div key={f.key}>
+                      <div className="mb-1 flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground/80" title={f.desc}>
+                          {f.label}
+                        </span>
+                        <span className="font-mono text-muted-foreground">{weights[f.key]}</span>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={weights[f.key]}
+                        onChange={(e) => setWeights((w) => ({ ...w, [f.key]: Number(e.target.value) }))}
+                        className="w-full accent-primary"
+                        aria-label={`${f.label} weight`}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setWeights(DEFAULT_WEIGHTS)}
+                    disabled={isDefaultWeights}
+                    className="rounded-md border border-border/50 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+                  >
+                    Reset to defaults
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
 
           {/* scope + sort */}
           <ScopeSortControls
