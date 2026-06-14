@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, DollarSign, Settings, ListOrdered } from "lucide-react";
+import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, Settings, ListOrdered } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { useTranslations } from "next-intl";
@@ -60,7 +60,6 @@ export default function Navbar() {
     // ScreenerTabs bar on those pages is the second-level navigation.
     { href: "/ranked", label: tNav("screeners"), icon: ListOrdered, public: true, match: ["/ranked", "/multibagger", "/options"] },
     { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
-    { href: "/trades", label: tNav("trades"), icon: DollarSign, public: false },
   ];
 
   const visibleItems = navItems.filter((item) => item.public || user);
