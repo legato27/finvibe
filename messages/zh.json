@@ -1098,7 +1098,8 @@
       "seeRefHint": "查看<link>API 参考</link>以获取完整工具列表和各客户端的配置示例。"
     },
     "updatePassword": "Update password",
-    "yourNamePh": "Your name"
+    "yourNamePh": "Your name",
+    "jobRuns": "任务运行"
   },
   "stock": {
     "addLot": "添加买入",
@@ -1587,5 +1588,28 @@
       "s4": "查看异常持仓——某一行权价新出现的集中持仓是资金流信息；不要直接卖到它对面。",
       "s5": "入场前先定离场：判定卡上的 PAM 失效位就是正股的结构止损——结构破了，期权仓位也随之了结。"
     }
+  },
+  "jobRuns": {
+    "title": "任务运行记录",
+    "intro": "计划中的后台任务——最近运行状态、耗时与错误。可按需重新运行（一次一个）。",
+    "loading": "加载任务中…",
+    "loadError": "加载任务状态失败。",
+    "colJob": "任务",
+    "colStatus": "状态",
+    "colStarted": "开始",
+    "colCompleted": "完成",
+    "colDuration": "耗时",
+    "colAction": "操作",
+    "statusSuccess": "成功",
+    "statusFailure": "失败",
+    "statusRunning": "运行中",
+    "statusQueued": "排队中",
+    "statusNever": "从未运行",
+    "rerun": "重跑",
+    "manual": "手动触发",
+    "rerunQueued": "{job} 已重新排队。",
+    "rerunBusy": "正在运行——请等其完成后再试。",
+    "rerunFailed": "重跑失败。",
+    "footnote": "时间为本地时区。失败的运行不会阻塞计划——下一次照常触发。重跑为单飞：每个任务同时只允许一个触发。"
   }
 }

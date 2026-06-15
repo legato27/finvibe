@@ -9,6 +9,7 @@ import {
   Clock,
   DollarSign,
   Plug,
+  Activity,
   ChevronLeft,
 } from "lucide-react";
 
@@ -18,6 +19,7 @@ const NAV = [
   { href: "/settings/login-history", labelKey: "loginHistory", icon: Clock },
   { href: "/settings/currency", labelKey: "currency", icon: DollarSign },
   { href: "/settings/mcp", labelKey: "mcp", icon: Plug },
+  { href: "/settings/job-runs", labelKey: "jobRuns", icon: Activity },
 ] as const;
 
 export function SettingsSidebar() {

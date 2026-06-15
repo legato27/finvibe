@@ -1098,7 +1098,8 @@
       "seeRefHint": "See <link>the API reference</link> for the full tool list and per-client setup snippets."
     },
     "updatePassword": "Update password",
-    "yourNamePh": "Your name"
+    "yourNamePh": "Your name",
+    "jobRuns": "Job runs"
   },
   "stock": {
     "addLot": "添加买入",
@@ -1587,5 +1588,28 @@
       "s4": "Check Unusual OI — a fresh concentrated position at one strike is flow information; don't sell straight into it.",
       "s5": "Plan the exit before entry: the PAM invalidation level on the Verdict card is the structural stop for the underlying — option positions die with the structure."
     }
+  },
+  "jobRuns": {
+    "title": "Job Run History",
+    "intro": "Scheduled background jobs — last run status, timing, and errors. Rerun any job on demand (one at a time).",
+    "loading": "Loading jobs…",
+    "loadError": "Failed to load job status.",
+    "colJob": "Job",
+    "colStatus": "Status",
+    "colStarted": "Started",
+    "colCompleted": "Completed",
+    "colDuration": "Duration",
+    "colAction": "Action",
+    "statusSuccess": "Success",
+    "statusFailure": "Failed",
+    "statusRunning": "Running",
+    "statusQueued": "Queued",
+    "statusNever": "Never run",
+    "rerun": "Rerun",
+    "manual": "manual trigger",
+    "rerunQueued": "{job} re-queued.",
+    "rerunBusy": "Already running — try again when it finishes.",
+    "rerunFailed": "Rerun failed.",
+    "footnote": "Times are local. A failed run never blocks the schedule — the next run fires as normal. Reruns are single-flight: only one trigger per job at a time."
   }
 }

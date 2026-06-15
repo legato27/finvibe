@@ -208,6 +208,14 @@ export const modelsApi = {
   optionsRecoOpen: () => api.get(`/api/models/options-reco/open`).then((r) => r.data),
 };
 
+// ── Scheduled jobs (status page) ──────────────────────────────
+
+export const jobsApi = {
+  status: () => api.get("/api/jobs/status").then((r) => r.data),
+  rerun: (taskName: string) =>
+    api.post(`/api/jobs/${encodeURIComponent(taskName)}/rerun`).then((r) => r.data),
+};
+
 // ── Macro ─────────────────────────────────────────────────────
 
 export const macroApi = {
