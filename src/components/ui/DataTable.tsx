@@ -13,6 +13,7 @@
  *  - 14px minimum text, tabular numerals via the `nums` utility
  */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ReactNode, useMemo, useState } from "react";
 
 export interface Column<Row> {
@@ -51,6 +52,7 @@ export default function DataTable<Row>({
   emptyText?: string;
 }) {
   const [sort, setSort] = useState(defaultSort ?? null);
+  const router = useRouter();
 
   const sorted = useMemo(() => {
     if (!sort) return rows;
@@ -116,10 +118,26 @@ export default function DataTable<Row>({
               </td>
             </tr>
           )}
-          {sorted.map((row) => (
+          {sorted.map((row) => {
+            const href = rowHref?.(row);
+            return (
             <tr
               key={rowKey(row)}
-              className="relative border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40 focus-within:bg-muted/40"
+              // Row navigation via a guarded onClick — reliable on every browser.
+              // (The old CSS stretched-link relied on `position: relative` on the
+              // <tr>, which iOS Safari ignores, so every row's overlay collapsed
+              // onto one another and every tap hit the last row's link.)
+              onClick={
+                href
+                  ? (e) => {
+                      if ((e.target as HTMLElement).closest("a,button")) return;
+                      router.push(href);
+                    }
+                  : undefined
+              }
+              className={`border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40 focus-within:bg-muted/40 ${
+                href ? "cursor-pointer" : ""
+              }`}
             >
               {columns.map((c, i) => (
                 <td
@@ -128,11 +146,8 @@ export default function DataTable<Row>({
                     c.hideBelow ? HIDE[c.hideBelow] : ""
                   } ${c.className ?? ""}`}
                 >
-                  {i === 0 && rowHref ? (
-                    <Link
-                      href={rowHref(row)}
-                      className="font-medium text-foreground after:absolute after:inset-0 after:content-[''] focus-visible:after:outline focus-visible:after:outline-2 focus-visible:after:outline-ring"
-                    >
+                  {i === 0 && href ? (
+                    <Link href={href} className="font-medium text-foreground hover:underline">
                       {c.cell(row)}
                     </Link>
                   ) : (
@@ -141,7 +156,8 @@ export default function DataTable<Row>({
                 </td>
               ))}
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>
