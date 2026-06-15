@@ -21,6 +21,7 @@ interface JobRow {
   task_name: string;
   short_name: string;
   schedule: string;
+  next_run: string | null;
   running: boolean;
   last: RunInfo | null;
 }
@@ -112,6 +113,7 @@ export function JobRunsCard() {
               <th scope="col" className="px-3 py-2 text-left hidden sm:table-cell">{t("colStarted")}</th>
               <th scope="col" className="px-3 py-2 text-left hidden md:table-cell">{t("colCompleted")}</th>
               <th scope="col" className="px-3 py-2 text-right hidden sm:table-cell">{t("colDuration")}</th>
+              <th scope="col" className="px-3 py-2 text-left hidden lg:table-cell">{t("colNextRun")}</th>
               <th scope="col" className="px-3 py-2 text-right">{t("colAction")}</th>
             </tr>
           </thead>
@@ -136,6 +138,7 @@ export function JobRunsCard() {
                 <td className="px-3 py-2 text-muted-foreground hidden sm:table-cell nums">{fmtTime(j.last?.started_at)}</td>
                 <td className="px-3 py-2 text-muted-foreground hidden md:table-cell nums">{fmtTime(j.last?.completed_at)}</td>
                 <td className="px-3 py-2 text-right text-muted-foreground hidden sm:table-cell nums">{fmtDur(j.last?.duration_ms)}</td>
+                <td className="px-3 py-2 text-muted-foreground hidden lg:table-cell nums" title={j.schedule}>{fmtTime(j.next_run)}</td>
                 <td className="px-3 py-2 text-right">
                   <button
                     type="button"
