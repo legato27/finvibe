@@ -46,7 +46,7 @@ const TIPS = {
     "Cross-sectional composite z-score equal-weighting momentum, forecast, quality, value (margin of safety), moat and low-volatility vs the whole universe. Higher = stronger relative rank.",
   percentile:
     "Rank percentile (0–100) within the universe — 100 = top-ranked composite-z conviction.",
-  signal: "Top quintile → Long, bottom quintile → Short, middle → Neutral.",
+  signal: "Cross-sectional rank bucket: top quintile = Long, bottom = Short, middle = Neutral. This is purely the factor-composite ranking — distinct from the arbitrated Verdict, which can differ (e.g. when sentiment or the ensemble outweighs a weak factor rank).",
   verdict: "The unified verdict — ensemble, price action, ranking, sentiment and FinVibe Thoughts arbitrated into one conflict-aware state.",
   price: "Live price, refreshed every 60s.",
 };
@@ -217,7 +217,7 @@ export default function RankedBookPage() {
             <InfoTip label="Prob" tip={TIPS.prob} size={11} />
             <InfoTip label="Composite z" tip={TIPS.composite} size={11} />
             <InfoTip label="%ile" tip={TIPS.percentile} size={11} />
-            <InfoTip label="Signal" tip={TIPS.signal} size={11} />
+            <InfoTip label="Bucket" tip={TIPS.signal} size={11} />
             <InfoTip label="Verdict" tip={TIPS.verdict} size={11} />
           </div>
 
@@ -232,7 +232,7 @@ export default function RankedBookPage() {
                   <th scope="col" className="text-left p-2 hidden sm:table-cell">Sector</th>
                   <th scope="col" className="text-right p-2" title={TIPS.composite}>Composite z</th>
                   <th scope="col" className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>%ile</th>
-                  <th scope="col" className="text-center p-2" title={TIPS.signal}>Signal</th>
+                  <th scope="col" className="text-center p-2" title={TIPS.signal}>Bucket</th>
                   <th scope="col" className="text-center p-2" title={TIPS.verdict}>Verdict</th>
                 </tr>
               </thead>
