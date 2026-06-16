@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { RefreshCw, CheckCircle2, XCircle, Loader2, Clock, MinusCircle } from "lucide-react";
+import { RefreshCw, CheckCircle2, XCircle, Loader2, Clock, MinusCircle, AlertTriangle } from "lucide-react";
 import { jobsApi } from "@/lib/api";
 
 interface RunInfo {
@@ -33,6 +33,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
     failure: { cls: "text-signal-short", icon: <XCircle className="w-3.5 h-3.5" />, key: "statusFailure" },
     started: { cls: "text-primary", icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, key: "statusRunning" },
     queued: { cls: "text-signal-caution", icon: <Clock className="w-3.5 h-3.5" />, key: "statusQueued" },
+    stale: { cls: "text-signal-caution", icon: <AlertTriangle className="w-3.5 h-3.5" />, key: "statusStale" },
   };
   const s = status ? map[status] : undefined;
   if (!s) return (

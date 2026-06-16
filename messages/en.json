@@ -1611,6 +1611,7 @@
     "rerunBusy": "Already running — try again when it finishes.",
     "rerunFailed": "Rerun failed.",
     "footnote": "Times are local. A failed run never blocks the schedule — the next run fires as normal. Reruns are single-flight: only one trigger per job at a time.",
-    "colNextRun": "Next run"
+    "colNextRun": "Next run",
+    "statusStale": "Stale"
   }
 }
