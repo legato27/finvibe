@@ -5,10 +5,17 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, Sparkles, ShieldAlert, RefreshCw } from "lucide-react";
 import { scannerApi, stocksApi } from "@/lib/api";
+import { useWatchlistGroups } from "@/lib/supabase/hooks";
 import LivePrice from "@/components/ui/LivePrice";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
+import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
+import {
+  ColumnFilterBar,
+  useColumnFilters,
+  type FilterDef,
+} from "@/components/shared/ColumnFilters";
 
 // Scanner emits a lighter PAM read than the watchlist PamSummary.
 interface PamRead {
@@ -122,7 +129,8 @@ const pctColor = (x?: number | null) =>
 export default function MultibaggerPage() {
   const [track, setTrack] = useState<"all" | "A" | "B">("all");
   const [tab, setTab] = useState<"candidates" | "performance">("candidates");
-  const [symbol, setSymbol] = useState("");
+  const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
+  const { data: watchlistGroups } = useWatchlistGroups();
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<ScanResult>({
     queryKey: ["multibagger-candidates", track],
@@ -150,9 +158,27 @@ export default function MultibaggerPage() {
   });
 
   const regime = data?.regime;
-  const q = symbol.trim().toUpperCase();
-  const candidates = (data?.candidates ?? []).filter(
-    (c) => !q || c.ticker.toUpperCase().includes(q) || (c.name ?? "").toUpperCase().includes(q),
+
+  // Watchlist scope → type-aware column filters (rank order preserved).
+  const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
+  const wlRows = (data?.candidates ?? []).filter(
+    (c) => !wlSet || wlSet.has(c.ticker.toUpperCase()),
+  );
+  const filterDefs: FilterDef<Candidate>[] = [
+    { key: "ticker", label: "Ticker", kind: "text", value: (c) => `${c.ticker} ${c.name ?? ""}` },
+    { key: "track", label: "Track", kind: "select", value: (c) => c.track },
+    { key: "sector", label: "Sector", kind: "select", value: (c) => c.sector ?? "" },
+    { key: "theme", label: "Theme", kind: "select", value: (c) => c.theme_cluster ?? "" },
+    { key: "breakout", label: "Status", kind: "select", value: (c) => c.breakout_state ?? "" },
+    { key: "flags", label: "Flags", kind: "select", value: (c) => c.redflags?.verdict ?? "" },
+    { key: "score", label: "Score", kind: "number", value: (c) => c.composite ?? null },
+    { key: "rs", label: "RS", kind: "number", value: (c) => c.rs_rating ?? null },
+    { key: "ret12m", label: "12m %", kind: "number", value: (c) => c.ret_12m ?? null },
+    { key: "frm52h", label: "% from 52wH", kind: "number", value: (c) => c.pct_from_52w_high ?? null },
+  ];
+  const { filtered: candidates, state: filterState, setState: setFilterState } = useColumnFilters(
+    wlRows,
+    filterDefs,
   );
 
   return (
@@ -216,8 +242,8 @@ export default function MultibaggerPage() {
 
       {tab === "candidates" && (
         <>
-          {/* track toggle + symbol filter */}
-          <div className="flex items-center gap-2 flex-wrap">
+          {/* track toggle (drives the scan query) + watchlist scope */}
+          <div className="flex items-center gap-3 flex-wrap">
             <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
               {([["all", "All"], ["A", "Track A · Leaders"], ["B", "Track B · Early"]] as const).map(([f, label]) => (
                 <button
@@ -231,13 +257,11 @@ export default function MultibaggerPage() {
                 </button>
               ))}
             </div>
-            <input
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="Filter symbol…"
-              className="px-3 py-1.5 rounded-md text-xs bg-muted/50 border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary/50 w-40"
-            />
+            <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
           </div>
+
+          {/* type-aware column filters */}
+          <ColumnFilterBar rows={wlRows} defs={filterDefs} state={filterState} setState={setFilterState} />
 
           {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
           {error && <div className="card p-6 text-sm text-red-400">Failed to load candidates.</div>}

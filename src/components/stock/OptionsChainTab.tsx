@@ -68,6 +68,34 @@ function SideCells({ side, maxOi }: { side?: ChainSide; maxOi: number }) {
   );
 }
 
+type StrategyLogRow = {
+  made_at: string;
+  strategy: string | null;
+  side: string | null;
+  put_strike: number | null;
+  call_strike: number | null;
+  best_dte: number | null;
+  pop_pred: number | null;
+  annualized_return_pct: number | null;
+  conviction: number | null;
+  agreement: string | null;
+};
+
+const STRATEGY_TONE: Record<string, string> = {
+  sell_puts: "text-signal-long",
+  sell_calls: "text-signal-short",
+  sell_strangle: "text-signal-caution",
+};
+
+function strategyTrade(r: StrategyLogRow): string {
+  if (r.strategy === "sell_strangle" && r.put_strike != null && r.call_strike != null) {
+    return `${r.put_strike}p/${r.call_strike}c`;
+  }
+  const k = r.side === "call" ? r.call_strike : r.put_strike;
+  if (k == null) return "—";
+  return `$${k}${r.side === "call" ? "c" : "p"}`;
+}
+
 export default function OptionsChainTab({ ticker }: { ticker: string }) {
   const t = useTranslations("optionsChain");
   const tg = useTranslations("optionsGuide");
@@ -76,6 +104,12 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
   const { data: summary, isLoading: summaryLoading, isError: summaryError } = useQuery({
     queryKey: ["options-summary", ticker],
     queryFn: () => optionsApi.summary(ticker),
+    staleTime: STALE,
+    retry: 1,
+  });
+  const { data: strategyLog } = useQuery<{ count: number; rows: StrategyLogRow[] }>({
+    queryKey: ["options-strategy-log", ticker],
+    queryFn: () => optionsApi.strategyLog(ticker),
     staleTime: STALE,
     retry: 1,
   });
@@ -165,6 +199,59 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
           {chain?.fetched_at ? ` · ${new Date(chain.fetched_at).toLocaleTimeString()}` : ""}
         </p>
       </section>
+
+      {/* ── Strategy log (ranked-book picks over time) ── */}
+      {strategyLog && strategyLog.rows.length > 0 && (
+        <section aria-label="Options strategy log" className="card">
+          <h3 className="card-title mb-1">Strategy log</h3>
+          <p className="mb-2 text-xs text-muted-foreground">
+            The option screener&apos;s ranked-book call for {ticker}, logged each time it changes.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase tracking-wide text-muted-foreground">
+                  <th scope="col" className="px-2 py-1.5 text-left font-medium">Date</th>
+                  <th scope="col" className="px-2 py-1.5 text-left font-medium">Strategy</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">Trade</th>
+                  <th scope="col" className="hidden px-2 py-1.5 text-right font-medium sm:table-cell">DTE</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">POP</th>
+                  <th scope="col" className="hidden px-2 py-1.5 text-right font-medium md:table-cell">Ann.</th>
+                  <th scope="col" className="px-2 py-1.5 text-right font-medium">Conv.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {strategyLog.rows.map((r, i) => (
+                  <tr key={`${r.made_at}-${i}`} className="border-b border-border/50 last:border-0">
+                    <td className="nums px-2 py-1.5 text-left font-mono text-xs text-muted-foreground">
+                      {r.made_at?.slice(0, 10)}
+                    </td>
+                    <td className={`px-2 py-1.5 text-left text-xs font-semibold ${STRATEGY_TONE[r.strategy ?? ""] ?? ""}`}>
+                      {r.strategy ? r.strategy.replace("_", " ") : "—"}
+                      {r.agreement && (
+                        <span className="ml-1 text-[10px] font-normal text-muted-foreground">({r.agreement})</span>
+                      )}
+                    </td>
+                    <td className="nums px-2 py-1.5 text-right font-mono text-xs">{strategyTrade(r)}</td>
+                    <td className="nums hidden px-2 py-1.5 text-right font-mono text-xs sm:table-cell">
+                      {r.best_dte != null ? `${r.best_dte}d` : "—"}
+                    </td>
+                    <td className="nums px-2 py-1.5 text-right font-mono text-xs">
+                      {r.pop_pred != null ? `${Math.round(r.pop_pred * 100)}%` : "—"}
+                    </td>
+                    <td className="nums hidden px-2 py-1.5 text-right font-mono text-xs text-signal-long md:table-cell">
+                      {r.annualized_return_pct != null ? `${r.annualized_return_pct.toFixed(0)}%` : "—"}
+                    </td>
+                    <td className="nums px-2 py-1.5 text-right font-mono text-xs">
+                      {r.conviction != null ? `${Math.round(r.conviction * 100)}%` : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {/* ── IV term structure ── */}
       {term.length > 1 && (

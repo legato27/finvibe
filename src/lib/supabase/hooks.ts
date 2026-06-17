@@ -52,6 +52,48 @@ export function useMyWatchlistTickers() {
   });
 }
 
+/** One watchlist with its member tickers — drives the screener watchlist
+ *  picklist. Derived from the same nested query useWatchlists uses, so it shares
+ *  the RLS scoping (lists + items are owner-scoped). */
+export interface WatchlistGroup {
+  id: number;
+  name: string;
+  is_default: boolean;
+  tickers: Set<string>;
+}
+
+export function useWatchlistGroups() {
+  return useQuery({
+    queryKey: ["watchlist-groups"],
+    queryFn: async (): Promise<WatchlistGroup[]> => {
+      const { data, error } = await supabase
+        .from("watchlists")
+        .select("id, name, is_default, watchlist_items(stock_catalog(ticker))")
+        .order("is_default", { ascending: false })
+        .order("created_at", { ascending: true });
+      if (error) return [];
+      return (
+        (data ?? []) as Array<{
+          id: number;
+          name: string;
+          is_default: boolean;
+          watchlist_items?: Array<{ stock_catalog?: { ticker?: string } | null }> | null;
+        }>
+      ).map((w) => ({
+        id: w.id,
+        name: w.name,
+        is_default: w.is_default,
+        tickers: new Set<string>(
+          (w.watchlist_items ?? [])
+            .map((it) => it.stock_catalog?.ticker?.toUpperCase())
+            .filter((t): t is string => !!t),
+        ),
+      }));
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
 /** Rename a watchlist. RLS scopes the update to the owner. */
 export function useRenameWatchlist() {
   const qc = useQueryClient();

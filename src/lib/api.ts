@@ -110,6 +110,10 @@ export const optionsApi = {
   summary: (ticker: string) =>
     api.get(`/api/options/${ticker}/summary`).then((r) => r.data),
   screener: () => api.get("/api/options/screener").then((r) => r.data),
+  // Timestamped log of the ranked-book strategy for this name — one entry per
+  // change. Feeds the "Strategy log" section in the stock-detail Options tab.
+  strategyLog: (ticker: string, limit = 30) =>
+    api.get(`/api/options/${ticker}/strategy-log?limit=${limit}`).then((r) => r.data),
 };
 
 // ── FX ───────────────────────────────────────────────────────

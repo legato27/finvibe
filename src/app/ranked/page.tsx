@@ -5,14 +5,19 @@ import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { modelsApi, stocksApi } from "@/lib/api";
-import { useMyWatchlistTickers } from "@/lib/supabase/hooks";
+import { useWatchlistGroups } from "@/lib/supabase/hooks";
 import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 import LivePrice from "@/components/ui/LivePrice";
 import GuideCard from "@/components/ui/GuideCard";
 import { InfoTip } from "@/components/shared/InfoTip";
-import { ScopeSortControls } from "@/components/shared/ScopeSortControls";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
+import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
+import {
+  ColumnFilterBar,
+  useColumnFilters,
+  type FilterDef,
+} from "@/components/shared/ColumnFilters";
 
 interface RankedRow {
   ticker: string;
@@ -60,10 +65,8 @@ const usd = (x?: number | null) =>
   x == null ? "—" : `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function RankedBookPage() {
-  const [filter, setFilter] = useState<"all" | "long" | "short">("all");
-  const [scope, setScope] = useState<"mine" | "all">("mine");
   const [sort, setSort] = useState<"prob" | "z">("prob");
-  const [symbol, setSymbol] = useState("");
+  const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
 
   const { data, isLoading, error } = useQuery<RankedBook>({
     queryKey: ["cross-sectional-ranked"],
@@ -71,9 +74,8 @@ export default function RankedBookPage() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: myTickers } = useMyWatchlistTickers();
-  const hasMine = (myTickers?.size ?? 0) > 0;
-  const useMine = scope === "mine" && hasMine;
+  const { data: watchlistGroups } = useWatchlistGroups();
+  const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
 
   // Live prices (the ranking is cached; overlay realtime quotes for all names).
   const tickers = data?.ranked.map((r) => r.ticker) ?? [];
@@ -109,13 +111,22 @@ export default function RankedBookPage() {
   // the chosen sort — prob-of-profit (default) or composite-z conviction.
   const sortKey = (r: RankedRow) =>
     sort === "prob" ? r.prob_profit_pct ?? -1 : r.composite_z;
-  const q = symbol.trim().toUpperCase();
-  const visibleRows = (data?.ranked ?? [])
-    .filter((r) => filter === "all" || r.bucket === filter)
-    .filter((r) => !useMine || (myTickers?.has(r.ticker) ?? false))
-    .filter((r) => !q || r.ticker.toUpperCase().includes(q))
-    .slice()
-    .sort((a, b) => sortKey(b) - sortKey(a));
+
+  // Watchlist scope → type-aware column filters → sort.
+  const wlRows = (data?.ranked ?? []).filter(
+    (r) => !wlSet || wlSet.has(r.ticker.toUpperCase()),
+  );
+  const filterDefs: FilterDef<RankedRow>[] = [
+    { key: "ticker", label: "Ticker", kind: "text", value: (r) => r.ticker },
+    { key: "bucket", label: "Bucket", kind: "select", value: (r) => r.bucket },
+    { key: "sector", label: "Sector", kind: "select", value: (r) => r.sector ?? "" },
+    { key: "verdict", label: "Verdict", kind: "select", value: (r) => verdictMap?.[r.ticker]?.state ?? "" },
+    { key: "prob", label: "Prob %", kind: "number", value: (r) => r.prob_profit_pct ?? null },
+    { key: "composite_z", label: "Composite z", kind: "number", value: (r) => r.composite_z },
+    { key: "percentile", label: "%ile", kind: "number", value: (r) => r.percentile },
+  ];
+  const { filtered, state: filterState, setState: setFilterState } = useColumnFilters(wlRows, filterDefs);
+  const visibleRows = filtered.slice().sort((a, b) => sortKey(b) - sortKey(a));
 
   return (
     <div className="space-y-4 max-w-[1100px] mx-auto">
@@ -173,42 +184,24 @@ export default function RankedBookPage() {
             <span>factors: {data.factors.join(", ")}</span>
           </div>
 
-          {/* scope + sort */}
-          <ScopeSortControls
-            scope={scope}
-            onScope={setScope}
-            hasMine={hasMine}
-            mineCount={myTickers?.size}
-            sort={sort}
-            sortOptions={[
-              { value: "prob", label: "Prob of profit" },
-              { value: "z", label: "Conviction (z)" },
-            ]}
-            onSort={(s) => setSort(s as "prob" | "z")}
-          />
-
-          {/* long / short / all + symbol filter */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
-              {(["all", "long", "short"] as const).map((f) => (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
-                    filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground/80"
-                  }`}
-                >
-                  {f}
-                </button>
-              ))}
-            </div>
-            <input
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              placeholder="Filter symbol…"
-              className="px-3 py-1.5 rounded-md text-xs bg-muted/50 border border-border/30 focus:outline-none focus:ring-1 focus:ring-primary/50 w-40"
-            />
+          {/* watchlist scope + sort */}
+          <div className="flex flex-wrap items-center gap-3">
+            <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              Sort
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as "prob" | "z")}
+                className="bg-muted/50 border border-border/30 rounded-md px-2 py-1 text-xs text-foreground/90 focus:outline-none"
+              >
+                <option value="prob">Prob of profit</option>
+                <option value="z">Conviction (z)</option>
+              </select>
+            </label>
           </div>
+
+          {/* type-aware column filters (ticker, bucket, sector, verdict, ranges) */}
+          <ColumnFilterBar rows={wlRows} defs={filterDefs} state={filterState} setState={setFilterState} />
 
           {/* legend (kept above the table — InfoTip cards would be clipped inside the scroll container) */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
@@ -241,7 +234,7 @@ export default function RankedBookPage() {
                   <tr>
                     <td colSpan={9} className="p-6 text-center text-muted-foreground">
                       No names match.{" "}
-                      {useMine && "Your watchlist names may be excluded for sparse data — try “All”."}
+                      {wlSet && "Your watchlist names may be excluded for sparse data — try “All names”."}
                     </td>
                   </tr>
                 )}

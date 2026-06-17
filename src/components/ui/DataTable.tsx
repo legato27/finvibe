@@ -15,6 +15,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ReactNode, useMemo, useState } from "react";
+import {
+  ColumnFilterBar,
+  applyFilters,
+  countActiveFilters,
+  type FilterDef,
+  type FilterState,
+} from "@/components/shared/ColumnFilters";
 
 export interface Column<Row> {
   key: string;
@@ -41,6 +48,7 @@ export default function DataTable<Row>({
   rowHref,
   defaultSort,
   emptyText = "—",
+  filters,
 }: {
   caption: string;
   columns: Column<Row>[];
@@ -50,16 +58,24 @@ export default function DataTable<Row>({
   rowHref?: (row: Row) => string;
   defaultSort?: { key: string; dir: "asc" | "desc" };
   emptyText?: string;
+  /** optional type-aware per-column filters, rendered as a bar above the table */
+  filters?: FilterDef<Row>[];
 }) {
   const [sort, setSort] = useState(defaultSort ?? null);
+  const [filterState, setFilterState] = useState<FilterState>({});
   const router = useRouter();
 
+  const filtered = useMemo(
+    () => (filters?.length ? applyFilters(rows, filters, filterState) : rows),
+    [rows, filters, filterState],
+  );
+
   const sorted = useMemo(() => {
-    if (!sort) return rows;
+    if (!sort) return filtered;
     const col = columns.find((c) => c.key === sort.key);
-    if (!col?.sortValue) return rows;
+    if (!col?.sortValue) return filtered;
     const sv = col.sortValue;
-    return [...rows].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       const va = sv(a), vb = sv(b);
       if (va == null) return 1;
       if (vb == null) return -1;
@@ -68,13 +84,20 @@ export default function DataTable<Row>({
         : String(va).localeCompare(String(vb));
       return sort.dir === "asc" ? cmp : -cmp;
     });
-  }, [rows, sort, columns]);
+  }, [filtered, sort, columns]);
 
   const toggleSort = (key: string) =>
     setSort((s) => (s?.key === key ? { key, dir: s.dir === "desc" ? "asc" : "desc" } : { key, dir: "desc" }));
 
+  const hasFilters = !!filters?.length;
+  const activeFilterCount = hasFilters ? countActiveFilters(filters!, filterState) : 0;
+
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <div className="space-y-2">
+      {hasFilters && (
+        <ColumnFilterBar rows={rows} defs={filters!} state={filterState} setState={setFilterState} />
+      )}
+      <div className="overflow-x-auto rounded-xl border border-border">
       <table className="w-full border-collapse text-sm">
         <caption className="sr-only">{caption}</caption>
         <thead>
@@ -114,7 +137,7 @@ export default function DataTable<Row>({
           {sorted.length === 0 && (
             <tr>
               <td colSpan={columns.length} className="px-3 py-6 text-center text-muted-foreground">
-                {emptyText}
+                {activeFilterCount > 0 ? "No rows match the active filters." : emptyText}
               </td>
             </tr>
           )}
@@ -160,6 +183,7 @@ export default function DataTable<Row>({
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

@@ -8,6 +8,7 @@
  *
  * Replaces the old 600-line model-estimate "options book" presentation.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { optionsApi } from "@/lib/api";
@@ -17,6 +18,9 @@ import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
+import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
+import type { FilterDef } from "@/components/shared/ColumnFilters";
+import { useWatchlistGroups } from "@/lib/supabase/hooks";
 
 interface ScreenerRow {
   ticker: string;
@@ -72,6 +76,32 @@ export default function OptionsScreenerPage() {
     staleTime: 15 * 60_000,
     refetchInterval: 30 * 60_000,
   });
+
+  const { data: watchlistGroups } = useWatchlistGroups();
+  const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
+  const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
+  const rows = (data?.rows ?? []).filter((r) => !wlSet || wlSet.has(r.ticker.toUpperCase()));
+
+  const strategyLabel = (s: string) =>
+    s === "sell_puts" ? ts("strat.sell_puts")
+      : s === "sell_calls" ? ts("strat.sell_calls")
+      : s === "sell_strangle" ? ts("strat.sell_strangle")
+      : s;
+
+  const filters: FilterDef<ScreenerRow>[] = [
+    { key: "ticker", label: ts("colTicker"), kind: "text", value: (r) => r.ticker },
+    { key: "verdict", label: ts("colVerdict"), kind: "select", value: (r) => r.verdict ?? "" },
+    { key: "sector", label: "Sector", kind: "select", value: (r) => r.sector ?? "" },
+    { key: "strategy", label: ts("colStrategyLong"), kind: "select", value: (r) => r.reco?.strategy ?? "", optionLabel: strategyLabel },
+    { key: "iv_rank", label: ts("colIvRankLong"), kind: "number", value: (r) => r.iv_rank },
+    { key: "atm_iv", label: ts("colAtmIv"), kind: "number", value: (r) => r.atm_iv_pct },
+    { key: "em", label: ts("colExpectedMove"), kind: "number", value: (r) => r.expected_move_30d_pct },
+    { key: "pcr", label: ts("colPcr"), kind: "number", value: (r) => r.pcr_oi },
+    { key: "skew", label: ts("colSkew"), kind: "number", value: (r) => r.skew_25d_pp },
+    { key: "unusual", label: ts("colUnusualLong"), kind: "number", value: (r) => r.n_unusual_oi },
+    { key: "pop", label: "POP %", kind: "number", value: (r) => (r.reco?.pop != null ? Math.round(r.reco.pop * 100) : null) },
+    { key: "ann", label: "Annualized %", kind: "number", value: (r) => r.reco?.annualized_return_pct ?? null },
+  ];
 
   const columns: Column<ScreenerRow>[] = [
     {
@@ -239,9 +269,12 @@ export default function OptionsScreenerPage() {
   return (
     <div className="mx-auto max-w-[1200px] space-y-4">
       <ScreenerTabs />
-      <header>
-        <h1 className="text-lg font-bold text-foreground">{ts("title")}</h1>
-        <p className="text-sm text-muted-foreground">{ts("subtitle")}</p>
+      <header className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-lg font-bold text-foreground">{ts("title")}</h1>
+          <p className="text-sm text-muted-foreground">{ts("subtitle")}</p>
+        </div>
+        <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
       </header>
 
       <GuideCard
@@ -270,7 +303,8 @@ export default function OptionsScreenerPage() {
         <DataTable
           caption={ts("tableCaption")}
           columns={columns}
-          rows={data?.rows ?? []}
+          rows={rows}
+          filters={filters}
           rowKey={(r) => r.ticker}
           rowHref={(r) => `/stock/${r.ticker}?tab=options`}
           defaultSort={{ key: "iv_rank", dir: "desc" }}
