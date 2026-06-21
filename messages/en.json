@@ -1437,7 +1437,21 @@
     "thoughtsAvailable": "FinVibe's Thoughts available",
     "title": "Watchlists",
     "trend": "Trend",
-    "remove": "Remove from watchlist"
+    "remove": "Remove from watchlist",
+    "quickSearchPh": "Search symbol or name…",
+    "groupBy": "Group",
+    "groupNone": "No grouping",
+    "groupSector": "Sector",
+    "groupIndustry": "Industry",
+    "groupMoat": "Moat",
+    "groupVerdict": "Verdict",
+    "groupPam": "PAM direction",
+    "columnIndustry": "Industry",
+    "columnVerdict": "Verdict",
+    "columnPam": "PAM",
+    "columnOption": "Options",
+    "noMatch": "No stocks match your search.",
+    "resultCount": "{count} names"
   },
   "verdict": {
     "title": "Unified verdict",

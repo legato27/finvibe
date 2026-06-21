@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding, useRenameWatchlist } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
-import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
-import LivePrice from "@/components/ui/LivePrice";
-import { Plus, Trash2, X, List, Search, Building2, TrendingUp, TrendingDown, Brain, RefreshCw, Briefcase, FolderPlus, Pencil, Check } from "lucide-react";
-import { stocksApi } from "@/lib/api";
+import { type VerdictJson } from "@/components/ui/VerdictBadge";
+import { type PamSummary } from "@/components/shared/PamBadge";
+import WatchlistTable, { type WatchRow, type OptStrategy } from "@/components/watchlist/WatchlistTable";
+import { Plus, Trash2, X, List, Search, FolderPlus, Pencil, Check, RefreshCw } from "lucide-react";
+import { stocksApi, modelsApi } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { formatMoS } from "@/lib/valuation";
 
 /* ── Add-to-Portfolio Modal ─────────────────────────────────── */
 function AddToPortfolioModal({
@@ -273,6 +273,96 @@ export default function WatchlistPage() {
     staleTime: 5 * 60_000,
   });
 
+  // PAM (price-action) strategy per ticker — compact summary for the list view.
+  const { data: pamMap } = useQuery<Record<string, PamSummary | null>>({
+    queryKey: ["wl-pam", activeTickers],
+    queryFn: () => stocksApi.pamBatch(activeTickers),
+    enabled: activeTickers.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
+  // Option strategy: the ranked options book gives the current recommended
+  // strategy per name. Fetched once (covers elevated-vol names only); others
+  // show "—". Independent of the active list, so it's shared across watchlists.
+  const { data: optBook } = useQuery<{ ranked?: Array<{ ticker: string; strategy?: string; conviction?: number | null; side?: string | null }> }>({
+    queryKey: ["wl-options-ranked"],
+    queryFn: () => modelsApi.optionsRanked(),
+    staleTime: 10 * 60_000,
+  });
+  const optMap = useMemo(() => {
+    const m = new Map<string, OptStrategy>();
+    for (const r of optBook?.ranked ?? []) {
+      if (r?.ticker && r.strategy) {
+        m.set(r.ticker.toUpperCase(), {
+          strategy: r.strategy,
+          conviction: r.conviction ?? null,
+          side: r.side ?? null,
+        });
+      }
+    }
+    return m;
+  }, [optBook]);
+
+  // Flatten + enrich each watchlist item into the row shape the grid consumes.
+  const rows = useMemo<WatchRow[]>(() => {
+    const items = activeWatchlist?.watchlist_items ?? [];
+    return items
+      .map((item: any): WatchRow | null => {
+        const stock = item.stock_catalog;
+        if (!stock) return null;
+        const llm = llmMap?.[stock.ticker];
+        const livePrice = priceMap.get(stock.ticker) ?? null;
+        const isEtf = stock.is_etf || stock.asset_type === "etf";
+
+        // Sector display (first part + "+N"), with AI fallback — mirrors the old row logic.
+        let sectorDisplay: string | null = null;
+        let sectorGroup: string | null = null;
+        let sectorIsAi = false;
+        if (!isEtf) {
+          if (stock.sector && stock.sector.trim() && stock.sector !== "-") {
+            const parts = stock.sector.split(",").map((s: string) => s.trim()).filter(Boolean);
+            sectorGroup = parts[0];
+            sectorDisplay = parts.length > 1 ? `${parts[0]} +${parts.length - 1}` : parts[0];
+          } else if (llm?.llm_sector) {
+            sectorDisplay = llm.llm_sector;
+            sectorGroup = llm.llm_sector;
+            sectorIsAi = true;
+          }
+        }
+
+        const moat = stock.moat_rating || (llm?.llm_moat !== "None" ? llm?.llm_moat : null) || null;
+        const moatIsAi = !stock.moat_rating && !!llm?.llm_moat;
+
+        return {
+          id: item.id,
+          stockId: stock.id,
+          ticker: stock.ticker,
+          name: stock.name ?? null,
+          sector: sectorDisplay,
+          sectorGroup,
+          sectorIsAi,
+          industry: !isEtf && !sectorIsAi ? stock.industry ?? null : null,
+          isEtf,
+          moat,
+          moatIsAi,
+          enrichmentStatus: stock.enrichment_status ?? null,
+          hasThoughts: !!llm?.thoughts_json,
+          price: livePrice ?? stock.last_price ?? null,
+          livePrice,
+          lastPriceUpdatedAt: stock.last_price_updated_at ?? null,
+          fairValue: stock.intrinsic_value ?? null,
+          mos: stock.margin_of_safety ?? null,
+          aiIntrinsic: llm?.llm_intrinsic_value != null ? Number(llm.llm_intrinsic_value) : null,
+          aiMos: llm?.llm_margin_of_safety != null ? Number(llm.llm_margin_of_safety) : null,
+          trend: stock.quarterly_trend ?? null,
+          verdict: verdictMap?.[stock.ticker] ?? null,
+          pam: pamMap?.[stock.ticker] ?? null,
+          opt: optMap.get(stock.ticker) ?? null,
+        };
+      })
+      .filter(Boolean) as WatchRow[];
+  }, [activeWatchlist, llmMap, priceMap, verdictMap, pamMap, optMap]);
+
   const renameWatchlist = useRenameWatchlist();
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState("");
@@ -296,23 +386,6 @@ export default function WatchlistPage() {
     } finally {
       setRefreshing(false);
     }
-  }
-
-  function timeAgo(iso: string | null | undefined): string {
-    if (!iso) return "";
-    const diff = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diff / 60_000);
-    if (mins < 1) return "just now";
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    return `${days}d ago`;
-  }
-
-  function isStale(iso: string | null | undefined): boolean {
-    if (!iso) return true;
-    return Date.now() - new Date(iso).getTime() > 3600_000; // > 1 hour
   }
 
   if (isLoading) {
@@ -488,172 +561,13 @@ export default function WatchlistPage() {
                   {t("noStocksYet")}
                 </div>
               ) : (
-                <div className="divide-y divide-border/30">
-                  {activeWatchlist.watchlist_items?.map((item: any) => {
-                    const stock = item.stock_catalog;
-                    if (!stock) return null;
-
-                    const llm = llmMap?.[stock.ticker];
-                    const livePrice = priceMap.get(stock.ticker) ?? null;
-                    const shownPrice = livePrice ?? stock.last_price;
-                    const rowVerdict = verdictMap?.[stock.ticker];
-                    const isEtf = stock.is_etf || stock.asset_type === "etf";
-
-                    // Sector display logic
-                    let sectorDisplay: string | null = null;
-                    let sectorIsAi = false;
-                    if (!isEtf) {
-                      if (stock.sector && stock.sector.trim() && stock.sector !== "-") {
-                        // If multiple sectors (comma-separated), show first + count
-                        const parts = stock.sector.split(",").map((s: string) => s.trim()).filter(Boolean);
-                        sectorDisplay = parts[0];
-                        if (parts.length > 1) {
-                          sectorDisplay += ` +${parts.length - 1}`;
-                        }
-                      } else if (llm?.llm_sector) {
-                        sectorDisplay = llm.llm_sector;
-                        sectorIsAi = true;
-                      }
-                    }
-
-                    // Moat display logic
-                    const moatRating = stock.moat_rating || (llm?.llm_moat !== "None" ? llm?.llm_moat : null);
-                    const moatIsAi = !stock.moat_rating && !!llm?.llm_moat;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="relative flex items-center justify-between px-3 py-3 hover:bg-accent/50 focus-within:bg-accent/50 transition-colors group"
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              {/* Row-stretched link: native keyboard + SR semantics
-                                  (replaces the old clickable-div onClick). */}
-                              <Link
-                                href={`/stock/${stock.ticker}`}
-                                className="font-mono text-sm font-bold text-primary after:absolute after:inset-0 after:content-['']"
-                              >
-                                {stock.ticker}
-                              </Link>
-                              {moatRating && moatRating !== "None" && (
-                                <span className={`text-[9px] px-1.5 py-0.5 rounded ${
-                                  moatRating === "Wide" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-                                }`}>
-                                  {moatRating}{moatIsAi ? " (AI)" : ""}
-                                </span>
-                              )}
-                              {stock.enrichment_status === "pending" && (
-                                <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-signal-caution rounded animate-pulse">{t("pending")}</span>
-                              )}
-                              {stock.enrichment_status === "processing" && (
-                                <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-sky-700 dark:text-sky-400 rounded animate-pulse">{t("enriching")}</span>
-                              )}
-                              {llm?.thoughts_json && (
-                                <span title={t("thoughtsAvailable")}><Brain className="w-3 h-3 text-primary/50" aria-label={t("thoughtsAvailable")} /></span>
-                              )}
-                              {rowVerdict?.state && <VerdictBadge state={rowVerdict.state} size="sm" />}
-                            </div>
-                            <div className="text-xs text-muted-foreground truncate max-w-[130px] sm:max-w-[250px]">
-                              {stock.name || "—"}
-                            </div>
-                            {sectorDisplay && (
-                              <div className="flex items-center gap-1 mt-0.5">
-                                <Building2 className="w-2.5 h-2.5 text-muted-foreground/60" />
-                                <span className="text-[10px] text-muted-foreground/60">
-                                  {sectorDisplay}
-                                  {sectorIsAi ? " (AI)" : ""}
-                                  {stock.industry && !sectorIsAi ? ` · ${stock.industry}` : ""}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-                          {shownPrice != null && shownPrice > 0 && (
-                            <div className="text-right">
-                              <LivePrice price={shownPrice} currency="$" live={livePrice != null} className="text-sm text-foreground" />
-                              {livePrice == null && stock.last_price_updated_at && (
-                                <div className={`text-[10px] ${isStale(stock.last_price_updated_at) ? "text-amber-400/70" : "text-muted-foreground/40"}`}>
-                                  {timeAgo(stock.last_price_updated_at)}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                          {stock.intrinsic_value != null && stock.last_price != null && (
-                            <div className="text-right hidden sm:block">
-                              <div className="text-[10px] text-muted-foreground/60">{t("fairValue")}</div>
-                              <span className="font-mono text-xs text-muted-foreground">${stock.intrinsic_value.toFixed(2)}</span>
-                            </div>
-                          )}
-                          {stock.margin_of_safety != null && (
-                            <div className="text-right hidden sm:block">
-                              <div className="text-[10px] text-muted-foreground/60">{t("mos")}</div>
-                              <span className={`font-mono text-xs flex items-center gap-0.5 ${
-                                stock.margin_of_safety > 0 ? "text-green-400" : "text-red-400"
-                              }`}>
-                                {stock.margin_of_safety > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                {formatMoS(stock.margin_of_safety)}
-                              </span>
-                            </div>
-                          )}
-                          {/* AI Intrinsic Value */}
-                          {llm?.llm_intrinsic_value != null && (
-                            <div className="text-right hidden lg:block">
-                              <div className="text-[10px] text-sky-700 dark:text-sky-400">{t("intrinsicAi")}</div>
-                              <span className="font-mono text-xs text-sky-700 dark:text-sky-400">
-                                ${Number(llm.llm_intrinsic_value).toFixed(2)}
-                              </span>
-                            </div>
-                          )}
-                          {/* AI MoS */}
-                          {llm?.llm_margin_of_safety != null && (
-                            <div className="text-right hidden lg:block">
-                              <div className="text-[10px] text-sky-700 dark:text-sky-400">{t("mosAi")}</div>
-                              <span className={`font-mono text-xs ${
-                                Number(llm.llm_margin_of_safety) > 0 ? "text-green-400" : "text-red-400"
-                              }`}>
-                                {(Number(llm.llm_margin_of_safety) * 100).toFixed(0)}%
-                              </span>
-                            </div>
-                          )}
-                          {stock.quarterly_trend && (
-                            <div className="text-right hidden sm:block">
-                              <div className="text-[10px] text-muted-foreground/60">{t("trend")}</div>
-                              <span className={`text-xs ${
-                                stock.quarterly_trend === "up" ? "text-green-400" : stock.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
-                              }`}>
-                                {stock.quarterly_trend === "up" ? "↑" : stock.quarterly_trend === "down" ? "↓" : "→"} Q
-                              </span>
-                            </div>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setPortfolioModal({ ticker: stock.ticker, name: stock.name || null, price: stock.last_price ?? null });
-                            }}
-                            className="relative p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-                            title={t("addToPortfolioTitle")}
-                            aria-label={t("addToPortfolioTitle")}
-                          >
-                            <Briefcase className="w-4 h-4" aria-hidden="true" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: stock.id });
-                            }}
-                            className="relative p-1.5 rounded text-muted-foreground hover:text-signal-short hover:bg-signal-short-bg transition-colors sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
-                            aria-label={t("remove")}
-                          >
-                            <X className="w-4 h-4" aria-hidden="true" />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <WatchlistTable
+                  rows={rows}
+                  onAddToPortfolio={(r) =>
+                    setPortfolioModal({ ticker: r.ticker, name: r.name, price: r.price })
+                  }
+                  onRemove={(r) => removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: r.stockId })}
+                />
               )}
             </>
           ) : (

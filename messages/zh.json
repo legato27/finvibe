@@ -1437,7 +1437,21 @@
     "thoughtsAvailable": "FinVibe's Thoughts available",
     "title": "自选股",
     "trend": "Trend",
-    "remove": "从自选中移除"
+    "remove": "从自选中移除",
+    "quickSearchPh": "搜索代码或名称…",
+    "groupBy": "分组",
+    "groupNone": "不分组",
+    "groupSector": "行业板块",
+    "groupIndustry": "细分行业",
+    "groupMoat": "护城河",
+    "groupVerdict": "结论",
+    "groupPam": "PAM 方向",
+    "columnIndustry": "细分行业",
+    "columnVerdict": "结论",
+    "columnPam": "PAM",
+    "columnOption": "期权",
+    "noMatch": "没有符合搜索的股票。",
+    "resultCount": "{count} 只"
   },
   "verdict": {
     "title": "综合判定",
