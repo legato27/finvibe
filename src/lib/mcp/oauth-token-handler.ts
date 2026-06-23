@@ -281,6 +281,12 @@ async function issueTokens(
   const access_expires_at = new Date(now + ACCESS_TTL_SECONDS * 1000).toISOString();
   const refresh_expires_at = new Date(now + REFRESH_TTL_SECONDS * 1000).toISOString();
 
+  // NOTE: `resource` is intentionally NOT persisted here — the
+  // mcp_oauth_tokens table has no `resource` column in production (migration
+  // 015 added it to mcp_oauth_codes but not to mcp_oauth_tokens), and binding
+  // the access token to a resource is optional (RFC 8707). We still echo the
+  // requested resource back in the token response below so clients can confirm
+  // it. Inserting a non-existent column previously 500'd every token exchange.
   const { error } = await supabase.from("mcp_oauth_tokens").insert({
     user_id: args.user_id,
     client_id: args.client_id,
@@ -290,7 +296,6 @@ async function issueTokens(
     scope: args.scope,
     access_expires_at,
     refresh_expires_at,
-    resource: args.resource,
   });
   if (error) return err("server_error", error.message, 500);
 
