@@ -492,3 +492,56 @@ export const TOOL_CATALOG: ToolDoc[] = [
 export function toolByName(name: string): ToolDoc | undefined {
   return TOOL_CATALOG.find((t) => t.name === name);
 }
+
+// ── MCP token scopes ─────────────────────────────────────────
+// A personal access token carries a scope that gates which tools it may call.
+// This is enforced server-side in registerTools() — a scoped token never sees
+// the tools it isn't allowed to call.
+//
+//   full   → every tool (legacy default; backward-compatible with old tokens)
+//   manage → read tools + writes to the USER's own watchlists / portfolios /
+//            holdings. Excludes non-user writes (e.g. enrich_stock).
+//   read   → read-only tools only.
+export type McpScope = "full" | "manage" | "read";
+
+export const MCP_SCOPES: McpScope[] = ["full", "manage", "read"];
+
+export const SCOPE_LABELS: Record<McpScope, string> = {
+  full: "Full access — read + manage + enrichment",
+  manage: "Read + manage my watchlists & portfolios",
+  read: "Read-only",
+};
+
+// Tools that mutate the user's own watchlists / portfolios / holdings / sales.
+export const WRITE_USER_TOOLS = new Set<string>([
+  "create_watchlist",
+  "delete_watchlist",
+  "add_to_watchlist",
+  "remove_from_watchlist",
+  "create_portfolio",
+  "delete_portfolio",
+  "add_holding",
+  "update_holding",
+  "delete_holding",
+  "sell_lot",
+]);
+
+// Side-effecting tools that are NOT plain user-data edits (compute/enrichment).
+export const WRITE_OTHER_TOOLS = new Set<string>(["enrich_stock"]);
+
+export type ToolAccess = "read" | "write_user" | "write_other";
+
+export function toolAccess(name: string): ToolAccess {
+  if (WRITE_USER_TOOLS.has(name)) return "write_user";
+  if (WRITE_OTHER_TOOLS.has(name)) return "write_other";
+  return "read";
+}
+
+/** Whether a token with `scope` may call the tool `name`. */
+export function scopeAllows(scope: McpScope, name: string): boolean {
+  const access = toolAccess(name);
+  if (scope === "full") return true;
+  if (scope === "read") return access === "read";
+  // manage
+  return access === "read" || access === "write_user";
+}

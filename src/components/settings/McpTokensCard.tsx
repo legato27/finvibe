@@ -11,10 +11,13 @@ import {
   Trash2,
 } from "lucide-react";
 
+import { MCP_SCOPES, SCOPE_LABELS, type McpScope } from "@/lib/mcp/catalog";
+
 interface TokenRow {
   id: number;
   name: string;
   token_prefix: string;
+  scope?: McpScope;
   created_at: string;
   last_used_at: string | null;
 }
@@ -29,6 +32,7 @@ export function McpTokensCard() {
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
+  const [scope, setScope] = useState<McpScope>("read");
   const [creating, setCreating] = useState(false);
   const [revealed, setRevealed] = useState<NewToken | null>(null);
   const [copied, setCopied] = useState(false);
@@ -63,7 +67,7 @@ export function McpTokensCard() {
       const res = await fetch("/api/mcp/tokens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name: name.trim(), scope }),
       });
       if (!res.ok) throw new Error((await res.json()).error || t("tokens.failedCreate"));
       const json = (await res.json()) as NewToken;
@@ -125,6 +129,18 @@ export function McpTokensCard() {
               if (e.key === "Enter") void create();
             }}
           />
+          <select
+            value={scope}
+            onChange={(e) => setScope(e.target.value as McpScope)}
+            title="Token scope — which tools this token may call"
+            className="bg-background/50 border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+          >
+            {MCP_SCOPES.map((s) => (
+              <option key={s} value={s}>
+                {SCOPE_LABELS[s]}
+              </option>
+            ))}
+          </select>
           <button
             onClick={() => void create()}
             disabled={creating || !name.trim()}
@@ -191,7 +207,12 @@ export function McpTokensCard() {
                 className="flex items-center justify-between px-3 py-2 bg-background/30"
               >
                 <div className="min-w-0">
-                  <div className="text-sm text-foreground truncate">{tok.name}</div>
+                  <div className="text-sm text-foreground truncate flex items-center gap-1.5">
+                    {tok.name}
+                    <span className="text-[9px] uppercase tracking-wide px-1.5 py-0.5 rounded border border-border/60 text-muted-foreground">
+                      {tok.scope ?? "full"}
+                    </span>
+                  </div>
                   <div className="text-[10px] text-muted-foreground font-mono">
                     {tok.token_prefix} · {t("tokens.createdLabel", { date: new Date(tok.created_at).toLocaleDateString() })}
                     {tok.last_used_at

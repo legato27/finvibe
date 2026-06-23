@@ -3,11 +3,13 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import * as db from "@/lib/mcp/db";
 import { market } from "@/lib/mcp/market";
-import { toolByName } from "@/lib/mcp/catalog";
+import { toolByName, scopeAllows, type McpScope } from "@/lib/mcp/catalog";
 
 export interface ToolContext {
   userId: string;
   supabase: ServiceSupabase;
+  /** Toolset scope of the calling token. Defaults to "full" if omitted. */
+  scope?: McpScope;
 }
 
 function ok(payload: unknown) {
@@ -26,15 +28,27 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   // Tool titles and descriptions live in src/lib/mcp/catalog.ts
   // so they stay in sync with the public docs page at /mcp.
 
+  const scope: McpScope = ctx.scope ?? "full";
+
+  // Scope gate: a tool is only registered (and thus only visible/callable) if
+  // the calling token's scope permits it. A "read" token never even sees the
+  // write tools; a "manage" token sees read + own-watchlist/portfolio writes.
+  // `reg` has the exact type of server.registerTool, so all call sites below
+  // keep full type-checking; it just skips registration when scope disallows.
+  const reg = ((name: string, ...rest: unknown[]) => {
+    if (!scopeAllows(scope, name)) return undefined as never;
+    return (server.registerTool as (...a: unknown[]) => unknown)(name, ...rest);
+  }) as typeof server.registerTool;
+
   // ── Profile ──────────────────────────────────────────────
-  server.registerTool(
+  reg(
     "get_profile",
     { ...meta("get_profile"), inputSchema: {} },
     async () => ok(await db.getProfile(ctx.userId, ctx.supabase)),
   );
 
   // ── Watchlists ───────────────────────────────────────────
-  server.registerTool(
+  reg(
     "list_watchlists",
     { ...meta("list_watchlists"), inputSchema: {} },
     async () => {
@@ -47,7 +61,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     },
   );
 
-  server.registerTool(
+  reg(
     "create_watchlist",
     {
       ...meta("create_watchlist"),
@@ -59,7 +73,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.createWatchlist(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "delete_watchlist",
     {
       ...meta("delete_watchlist"),
@@ -68,7 +82,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.deleteWatchlist(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "add_to_watchlist",
     {
       ...meta("add_to_watchlist"),
@@ -80,7 +94,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.addToWatchlist(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "remove_from_watchlist",
     {
       ...meta("remove_from_watchlist"),
@@ -94,13 +108,13 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   );
 
   // ── Portfolios ───────────────────────────────────────────
-  server.registerTool(
+  reg(
     "list_portfolios",
     { ...meta("list_portfolios"), inputSchema: {} },
     async () => ok(await db.listPortfolios(ctx.userId, ctx.supabase)),
   );
 
-  server.registerTool(
+  reg(
     "get_portfolio",
     {
       ...meta("get_portfolio"),
@@ -109,7 +123,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.getPortfolio(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "create_portfolio",
     {
       ...meta("create_portfolio"),
@@ -121,7 +135,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.createPortfolio(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "delete_portfolio",
     {
       ...meta("delete_portfolio"),
@@ -131,7 +145,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   );
 
   // ── Holdings ─────────────────────────────────────────────
-  server.registerTool(
+  reg(
     "add_holding",
     {
       ...meta("add_holding"),
@@ -149,7 +163,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.addHolding(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "update_holding",
     {
       ...meta("update_holding"),
@@ -165,7 +179,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.updateHolding(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "delete_holding",
     {
       ...meta("delete_holding"),
@@ -174,7 +188,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.deleteHolding(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "sell_lot",
     {
       ...meta("sell_lot"),
@@ -191,7 +205,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   );
 
   // ── Sales ────────────────────────────────────────────────
-  server.registerTool(
+  reg(
     "list_stock_sales",
     {
       ...meta("list_stock_sales"),
@@ -204,7 +218,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   );
 
   // ── Market data ──────────────────────────────────────────
-  server.registerTool(
+  reg(
     "search_stocks",
     {
       ...meta("search_stocks"),
@@ -216,7 +230,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.search(args.q, args.market)),
   );
 
-  server.registerTool(
+  reg(
     "get_stock_info",
     {
       ...meta("get_stock_info"),
@@ -225,7 +239,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.info(args.ticker)),
   );
 
-  server.registerTool(
+  reg(
     "get_stock_price",
     {
       ...meta("get_stock_price"),
@@ -234,7 +248,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.refreshPrices(args.tickers)),
   );
 
-  server.registerTool(
+  reg(
     "get_price_history",
     {
       ...meta("get_price_history"),
@@ -250,7 +264,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       ok(await market.priceHistory(args.ticker, args.period, args.interval)),
   );
 
-  server.registerTool(
+  reg(
     "get_price_action",
     {
       ...meta("get_price_action"),
@@ -259,19 +273,19 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.priceAction(args.ticker)),
   );
 
-  server.registerTool(
+  reg(
     "get_today_signals",
     { ...meta("get_today_signals"), inputSchema: {} },
     async () => ok(await market.signalsToday()),
   );
 
-  server.registerTool(
+  reg(
     "get_macro_today",
     { ...meta("get_macro_today"), inputSchema: {} },
     async () => ok(await market.macroToday()),
   );
 
-  server.registerTool(
+  reg(
     "get_fx_rates",
     {
       ...meta("get_fx_rates"),
@@ -281,7 +295,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   );
 
   // ── Options ──────────────────────────────────────────────
-  server.registerTool(
+  reg(
     "get_option_expiries",
     {
       ...meta("get_option_expiries"),
@@ -290,7 +304,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.optionExpiries(args.ticker)),
   );
 
-  server.registerTool(
+  reg(
     "get_option_chain",
     {
       ...meta("get_option_chain"),
@@ -307,7 +321,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       ok(await market.optionChain(args.ticker, args.expiry, args.strikes)),
   );
 
-  server.registerTool(
+  reg(
     "get_options_summary",
     {
       ...meta("get_options_summary"),
@@ -316,14 +330,14 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.optionsSummary(args.ticker)),
   );
 
-  server.registerTool(
+  reg(
     "get_options_screener",
     { ...meta("get_options_screener"), inputSchema: {} },
     async () => ok(await market.optionsScreener()),
   );
 
   // ── News & sentiment ─────────────────────────────────────
-  server.registerTool(
+  reg(
     "get_stock_news",
     {
       ...meta("get_stock_news"),
@@ -337,7 +351,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       ok(await market.newsFeed(args.tickers, args.limit, args.source_kind)),
   );
 
-  server.registerTool(
+  reg(
     "get_stock_sentiment",
     {
       ...meta("get_stock_sentiment"),
@@ -346,7 +360,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.tickerSentiment(args.ticker)),
   );
 
-  server.registerTool(
+  reg(
     "get_osint_events",
     {
       ...meta("get_osint_events"),
@@ -361,7 +375,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   );
 
   // ── AI ───────────────────────────────────────────────────
-  server.registerTool(
+  reg(
     "get_multibagger_candidates",
     {
       ...meta("get_multibagger_candidates"),
@@ -370,7 +384,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.multibaggerCandidates(args.track)),
   );
 
-  server.registerTool(
+  reg(
     "get_stock_verdict",
     {
       ...meta("get_stock_verdict"),
@@ -379,7 +393,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.verdict(args.ticker)),
   );
 
-  server.registerTool(
+  reg(
     "get_llm_thoughts",
     {
       ...meta("get_llm_thoughts"),
@@ -388,7 +402,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.getLlmThoughts(ctx.userId, ctx.supabase, args)),
   );
 
-  server.registerTool(
+  reg(
     "enrich_stock",
     {
       ...meta("enrich_stock"),

@@ -2,6 +2,7 @@ import { createMcpHandler } from "mcp-handler";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { hashToken } from "@/lib/mcp/tokens";
 import { registerTools } from "@/lib/mcp/tools";
+import type { McpScope } from "@/lib/mcp/catalog";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 // Validate personal access tokens only
 async function validatePersonalToken(
   token: string,
-): Promise<{ userId: string } | null> {
+): Promise<{ userId: string; scope: McpScope } | null> {
   if (!token.startsWith("vbf_")) {
     console.error(`[validateToken] not a personal token`);
     return null;
@@ -17,14 +18,32 @@ async function validatePersonalToken(
 
   const supabase = createServiceSupabase();
   const hash = hashToken(token);
-  const { data } = await supabase
+
+  // Resilient to the scope migration not yet being applied: try selecting the
+  // scope column, and if it doesn't exist yet, fall back to the legacy columns
+  // and treat the token as full-scope. This means auth NEVER breaks regardless
+  // of deploy order — enforcement simply activates once the column exists.
+  type TokenRow = { id: number; user_id: string; scope?: string };
+  let row: TokenRow | null = null;
+  const withScope = await supabase
     .from("mcp_tokens")
-    .select("id, user_id")
+    .select("id, user_id, scope")
     .eq("token_hash", hash)
     .is("revoked_at", null)
     .maybeSingle();
+  if (withScope.error) {
+    const legacy = await supabase
+      .from("mcp_tokens")
+      .select("id, user_id")
+      .eq("token_hash", hash)
+      .is("revoked_at", null)
+      .maybeSingle();
+    row = legacy.data as TokenRow | null;
+  } else {
+    row = withScope.data as TokenRow | null;
+  }
 
-  if (!data) {
+  if (!row) {
     console.error(`[validateToken] vbf_ token not found / revoked`);
     return null;
   }
@@ -32,10 +51,12 @@ async function validatePersonalToken(
   void supabase
     .from("mcp_tokens")
     .update({ last_used_at: new Date().toISOString() })
-    .eq("id", data.id)
+    .eq("id", row.id)
     .then(() => {});
 
-  return { userId: data.user_id as string };
+  // Older tokens (pre-scope migration) have no scope value → treat as full.
+  const scope = (row.scope as McpScope) ?? "full";
+  return { userId: row.user_id as string, scope };
 }
 
 function withCors(resp: Response): Response {
@@ -73,14 +94,14 @@ async function handler(req: Request) {
     );
   }
 
-  const { userId } = validation;
-  console.error(`[mcp] token valid: userId=${userId}`);
+  const { userId, scope } = validation;
+  console.error(`[mcp] token valid: userId=${userId} scope=${scope}`);
 
   // Create MCP handler with verified user
   const supabase = createServiceSupabase();
   const mcp = createMcpHandler(
     (server) => {
-      registerTools(server, { userId, supabase });
+      registerTools(server, { userId, supabase, scope });
     },
     {},
     { basePath: "/api/mcp", maxDuration: 60, verboseLogs: false },
