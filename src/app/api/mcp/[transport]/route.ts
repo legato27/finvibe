@@ -92,6 +92,15 @@ async function handler(req: Request) {
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization");
   console.error(`[mcp] ${req.method} ${url.pathname} auth=${authHeader ? "present" : "missing"}`);
 
+  // Reachability/health probe. Clients (claude.ai's connector among them) issue
+  // a HEAD against the endpoint to check liveness. mcp-handler does NOT implement
+  // HEAD — it holds the request open until the gateway kills it with a 504, and
+  // a single 504 flips a working connector into a permanent "couldn't connect"
+  // state in the claude.ai UI. Answer HEAD immediately, before mcp-handler.
+  if (req.method === "HEAD") {
+    return withCors(new Response(null, { status: 200 }));
+  }
+
   // Extract token (handle both "Bearer token" and raw token formats)
   let token = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
   if (!token && (authHeader?.startsWith("vbf_") || authHeader?.startsWith("vbo_"))) {
@@ -149,6 +158,7 @@ async function handler(req: Request) {
 export const GET = handler;
 export const POST = handler;
 export const DELETE = handler;
+export const HEAD = handler;
 
 export function OPTIONS() {
   return new Response(null, {
