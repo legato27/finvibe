@@ -8,6 +8,7 @@ import {
   ACCESS_TTL_SECONDS,
   REFRESH_TTL_SECONDS,
   generateTokenPair,
+  originOf,
   sha256,
   verifyPkceS256,
 } from "@/lib/mcp/oauth";
@@ -148,9 +149,18 @@ export async function handleTokenPost(req: Request): Promise<Response> {
     const auth = await authenticateClient(supabase, body);
     if (!auth.ok) return auth.resp;
 
+    // Canonical host of this MCP/authorization server, used for RFC 8707
+    // audience binding in exchangeCode (this AS serves exactly one resource).
+    let selfHost: string | null = null;
+    try {
+      selfHost = new URL(originOf(req)).host;
+    } catch {
+      selfHost = null;
+    }
+
     let resp: Response;
     if (grant_type === "authorization_code") {
-      resp = await exchangeCode(supabase, auth.client_id, body);
+      resp = await exchangeCode(supabase, auth.client_id, body, selfHost);
     } else if (grant_type === "refresh_token") {
       resp = await exchangeRefresh(supabase, auth.client_id, body);
     } else {
@@ -168,6 +178,7 @@ async function exchangeCode(
   supabase: ReturnType<typeof createServiceSupabase>,
   client_id: string,
   body: Record<string, string>,
+  selfHost: string | null,
 ) {
   const code = body.code;
   const redirect_uri = body.redirect_uri;
@@ -217,6 +228,30 @@ async function exchangeCode(
     return err("invalid_grant", "PKCE verification failed");
   }
 
+  // RFC 8707 audience binding. This authorization server issues access tokens
+  // for exactly one MCP resource (this server). Reject a request whose target
+  // `resource` points at a different host, so a token minted here can never be
+  // a valid audience for another service (MCP spec: "MCP servers MUST only
+  // accept tokens specifically intended for themselves"). Lenient on purpose:
+  // a missing, unparseable, or same-host resource all pass — Claude always
+  // sends this server's own canonical URL, so this never rejects a real client.
+  const reqResource = body.resource || (row.resource as string | null) || null;
+  if (reqResource && selfHost) {
+    let resourceHost: string | null = null;
+    try {
+      resourceHost = new URL(reqResource).host.toLowerCase();
+    } catch {
+      resourceHost = null;
+    }
+    if (resourceHost && resourceHost !== selfHost.toLowerCase()) {
+      return err(
+        "invalid_target",
+        `resource ${reqResource} is not served by this authorization server`,
+        400,
+      );
+    }
+  }
+
   await supabase
     .from("mcp_oauth_codes")
     .update({ consumed_at: new Date().toISOString() })
@@ -226,7 +261,7 @@ async function exchangeCode(
     user_id: row.user_id as string,
     client_id,
     scope: (row.scope as string | null) ?? "mcp.full",
-    resource: (row.resource as string | null) ?? null,
+    resource: reqResource,
   });
 }
 
@@ -281,13 +316,7 @@ async function issueTokens(
   const access_expires_at = new Date(now + ACCESS_TTL_SECONDS * 1000).toISOString();
   const refresh_expires_at = new Date(now + REFRESH_TTL_SECONDS * 1000).toISOString();
 
-  // NOTE: `resource` is intentionally NOT persisted here — the
-  // mcp_oauth_tokens table has no `resource` column in production (migration
-  // 015 added it to mcp_oauth_codes but not to mcp_oauth_tokens), and binding
-  // the access token to a resource is optional (RFC 8707). We still echo the
-  // requested resource back in the token response below so clients can confirm
-  // it. Inserting a non-existent column previously 500'd every token exchange.
-  const { error } = await supabase.from("mcp_oauth_tokens").insert({
+  const baseRow = {
     user_id: args.user_id,
     client_id: args.client_id,
     access_token_hash: tokens.access_hash,
@@ -296,7 +325,18 @@ async function issueTokens(
     scope: args.scope,
     access_expires_at,
     refresh_expires_at,
-  });
+  };
+  // Persist the bound `resource` (RFC 8707 audience) when the column exists
+  // (migration 017_mcp_oauth_token_resource). Resilient to that migration not
+  // yet being applied: if the column is missing the insert errors on it, so we
+  // retry without it — token issuance never breaks on deploy order. (This is
+  // the same resilience pattern used for the mcp_tokens.scope column.)
+  let { error } = await supabase
+    .from("mcp_oauth_tokens")
+    .insert(args.resource ? { ...baseRow, resource: args.resource } : baseRow);
+  if (error && args.resource && /resource/i.test(error.message)) {
+    ({ error } = await supabase.from("mcp_oauth_tokens").insert(baseRow));
+  }
   if (error) return err("server_error", error.message, 500);
 
   return Response.json(

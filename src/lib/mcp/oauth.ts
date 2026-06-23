@@ -86,6 +86,15 @@ export function verifyPkceS256(code_verifier: string, code_challenge: string): b
 }
 
 // Look up an OAuth access token. Returns null if missing, expired, or revoked.
+//
+// Audience binding (RFC 8707 / MCP spec "MCP servers MUST only accept tokens
+// specifically intended for themselves"): this authorization server issues
+// tokens for exactly one MCP resource (this server), and the token endpoint
+// rejects any authorization request whose `resource` targets a different host
+// (see exchangeCode). Every row in mcp_oauth_tokens is therefore, by
+// construction, audience-bound to this server — a token issued here can never
+// be valid for another resource. The optional `resource` column (migration
+// 015) records the exact bound URI for audit and future per-resource checks.
 export async function lookupOAuthToken(
   supabase: ServiceSupabase,
   access_token: string,
