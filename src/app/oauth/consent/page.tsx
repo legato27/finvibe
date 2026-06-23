@@ -8,6 +8,7 @@ import {
   generateAuthorizationCode,
   CODE_TTL_SECONDS,
 } from "@/lib/mcp/oauth";
+import { MCP_SCOPES, SCOPE_LABELS, toMcpScope } from "@/lib/mcp/catalog";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,6 @@ export default async function ConsentPage(props: {
     redirect_uri,
     code_challenge,
     code_challenge_method,
-    scope = "mcp.full",
     state,
     resource,
   } = sp;
@@ -75,6 +75,9 @@ export default async function ConsentPage(props: {
 
     const service = createServiceSupabase();
     const resourceVal = formData.get("resource");
+    // The user picks the MCP scope on this screen; it is stored on the grant
+    // (and propagated to the issued token) and enforced in registerTools().
+    const grantedScope = toMcpScope(String(formData.get("mcp_scope") ?? "manage"));
     const { error } = await service.from("mcp_oauth_codes").insert({
       code,
       client_id: String(formData.get("client_id")),
@@ -82,7 +85,7 @@ export default async function ConsentPage(props: {
       redirect_uri: String(formData.get("redirect_uri")),
       code_challenge: String(formData.get("code_challenge")),
       code_challenge_method: "S256",
-      scope: String(formData.get("scope") ?? "mcp.full"),
+      scope: grantedScope,
       resource: resourceVal ? String(resourceVal) : null,
       expires_at: expiresAt,
     });
@@ -152,10 +155,25 @@ export default async function ConsentPage(props: {
             <div className="text-foreground font-mono text-xs">{displayHost}</div>
           </div>
           <div>
-            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            <label
+              htmlFor="mcp_scope"
+              className="text-[10px] uppercase tracking-wider text-muted-foreground"
+            >
               {t("consent.scope")}
-            </div>
-            <div className="text-foreground">{scope}</div>
+            </label>
+            <select
+              id="mcp_scope"
+              name="mcp_scope"
+              form="consent-form"
+              defaultValue="manage"
+              className="mt-1 w-full bg-background/50 border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+            >
+              {MCP_SCOPES.map((s) => (
+                <option key={s} value={s}>
+                  {SCOPE_LABELS[s]}
+                </option>
+              ))}
+            </select>
             <p className="text-xs text-muted-foreground mt-1">
               {t.rich("consent.scopeDesc", {
                 link: (chunks) => (
@@ -169,11 +187,10 @@ export default async function ConsentPage(props: {
         </div>
       </div>
 
-      <form className="mt-4 flex gap-2">
+      <form id="consent-form" className="mt-4 flex gap-2">
         <input type="hidden" name="client_id" value={client_id} />
         <input type="hidden" name="redirect_uri" value={redirect_uri} />
         <input type="hidden" name="code_challenge" value={code_challenge} />
-        <input type="hidden" name="scope" value={scope} />
         {state ? <input type="hidden" name="state" value={state} /> : null}
         {resource ? <input type="hidden" name="resource" value={resource} /> : null}
 

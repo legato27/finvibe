@@ -545,3 +545,13 @@ export function scopeAllows(scope: McpScope, name: string): boolean {
   // manage
   return access === "read" || access === "write_user";
 }
+
+/**
+ * Normalise a stored scope string to an McpScope. Personal tokens and new
+ * OAuth grants store "full" | "manage" | "read" directly; legacy OAuth grants
+ * stored the OAuth scope string ("mcp.full") — those map to "full".
+ */
+export function toMcpScope(raw: string | null | undefined): McpScope {
+  if (raw === "manage" || raw === "read" || raw === "full") return raw;
+  return "full";
+}

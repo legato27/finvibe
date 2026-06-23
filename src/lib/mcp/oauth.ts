@@ -89,7 +89,7 @@ export function verifyPkceS256(code_verifier: string, code_challenge: string): b
 export async function lookupOAuthToken(
   supabase: ServiceSupabase,
   access_token: string,
-): Promise<{ userId: string; clientId: string; tokenId: number } | null> {
+): Promise<{ userId: string; clientId: string; tokenId: number; scope: string | null } | null> {
   if (!access_token.startsWith(ACCESS_PREFIX)) {
     console.error(`[lookupOAuthToken] wrong prefix: ${access_token.slice(0, 6)}`);
     return null;
@@ -97,7 +97,7 @@ export async function lookupOAuthToken(
   const hash = sha256(access_token);
   const { data, error } = await supabase
     .from("mcp_oauth_tokens")
-    .select("id, user_id, client_id, access_expires_at, revoked_at")
+    .select("id, user_id, client_id, scope, access_expires_at, revoked_at")
     .eq("access_token_hash", hash)
     .is("revoked_at", null)
     .maybeSingle();
@@ -126,6 +126,7 @@ export async function lookupOAuthToken(
     userId: data.user_id as string,
     clientId: data.client_id as string,
     tokenId: data.id as number,
+    scope: (data.scope as string | null) ?? null,
   };
 }
 

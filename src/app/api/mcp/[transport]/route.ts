@@ -1,11 +1,25 @@
 import { createMcpHandler } from "mcp-handler";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { hashToken } from "@/lib/mcp/tokens";
+import { lookupOAuthToken, originOf } from "@/lib/mcp/oauth";
 import { registerTools } from "@/lib/mcp/tools";
-import type { McpScope } from "@/lib/mcp/catalog";
+import { toMcpScope, type McpScope } from "@/lib/mcp/catalog";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
+
+// Validate a bearer token — either a vbf_ personal access token or a vbo_
+// OAuth 2.1 access token — and resolve its MCP scope.
+async function validateToken(
+  token: string,
+): Promise<{ userId: string; scope: McpScope } | null> {
+  if (token.startsWith("vbo_")) {
+    const oauth = await lookupOAuthToken(createServiceSupabase(), token);
+    if (!oauth) return null;
+    return { userId: oauth.userId, scope: toMcpScope(oauth.scope) };
+  }
+  return validatePersonalToken(token);
+}
 
 // Validate personal access tokens only
 async function validatePersonalToken(
@@ -64,6 +78,8 @@ function withCors(resp: Response): Response {
   headers.set("Access-Control-Allow-Origin", "*");
   headers.set("Access-Control-Allow-Methods", "GET, POST, DELETE, HEAD, OPTIONS");
   headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  // Let browser clients (claude.ai) read the auth challenge to start OAuth.
+  headers.set("Access-Control-Expose-Headers", "WWW-Authenticate");
   return new Response(resp.body, {
     status: resp.status,
     statusText: resp.statusText,
@@ -78,18 +94,26 @@ async function handler(req: Request) {
 
   // Extract token (handle both "Bearer token" and raw token formats)
   let token = authHeader ? /^Bearer\s+(\S+)$/.exec(authHeader)?.[1] : undefined;
-  if (!token && authHeader?.startsWith("vbf_")) {
+  if (!token && (authHeader?.startsWith("vbf_") || authHeader?.startsWith("vbo_"))) {
     token = authHeader;
   }
 
-  // Validate personal token
-  const validation = token ? await validatePersonalToken(token) : null;
+  // Validate a vbf_ personal token or a vbo_ OAuth access token.
+  const validation = token ? await validateToken(token) : null;
   if (!validation) {
     console.error(`[mcp] token validation failed, returning 401`);
+    // RFC 9728 / MCP auth: point unauthenticated clients at the protected-
+    // resource metadata so they can discover the authorization server and
+    // start the OAuth flow (this is what makes the claude.ai "Connect" button
+    // work — without it the client has no way to find /authorize).
+    const resourceMetadata = `${originOf(req)}/.well-known/oauth-protected-resource`;
     return withCors(
       new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadata}"`,
+        },
       }),
     );
   }
