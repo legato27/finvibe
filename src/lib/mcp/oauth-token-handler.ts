@@ -305,7 +305,12 @@ async function issueTokens(
       refresh_token: tokens.refresh_token,
       token_type: "Bearer",
       expires_in: ACCESS_TTL_SECONDS,
-      scope: args.scope,
+      // NOTE: we intentionally do NOT echo `scope` here. The granted MCP scope
+      // (full/manage/read) is an INTERNAL enforcement value chosen at consent
+      // and stored on the token; it is not an OAuth scope the client requested.
+      // Returning an unsolicited/unrecognized scope makes strict clients
+      // (Claude Desktop) reject the token response. Enforcement still happens
+      // server-side in registerTools() via the stored scope.
       // RFC 8707: echo back the resource indicator so clients can confirm
       // the token is bound to the protected resource they requested.
       ...(args.resource ? { resource: args.resource } : {}),
