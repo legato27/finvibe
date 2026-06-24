@@ -10,6 +10,7 @@ import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 import LivePrice from "@/components/ui/LivePrice";
 import GuideCard from "@/components/ui/GuideCard";
 import { InfoTip } from "@/components/shared/InfoTip";
+import { LastUpdated } from "@/components/common/LastUpdated";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
@@ -32,6 +33,7 @@ interface RankedRow {
   pam?: unknown | null;
 }
 interface RankedBook {
+  as_of?: string;
   universe_size: number;
   factors: string[];
   method: string;
@@ -132,7 +134,10 @@ export default function RankedBookPage() {
     <div className="space-y-4 max-w-[1100px] mx-auto">
       <ScreenerTabs />
       <div>
-        <h1 className="text-lg font-semibold">Ranked Book</h1>
+        <div className="flex items-baseline justify-between gap-3">
+          <h1 className="text-lg font-semibold">Ranked Book</h1>
+          <LastUpdated at={data?.as_of} />
+        </div>
         <p className="text-xs text-muted-foreground mt-1">
           Cross-sectional composite z-score across the watchlist universe — ranked by conviction (top quintile = long,
           bottom = short). Highest-conviction names first.

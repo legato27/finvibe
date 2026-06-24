@@ -7,6 +7,7 @@
 
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import { market } from "./market";
+import { pooledMap } from "@/lib/util/pool";
 
 function tickerOf(t: string): string {
   return t.trim().toUpperCase();
@@ -133,13 +134,14 @@ export async function sweepUserEnrichment(
   if (!isSuperAdmin) return { enriched: [], failed: [] };
   const tickers = await findStaleEnrichmentTickers(userId, supabase, limit);
   if (!tickers.length) return { enriched: [], failed: [] };
-  const results = await Promise.allSettled(
-    tickers.map((t) => kickoffEnrichment(supabase, t, isSuperAdmin)),
+  // Bounded concurrency so a wide sweep doesn't fan out one request per ticker.
+  const results = await pooledMap(tickers, 5, (t) =>
+    kickoffEnrichment(supabase, t, isSuperAdmin),
   );
   const enriched: string[] = [];
   const failed: string[] = [];
   results.forEach((r, i) => {
-    if (r.status === "fulfilled") enriched.push(tickers[i]);
+    if (r?.kicked) enriched.push(tickers[i]);
     else failed.push(tickers[i]);
   });
   return { enriched, failed };

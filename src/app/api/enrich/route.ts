@@ -8,6 +8,7 @@ import { createServerSupabase } from "@/lib/supabase/server";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { kickoffEnrichment, sweepUserEnrichment } from "@/lib/mcp/db";
 import { isSuperAdminEmail } from "@/lib/auth/super-admin";
+import { pooledMap } from "@/lib/util/pool";
 
 export const maxDuration = 60;
 
@@ -68,11 +69,9 @@ export async function POST(request: NextRequest) {
 
   const enriched: string[] = [];
   const failed: string[] = [];
-  const results = await Promise.allSettled(
-    allowed.map((t) => kickoffEnrichment(supabase, t, true)),
-  );
+  const results = await pooledMap(allowed, 5, (t) => kickoffEnrichment(supabase, t, true));
   results.forEach((r, i) => {
-    if (r.status === "fulfilled") enriched.push(allowed[i]);
+    if (r?.kicked) enriched.push(allowed[i]);
     else failed.push(allowed[i]);
   });
 

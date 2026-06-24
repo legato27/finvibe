@@ -9,6 +9,7 @@ import { useWatchlistGroups } from "@/lib/supabase/hooks";
 import LivePrice from "@/components/ui/LivePrice";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { LastUpdated } from "@/components/common/LastUpdated";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import {
@@ -194,6 +195,7 @@ export default function MultibaggerPage() {
             catches early-stage base/VCP breakouts with an RS-line new high. Fundamentally confirmed,
             catalyst-aware, regime-adaptive.
           </p>
+          <LastUpdated at={data?.as_of} className="mt-1 inline-block" />
         </div>
         <button
           onClick={() => refetch()}

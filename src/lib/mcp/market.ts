@@ -3,6 +3,8 @@
 // (and re-uses the same Cloudflare Access service-token plumbing
 // that src/lib/proxy.ts uses).
 
+import { pooledMap } from "@/lib/util/pool";
+
 const DGX_API_URL = process.env.DGX_API_URL;
 const CF_ACCESS_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID;
 const CF_ACCESS_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET;
@@ -141,11 +143,11 @@ export const market = {
 export async function enrichTickers(tickers: string[]): Promise<void> {
   if (!tickers.length) return;
   const unique = [...new Set(tickers.map((t) => t.toUpperCase()))];
-  await Promise.allSettled(
-    unique.map((ticker) =>
-      market.enrich(ticker).catch((err) => {
-        console.error(`[mcp enrich] enrich ${ticker} failed`, err);
-      }),
-    ),
+  // Cap in-flight enrich requests so a big watchlist/sweep doesn't fire one
+  // HTTP call per ticker at once (DGX dedupes per ticker on its side too).
+  await pooledMap(unique, 5, (ticker) =>
+    market.enrich(ticker).catch((err) => {
+      console.error(`[mcp enrich] enrich ${ticker} failed`, err);
+    }),
   );
 }

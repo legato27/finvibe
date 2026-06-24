@@ -17,6 +17,7 @@ import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { LastUpdated } from "@/components/common/LastUpdated";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import type { FilterDef } from "@/components/shared/ColumnFilters";
@@ -81,6 +82,13 @@ export default function OptionsScreenerPage() {
   const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
   const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
   const rows = (data?.rows ?? []).filter((r) => !wlSet || wlSet.has(r.ticker.toUpperCase()));
+
+  // No top-level timestamp on this endpoint — use the newest per-row snapshot
+  // date as the "last updated by job" stamp (ISO dates compare lexically).
+  const screenerAsOf = (data?.rows ?? []).reduce<string | null>(
+    (max, r) => (r.summary_date && (!max || r.summary_date > max) ? r.summary_date : max),
+    null,
+  );
 
   const strategyLabel = (s: string) =>
     s === "sell_puts" ? ts("strat.sell_puts")
@@ -273,6 +281,7 @@ export default function OptionsScreenerPage() {
         <div>
           <h1 className="text-lg font-bold text-foreground">{ts("title")}</h1>
           <p className="text-sm text-muted-foreground">{ts("subtitle")}</p>
+          <LastUpdated at={screenerAsOf} className="mt-1 inline-block" />
         </div>
         <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
       </header>
