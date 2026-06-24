@@ -8,6 +8,7 @@ const TABS = [
   { href: "/settings/mcp/tokens", labelKey: "tokens" },
   { href: "/settings/mcp/oauth", labelKey: "connectedApps" },
   { href: "/settings/mcp/guide", labelKey: "guide" },
+  { href: "/settings/mcp/tools", labelKey: "tools" },
 ] as const;
 
 export function McpSubnav() {

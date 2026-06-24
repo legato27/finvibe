@@ -1071,7 +1071,8 @@
     "tab": {
       "connectedApps": "Connected apps",
       "guide": "Connection guide",
-      "tokens": "Personal tokens"
+      "tokens": "Personal tokens",
+      "tools": "Tools & reference"
     },
     "title": "Settings",
     "tokens": {

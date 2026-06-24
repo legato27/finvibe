@@ -1071,7 +1071,8 @@
     "tab": {
       "connectedApps": "已连接应用",
       "guide": "连接指南",
-      "tokens": "个人令牌"
+      "tokens": "个人令牌",
+      "tools": "工具与参考"
     },
     "title": "设置",
     "tokens": {
