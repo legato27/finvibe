@@ -10,6 +10,8 @@ export interface ToolContext {
   supabase: ServiceSupabase;
   /** Toolset scope of the calling token. Defaults to "full" if omitted. */
   scope?: McpScope;
+  /** Whether the token's user is a super admin (gates enrich_stock). */
+  isSuperAdmin?: boolean;
 }
 
 function ok(payload: unknown) {
@@ -29,6 +31,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
   // so they stay in sync with the public docs page at /mcp.
 
   const scope: McpScope = ctx.scope ?? "full";
+  const isSuperAdmin = ctx.isSuperAdmin ?? false;
 
   // Scope gate: a tool is only registered (and thus only visible/callable) if
   // the calling token's scope permits it. A "read" token never even sees the
@@ -56,7 +59,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       // Self-heal: any stale (pending or long-stuck processing) tickers in
       // this user's watchlists or portfolio holdings get re-kicked. Same
       // helper the /api/enrich route uses so both surfaces agree.
-      const backfilled = await db.sweepUserEnrichment(ctx.userId, ctx.supabase);
+      const backfilled = await db.sweepUserEnrichment(ctx.userId, ctx.supabase, isSuperAdmin);
       return ok({ watchlists: data, backfilled });
     },
   );
@@ -91,7 +94,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
         ticker: z.string().min(1),
       },
     },
-    async (args) => ok(await db.addToWatchlist(ctx.userId, ctx.supabase, args)),
+    async (args) => ok(await db.addToWatchlist(ctx.userId, ctx.supabase, args, isSuperAdmin)),
   );
 
   reg(
@@ -160,7 +163,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
         currency: z.string().length(3).optional(),
       },
     },
-    async (args) => ok(await db.addHolding(ctx.userId, ctx.supabase, args)),
+    async (args) => ok(await db.addHolding(ctx.userId, ctx.supabase, args, isSuperAdmin)),
   );
 
   reg(
@@ -402,6 +405,9 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await db.getLlmThoughts(ctx.userId, ctx.supabase, args)),
   );
 
+  // enrich_stock triggers the expensive DGX pipeline — super admins only, on
+  // top of the existing "full" scope gate. A non-admin token never sees it.
+  if (isSuperAdmin)
   reg(
     "enrich_stock",
     {

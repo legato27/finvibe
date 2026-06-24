@@ -4,6 +4,7 @@ import { hashToken } from "@/lib/mcp/tokens";
 import { lookupOAuthToken, originOf } from "@/lib/mcp/oauth";
 import { registerTools } from "@/lib/mcp/tools";
 import { toMcpScope, type McpScope } from "@/lib/mcp/catalog";
+import { isSuperAdminUserId } from "@/lib/auth/super-admin";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -132,9 +133,12 @@ async function handler(req: Request) {
 
   // Create MCP handler with verified user
   const supabase = createServiceSupabase();
+  // enrich_stock is super-admin only; resolve once so it's gated at tool
+  // registration (a non-admin token never sees the tool).
+  const isSuperAdmin = await isSuperAdminUserId(userId, supabase);
   const mcp = createMcpHandler(
     (server) => {
-      registerTools(server, { userId, supabase, scope });
+      registerTools(server, { userId, supabase, scope, isSuperAdmin });
     },
     {},
     { basePath: "/api/mcp", maxDuration: 60, verboseLogs: false },

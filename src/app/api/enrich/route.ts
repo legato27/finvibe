@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import { kickoffEnrichment, sweepUserEnrichment } from "@/lib/mcp/db";
+import { isSuperAdminEmail } from "@/lib/auth/super-admin";
 
 export const maxDuration = 60;
 
@@ -24,6 +25,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Stock enrichment runs the expensive DGX pipeline; restrict it to super
+  // admins. Non-admins still read whatever the shared catalog already holds —
+  // their watchlist/holding adds simply don't trigger a new enrichment.
+  if (!isSuperAdminEmail(user.email)) {
+    return NextResponse.json(
+      { error: "Forbidden: stock enrichment is restricted to administrators." },
+      { status: 403 },
+    );
+  }
+
   let body: Body;
   try {
     body = (await request.json()) as Body;
@@ -35,7 +46,8 @@ export async function POST(request: NextRequest) {
 
   // Sweep path — auto-requeue any of this user's stale rows.
   if (body.sweep) {
-    const result = await sweepUserEnrichment(user.id, supabase);
+    // Reached only after the super-admin gate above, so enrichment is allowed.
+    const result = await sweepUserEnrichment(user.id, supabase, true);
     return NextResponse.json(result);
   }
 
@@ -57,7 +69,7 @@ export async function POST(request: NextRequest) {
   const enriched: string[] = [];
   const failed: string[] = [];
   const results = await Promise.allSettled(
-    allowed.map((t) => kickoffEnrichment(supabase, t)),
+    allowed.map((t) => kickoffEnrichment(supabase, t, true)),
   );
   results.forEach((r, i) => {
     if (r.status === "fulfilled") enriched.push(allowed[i]);

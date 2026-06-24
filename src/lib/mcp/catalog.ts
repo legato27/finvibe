@@ -478,10 +478,11 @@ export const TOOL_CATALOG: ToolDoc[] = [
     group: "AI",
     title: "Refresh price + run AI thoughts and quant models",
     description:
-      "Manually kick off the full enrichment pipeline for one or more tickers: " +
-      "refresh price (synchronous, batched), then generate FinVibe LLM thoughts and " +
-      "run all quant models (in the background after the response). Useful when " +
-      "data feels stale; runs automatically when adding to a watchlist or holding.",
+      "Super-admin only. Manually kick off the full enrichment pipeline for one " +
+      "or more tickers: refresh price (synchronous, batched), then generate " +
+      "FinVibe LLM thoughts and run all quant models (in the background after the " +
+      "response). Useful when data feels stale. Requires a full-scope token whose " +
+      "user is a super admin; hidden for everyone else.",
     params: [
       { name: "tickers", type: "string[]", required: true },
     ],

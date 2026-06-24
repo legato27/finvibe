@@ -37,7 +37,11 @@ function assertValidTicker(t: string): string {
 export async function kickoffEnrichment(
   _supabase: ServiceSupabase,
   ticker: string,
-): Promise<{ kicked: boolean; error?: string }> {
+  isSuperAdmin: boolean,
+): Promise<{ kicked: boolean; error?: string; skipped?: boolean }> {
+  // The enrichment pipeline (DGX) is super-admin only. For everyone else this
+  // is a no-op so add/sweep flows still succeed — they just don't enrich.
+  if (!isSuperAdmin) return { kicked: false, skipped: true };
   try {
     await market.enrich(ticker);
     return { kicked: true };
@@ -122,12 +126,15 @@ export async function findStaleEnrichmentTickers(
 export async function sweepUserEnrichment(
   userId: string,
   supabase: ServiceSupabase,
+  isSuperAdmin: boolean,
   limit = 25,
 ): Promise<{ enriched: string[]; failed: string[] }> {
+  // Only super admins trigger enrichment; non-admin sweeps are a no-op.
+  if (!isSuperAdmin) return { enriched: [], failed: [] };
   const tickers = await findStaleEnrichmentTickers(userId, supabase, limit);
   if (!tickers.length) return { enriched: [], failed: [] };
   const results = await Promise.allSettled(
-    tickers.map((t) => kickoffEnrichment(supabase, t)),
+    tickers.map((t) => kickoffEnrichment(supabase, t, isSuperAdmin)),
   );
   const enriched: string[] = [];
   const failed: string[] = [];
@@ -229,6 +236,7 @@ export async function addToWatchlist(
   userId: string,
   supabase: ServiceSupabase,
   args: { watchlist_id: number; ticker: string },
+  isSuperAdmin: boolean,
 ) {
   await assertWatchlistOwned(userId, supabase, args.watchlist_id);
   const stock = await getOrCreateStock(supabase, args.ticker);
@@ -237,7 +245,7 @@ export async function addToWatchlist(
     .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
   if (error) throw new Error(error.message);
 
-  const enrichment = await kickoffEnrichment(supabase, stock.ticker);
+  const enrichment = await kickoffEnrichment(supabase, stock.ticker, isSuperAdmin);
 
   return {
     watchlist_id: args.watchlist_id,
@@ -434,6 +442,7 @@ export async function addHolding(
     notes?: string;
     currency?: string;
   },
+  isSuperAdmin: boolean,
 ) {
   await assertPortfolioOwned(userId, supabase, args.portfolio_id);
   const stock = await getOrCreateStock(supabase, args.ticker);
@@ -454,7 +463,7 @@ export async function addHolding(
     .single();
   if (error) throw new Error(error.message);
 
-  await kickoffEnrichment(supabase, stock.ticker);
+  await kickoffEnrichment(supabase, stock.ticker, isSuperAdmin);
 
   return data;
 }
