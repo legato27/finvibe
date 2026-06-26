@@ -4,6 +4,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
+import { verdictToAction, confidenceToConviction } from "@/lib/signals";
 import { usePortfolios, usePortfolioHoldings, useLLMAnalysis } from "@/lib/supabase/hooks";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
 import { StockEvents } from "@/components/stock/StockEvents";
@@ -88,6 +89,10 @@ export default function PortfolioStockPage() {
   const currentPrice = stockInfo?.current_price || detail?.last_price || 0;
   const thoughts = thoughtsData?.thoughts || null;
   const thoughtsGeneratedAt = thoughtsData?.generated_at || null;
+  // Unified arbitrated verdict (6-state) mapped to the buy/hold/avoid action
+  // vocabulary. Prefer it over the un-arbitrated LLM thoughts.verdict so the
+  // hero, options strategy, and position advice all speak the same call.
+  const unifiedAction = detail?.verdict?.state ? verdictToAction(detail.verdict.state) : undefined;
 
   // ── Position P&L ─────────────────────────────────────────
   const mktValue = position ? currentPrice * position.totalShares : 0;
@@ -112,8 +117,8 @@ export default function PortfolioStockPage() {
         detail={detail}
         stockInfo={stockInfo}
         currentPrice={currentPrice}
-        verdict={thoughts?.verdict}
-        conviction={thoughts?.conviction}
+        verdict={unifiedAction ?? thoughts?.verdict}
+        conviction={detail?.verdict?.state ? confidenceToConviction(detail.verdict.confidence) : thoughts?.conviction}
         llm={detail?.llm || supabaseLlm}
       />
 
@@ -185,6 +190,7 @@ export default function PortfolioStockPage() {
           position={{ shares: position.totalShares, avgCost: position.avgCost }}
           stockInfo={stockInfo}
           thoughts={thoughts}
+          verdictAction={unifiedAction}
           thoughtsGeneratedAt={thoughtsGeneratedAt}
           thoughtsData={thoughtsData}
           isGenerating={generatingThoughts && !thoughts}
@@ -225,6 +231,7 @@ export default function PortfolioStockPage() {
           currentPrice={currentPrice}
           stockInfo={stockInfo}
           thoughts={thoughts}
+          verdictAction={unifiedAction}
           position={{ shares: position.totalShares, avgCost: position.avgCost }}
         />
       ) : activeTab === "options" && (

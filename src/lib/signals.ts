@@ -52,6 +52,41 @@ export function signTextClass(n: number | null | undefined): string {
   return n > 0 ? "text-signal-long" : n < 0 ? "text-signal-short" : "text-signal-neutral";
 }
 
+// ── Unified verdict (6-state) → action vocabularies ─────────────────────────
+export type VerdictAction = "buy" | "hold" | "avoid";
+
+/**
+ * Map the arbitrated 6-state verdict to the 3-state buy/hold/avoid vocabulary
+ * the hero pill, options strategy, and portfolio advice speak. NEUTRAL and
+ * CONFLICTING (and anything unknown) → hold. This is the single bridge between
+ * `VerdictJson.state` and `thoughts.verdict` — there was none before.
+ */
+export function verdictToAction(state: string | null | undefined): VerdictAction {
+  switch (state) {
+    case "STRONG_LONG":
+    case "LONG":
+      return "buy";
+    case "SHORT":
+    case "STRONG_SHORT":
+      return "avoid";
+    default:
+      return "hold"; // NEUTRAL, CONFLICTING, null, unknown
+  }
+}
+
+/** Directional bucket of a unified verdict state (for conflict checks). */
+export function verdictDirection(state: string | null | undefined): Direction {
+  if (state === "STRONG_LONG" || state === "LONG") return "long";
+  if (state === "SHORT" || state === "STRONG_SHORT") return "short";
+  return "neutral";
+}
+
+/** Verdict confidence (0–1) → conviction label shown next to the action. */
+export function confidenceToConviction(c: number | null | undefined): "high" | "medium" | "low" {
+  if (c == null) return "medium";
+  return c >= 0.66 ? "high" : c >= 0.33 ? "medium" : "low";
+}
+
 // ── Moat (3-tier, per catalog: Wide / Narrow / None) ────────────────────────
 export interface MoatStyle {
   /** None / null → caller should not render the badge at all. */
@@ -102,4 +137,16 @@ export function ivRankTone(v: number | null | undefined): "caution" | "neutral" 
   if (v >= IV_RANK.high) return "caution";
   if (v >= IV_RANK.elevated) return "neutral";
   return "long";
+}
+
+/**
+ * Fear & Greed value (0–100) → gauge hex color. High = greed = green.
+ * Returns a raw hex (chart/gauge fill, not a Tailwind class).
+ */
+export function fngColor(v: number): string {
+  if (v <= 25) return "#ef4444"; // extreme fear
+  if (v <= 40) return "#f97316"; // fear
+  if (v <= 60) return "#fbbf24"; // neutral
+  if (v <= 75) return "#86efac"; // greed
+  return "#22c55e"; // extreme greed
 }

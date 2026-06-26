@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi, sentimentApi } from "@/lib/api";
+import { verdictToAction, confidenceToConviction } from "@/lib/signals";
 import { useLLMAnalysis } from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { PriceActionAnalysis } from "@/components/stock/PriceActionAnalysis";
@@ -139,8 +140,8 @@ export default function StockDetailPage() {
         detail={detail}
         stockInfo={stockInfo}
         currentPrice={currentPrice}
-        verdict={verdict}
-        conviction={thoughts?.conviction}
+        verdict={detail.verdict?.state ? verdictToAction(detail.verdict.state) : thoughts?.verdict}
+        conviction={detail.verdict?.state ? confidenceToConviction(detail.verdict.confidence) : thoughts?.conviction}
         llm={llm}
       />
 

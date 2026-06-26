@@ -125,10 +125,12 @@ export default function VerdictCard({ verdict }: { verdict: VerdictJson | null |
       {isConflict && (
         <div className="mt-3 rounded-lg border border-signal-conflict/40 bg-signal-conflict-bg p-3 text-sm">
           <p className="font-medium text-signal-conflict">
-            {t("conflictHeadline", {
-              a: t(`source.${v.conflict?.between?.[0] ?? "ensemble"}`),
-              b: t(`source.${v.conflict?.between?.[1] ?? "pam"}`),
-            })}
+            {v.conflict?.between?.[0] && v.conflict?.between?.[1]
+              ? t("conflictHeadline", {
+                  a: t(`source.${v.conflict.between[0]}`),
+                  b: t(`source.${v.conflict.between[1]}`),
+                })
+              : t("conflictHeadlineGeneric")}
           </p>
           {v.conflict?.explanation && (
             <p className="mt-1 text-foreground">{v.conflict.explanation}</p>

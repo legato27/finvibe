@@ -6,6 +6,7 @@ import { macroApi } from "@/lib/api";
 import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 import { TodayPanel } from "@/components/dashboard/TodayPanel";
 import { TodaySignalsPanel } from "@/components/dashboard/TodaySignalsPanel";
+import { RegimeAgreement } from "@/components/dashboard/RegimeAgreement";
 import { MacroTape } from "@/components/dashboard/MacroTape";
 import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { WatchlistGlance } from "@/components/dashboard/WatchlistGlance";
@@ -51,6 +52,7 @@ export function DashboardView() {
       </div>
 
       <Section title={t("sectionTodayTitle")} intro={t("sectionTodayIntro")}>
+        <RegimeAgreement />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 items-start">
           <TodaySignalsPanel />
           <TodayPanel />

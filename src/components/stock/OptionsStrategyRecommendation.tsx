@@ -152,6 +152,8 @@ interface Props {
   currentPrice: number;
   stockInfo: any;
   thoughts: any;
+  /** Arbitrated unified verdict mapped to buy/hold/avoid; preferred over thoughts.verdict. */
+  verdictAction?: "buy" | "hold" | "avoid";
   position?: Position;
 }
 
@@ -159,14 +161,14 @@ type RiskTol = "conservative" | "moderate" | "aggressive";
 type Objective = "income" | "protection" | "speculation" | "balanced" | "repair";
 
 export function OptionsStrategyRecommendation({
-  ticker, currentPrice, stockInfo, thoughts, position,
+  ticker, currentPrice, stockInfo, thoughts, verdictAction, position,
 }: Props) {
   const t = useTranslations("options");
   const [riskTol, setRiskTol] = useState<RiskTol | null>(null);
   const [objective, setObjective] = useState<Objective | null>(null);
   const [submittedProfile, setSubmittedProfile] = useState<{ risk: RiskTol; obj: Objective } | null>(null);
 
-  const verdict = thoughts?.verdict || "hold";
+  const verdict = verdictAction ?? thoughts?.verdict ?? "hold";
   const conviction = thoughts?.conviction || "medium";
   const beta = stockInfo?.beta || 1.0;
   const high52 = stockInfo?.fifty_two_week_high || currentPrice * 1.25;
