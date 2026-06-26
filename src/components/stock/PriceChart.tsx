@@ -82,6 +82,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
   const [showMA50,  setShowMA50]  = useState(true);
   const [showMA200, setShowMA200] = useState(false);
   const [drawMode,  setDrawMode]  = useState(false);
+  const [chartReady, setChartReady] = useState(false); // flips true once the (re)built chart's series exists
   const [ohlcv,     setOhlcv]     = useState<OhlcvState | null>(null);
   const [periodChg, setPeriodChg] = useState<number | null>(null);
 
@@ -104,7 +105,9 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
     queryKey: ["price_history", ticker, period, interval],
     queryFn:  () => stocksApi.priceHistory(ticker, period, interval),
     staleTime: 60_000,
-    refetchInterval: 60_000, // keep the last candle moving with the hero's live price
+    // No refetchInterval: the live price LINE (driven by the hero's polled
+    // currentPrice) conveys the live level without rebuilding the chart every
+    // minute, which would reset the user's zoom/pan.
   });
 
   const chartData = useMemo<CandleRow[]>(() => {
@@ -127,6 +130,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
     if (!containerRef.current || chartData.length === 0) return;
 
     let cancelled = false;
+    setChartReady(false);
 
     import("lightweight-charts").then(
       ({ createChart, CrosshairMode, LineStyle, ColorType }) => {
@@ -331,6 +335,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         });
 
         chart.timeScale().fitContent();
+        setChartReady(true);
       }
     );
 
@@ -349,8 +354,11 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
   useEffect(() => { ma200Ref.current?.applyOptions({ visible: showMA200 }); }, [showMA200]);
 
   // ── Live price line — the chart candles are delayed/EOD, so overlay the
-  // hero's polled live price and keep it in sync (don't rebuild the chart).
+  // hero's polled live price and keep it in sync. Gated on chartReady because
+  // the chart is built via an async import(); without that gate this effect
+  // runs before the series exists and never re-fires.
   useEffect(() => {
+    if (!chartReady) return;            // wait until the (re)built series exists
     const series = mainSeriesRef.current;
     if (!series) return;
     if (liveLineRef.current) {
@@ -360,12 +368,12 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
     if (currentPrice == null) return;
     try {
       liveLineRef.current = series.createPriceLine({
-        price: currentPrice, color: "#38bdf8", lineWidth: 1,
+        price: currentPrice, color: "#38bdf8", lineWidth: 2,
         lineStyle: 0, // LineStyle.Solid (enum not in scope outside the lazy chart import)
         axisLabelVisible: true, title: t("livePriceLine"),
       });
     } catch { /* ignore */ }
-  }, [currentPrice, chartData, chartMode, t]);
+  }, [currentPrice, chartReady, t]);
 
   // ── Resize observer ──────────────────────────────────────
   useEffect(() => {
