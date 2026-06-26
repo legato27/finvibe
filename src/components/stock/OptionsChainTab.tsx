@@ -187,7 +187,7 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
           <StatChip
             label={t("pcr")}
             value={fmt(summary?.pcr_oi)}
-            tone={summary?.pcr_oi > 1.2 ? "short" : summary?.pcr_oi < 0.7 ? "long" : "plain"}
+            tone={summary?.pcr_oi == null ? "plain" : summary.pcr_oi > 1.2 ? "short" : summary.pcr_oi < 0.7 ? "long" : "plain"}
           />
           <StatChip label={t("maxPain")} value={fmt(summary?.max_pain_near)} />
           {summary?.skew_25d && (

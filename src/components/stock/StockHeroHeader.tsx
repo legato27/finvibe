@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatMoS } from "@/lib/valuation";
 
@@ -109,7 +109,7 @@ export function StockHeroHeader({
               <span className={`flex items-center gap-1 text-sm font-mono ${
                 detail.quarterly_trend === "up" ? "text-green-400" : detail.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
               }`}>
-                {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : detail.quarterly_trend === "down" ? <TrendingDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
                 <span className="text-xs text-muted-foreground">{t('quarterlyShort')}</span>
               </span>
             )}

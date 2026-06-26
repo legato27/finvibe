@@ -1,5 +1,6 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { formatMoS } from "@/lib/valuation";
 
 interface StockMetricsProps {
   sector?: string | null;
@@ -115,7 +116,7 @@ export function StockMetrics({
         {marginOfSafety != null && (
           <MetricCard
             label={t('marginOfSafetyDcf')}
-            value={`${(marginOfSafety * 100).toFixed(0)}%`}
+            value={formatMoS(marginOfSafety) ?? "—"}
             color={marginOfSafety > 0 ? "text-signal-long" : "text-signal-short"}
           />
         )}
@@ -123,7 +124,7 @@ export function StockMetrics({
         {llmMarginOfSafety != null && (
           <MetricCard
             label={t('marginOfSafetyAi')}
-            value={`${(llmMarginOfSafety * 100).toFixed(0)}%`}
+            value={formatMoS(llmMarginOfSafety) ?? "—"}
             color={llmMarginOfSafety > 0 ? "text-signal-long" : "text-signal-short"}
           />
         )}
