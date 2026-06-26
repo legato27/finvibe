@@ -6,7 +6,6 @@ import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, Settings, ListOrdered } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
-import LanguageSwitcher from "@/components/shared/LanguageSwitcher";
 import { useTranslations } from "next-intl";
 import type { User } from "@supabase/supabase-js";
 
@@ -96,9 +95,6 @@ export default function Navbar() {
 
         {/* Right side */}
         <div className="ml-auto flex items-center gap-3">
-          {/* Language toggle */}
-          <LanguageSwitcher />
-
           {/* Theme toggle */}
           <button
             onClick={cycleTheme}

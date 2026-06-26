@@ -1,6 +1,6 @@
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import { Calendar, DollarSign, AlertCircle, Loader2 } from "lucide-react";
 
@@ -32,7 +32,7 @@ function CountdownBadge({ days }: { days: number }) {
 
 export function StockEvents({ ticker }: { ticker: string }) {
   const t = useTranslations("stock.events");
-  const locale = useLocale();
+  const locale = "en-US";
   const { data, isLoading, error } = useQuery({
     queryKey: ["stock-events", ticker],
     queryFn: () => stocksApi.events(ticker),
