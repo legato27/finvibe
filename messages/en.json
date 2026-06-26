@@ -1113,6 +1113,7 @@
     "jobRuns": "Job runs"
   },
   "stock": {
+    "livePriceLine": "Live",
     "addLot": "添加买入",
     "addTrade": "Add Trade",
     "ai": "AI",

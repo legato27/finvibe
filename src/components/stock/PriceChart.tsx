@@ -61,7 +61,7 @@ function fmtVol(v: number): string {
 
 // ── Component ────────────────────────────────────────────────
 
-export function PriceChart({ ticker, priceAction }: { ticker: string; priceAction?: any }) {
+export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: string; priceAction?: any; currentPrice?: number }) {
   const t = useTranslations('stock');
   // ── DOM + chart refs ──────────────────────────────────────
   const containerRef  = useRef<HTMLDivElement>(null);
@@ -72,6 +72,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
   const ma50Ref       = useRef<any>(null);
   const ma200Ref      = useRef<any>(null);
   const drawLinesRef  = useRef<{ line: any; price: number }[]>([]);
+  const liveLineRef   = useRef<any>(null);
 
   // ── UI state ──────────────────────────────────────────────
   const [period,    setPeriod]    = useState<Period>("1y");
@@ -103,6 +104,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
     queryKey: ["price_history", ticker, period, interval],
     queryFn:  () => stocksApi.priceHistory(ticker, period, interval),
     staleTime: 60_000,
+    refetchInterval: 60_000, // keep the last candle moving with the hero's live price
   });
 
   const chartData = useMemo<CandleRow[]>(() => {
@@ -345,6 +347,25 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
   useEffect(() => { ma20Ref.current?.applyOptions({ visible: showMA20 }); }, [showMA20]);
   useEffect(() => { ma50Ref.current?.applyOptions({ visible: showMA50 }); }, [showMA50]);
   useEffect(() => { ma200Ref.current?.applyOptions({ visible: showMA200 }); }, [showMA200]);
+
+  // ── Live price line — the chart candles are delayed/EOD, so overlay the
+  // hero's polled live price and keep it in sync (don't rebuild the chart).
+  useEffect(() => {
+    const series = mainSeriesRef.current;
+    if (!series) return;
+    if (liveLineRef.current) {
+      try { series.removePriceLine(liveLineRef.current); } catch { /* ignore */ }
+      liveLineRef.current = null;
+    }
+    if (currentPrice == null) return;
+    try {
+      liveLineRef.current = series.createPriceLine({
+        price: currentPrice, color: "#38bdf8", lineWidth: 1,
+        lineStyle: 0, // LineStyle.Solid (enum not in scope outside the lazy chart import)
+        axisLabelVisible: true, title: t("livePriceLine"),
+      });
+    } catch { /* ignore */ }
+  }, [currentPrice, chartData, chartMode, t]);
 
   // ── Resize observer ──────────────────────────────────────
   useEffect(() => {

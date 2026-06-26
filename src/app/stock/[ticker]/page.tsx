@@ -203,7 +203,7 @@ export default function StockDetailPage() {
 
       {activeTab === "chart" && (
         <div role="tabpanel" id="tabpanel-chart" className="space-y-4">
-          <PriceChart ticker={ticker} priceAction={priceAction} />
+          <PriceChart ticker={ticker} priceAction={priceAction} currentPrice={currentPrice} />
           <PriceActionAnalysis ticker={ticker} />
         </div>
       )}
