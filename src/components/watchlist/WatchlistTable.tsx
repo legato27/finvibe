@@ -34,6 +34,7 @@ import VerdictBadge, { type VerdictJson, type VerdictState } from "@/components/
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
 import LivePrice from "@/components/ui/LivePrice";
 import { formatMoS } from "@/lib/valuation";
+import { moatStyle, signTextClass, directionTextClass, normalizeDirection } from "@/lib/signals";
 
 export interface OptStrategy {
   strategy: string;
@@ -279,13 +280,9 @@ export default function WatchlistTable({
           <Link href={`/stock/${r.ticker}`} className="font-mono text-sm font-bold text-primary hover:underline">
             {r.ticker}
           </Link>
-          {r.moat && r.moat !== "None" && (
+          {moatStyle(r.moat).show && (
             <span
-              className={`text-[9px] px-1.5 py-0.5 rounded ${
-                r.moat === "Wide"
-                  ? "bg-signal-long-bg text-signal-long border border-signal-long/40"
-                  : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-              }`}
+              className={`text-[9px] px-1.5 py-0.5 rounded border ${moatStyle(r.moat).badgeClass}`}
             >
               {r.moat}
               {r.moatIsAi ? " (AI)" : ""}
@@ -356,9 +353,7 @@ export default function WatchlistTable({
       <td className="px-3 py-2 text-right">
         {r.mos != null ? (
           <span
-            className={`nums font-mono text-xs inline-flex items-center justify-end gap-0.5 ${
-              r.mos > 0 ? "text-green-400" : "text-red-400"
-            }`}
+            className={`nums font-mono text-xs inline-flex items-center justify-end gap-0.5 ${signTextClass(r.mos)}`}
           >
             {r.mos > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
             {formatMoS(r.mos)}
@@ -380,7 +375,7 @@ export default function WatchlistTable({
       {/* AI MoS */}
       <td className="px-3 py-2 text-right hidden lg:table-cell">
         {r.aiMos != null ? (
-          <span className={`nums font-mono text-xs ${r.aiMos > 0 ? "text-green-400" : "text-red-400"}`}>
+          <span className={`nums font-mono text-xs ${signTextClass(r.aiMos)}`}>
             {formatMoS(r.aiMos)}
           </span>
         ) : (
@@ -391,11 +386,7 @@ export default function WatchlistTable({
       {/* Trend */}
       <td className="px-3 py-2 text-right hidden md:table-cell">
         {r.trend ? (
-          <span
-            className={`text-xs ${
-              r.trend === "up" ? "text-green-400" : r.trend === "down" ? "text-red-400" : "text-muted-foreground"
-            }`}
-          >
+          <span className={`text-xs ${directionTextClass(normalizeDirection(r.trend))}`}>
             {r.trend === "up" ? "↑" : r.trend === "down" ? "↓" : "→"} Q
           </span>
         ) : (

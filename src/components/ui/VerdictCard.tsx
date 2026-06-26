@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import VerdictBadge, { SourceEvidence, VerdictJson } from "./VerdictBadge";
+import { NEUTRAL_BAND } from "@/lib/signals";
 
 const SOURCE_ORDER = ["ensemble", "pam", "ranked", "sentiment", "llm"] as const;
 
@@ -51,7 +52,7 @@ function AgreeMark({ s, score }: { s: SourceEvidence; score: number }) {
   }
   // A near-zero direction is a neutral stance — show it as such, not as
   // agreement (a NEUTRAL ensemble doesn't "agree" with a LONG verdict).
-  if (Math.abs(s.direction ?? 0) < 0.15) {
+  if (Math.abs(s.direction ?? 0) < NEUTRAL_BAND.verdictDirection) {
     return (
       <span className="text-signal-neutral" title={t("neutralStance")}>
         <span aria-hidden="true">–</span>

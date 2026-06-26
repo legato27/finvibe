@@ -1,6 +1,7 @@
 "use client";
 import { useTranslations } from "next-intl";
 import { formatMoS } from "@/lib/valuation";
+import { moatTextClass } from "@/lib/signals";
 
 interface StockMetricsProps {
   sector?: string | null;
@@ -93,7 +94,7 @@ export function StockMetrics({
                 ? t('moatConfidence', { pct: (moatConfidence * 100).toFixed(0) })
                 : undefined
             }
-            color={displayMoat === "Wide" ? "text-signal-long" : "text-signal-caution"}
+            color={moatTextClass(displayMoat)}
           />
         )}
 

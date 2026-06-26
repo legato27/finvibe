@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown, Eye, ChevronRight, Lock } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { formatMoS } from "@/lib/valuation";
+import { moatStyle } from "@/lib/signals";
 
 /**
  * Compact watchlist summary for the dashboard.
@@ -140,11 +141,7 @@ function AuthenticatedWatchlist() {
                       {stock.ticker}
                     </span>
                     {hasMoat && (
-                      <span className={`text-[9px] px-1 py-0 rounded ${
-                        stock.moat_rating === "Wide"
-                          ? "bg-signal-long-bg text-signal-long border border-signal-long/40"
-                          : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-                      }`}>
+                      <span className={`text-[9px] px-1 py-0 rounded border ${moatStyle(stock.moat_rating).badgeClass}`}>
                         {stock.moat_rating}
                       </span>
                     )}

@@ -22,6 +22,7 @@ import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import type { FilterDef } from "@/components/shared/ColumnFilters";
 import { useWatchlistGroups } from "@/lib/supabase/hooks";
+import { IV_RANK } from "@/lib/signals";
 
 interface ScreenerRow {
   ticker: string;
@@ -207,7 +208,7 @@ export default function OptionsScreenerPage() {
           <Sparkline values={r.iv_sparkline} width={48} height={16} className="text-muted-foreground" />
           <span
             className={`nums font-mono font-semibold ${
-              (r.iv_rank ?? 0) >= 70 ? "text-signal-caution" : ""
+              (r.iv_rank ?? 0) >= IV_RANK.high ? "text-signal-caution" : ""
             }`}
           >
             {fmt(r.iv_rank, 0)}

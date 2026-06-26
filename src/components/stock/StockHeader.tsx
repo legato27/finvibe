@@ -2,6 +2,7 @@
 import { TrendingUp, TrendingDown, Minus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { moatStyle } from "@/lib/signals";
 
 interface StockHeaderProps {
   ticker: string;
@@ -48,17 +49,13 @@ export function StockHeader({
                   {assetType}
                 </span>
               )}
-              {displayMoat && displayMoat !== "None" && (
+              {moatStyle(displayMoat).show && (
                 <span
-                  className={`text-[10px] px-2 py-0.5 rounded ${
-                    displayMoat === "Wide"
-                      ? "bg-signal-long-bg text-signal-long border border-signal-long/40"
-                      : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-                  }`}
+                  className={`text-[10px] px-2 py-0.5 rounded border ${moatStyle(displayMoat).badgeClass}`}
                 >
                   {isAiMoat
-                    ? t('moatLabelAi', { rating: displayMoat })
-                    : t('moatLabel', { rating: displayMoat })}
+                    ? t('moatLabelAi', { rating: displayMoat! })
+                    : t('moatLabel', { rating: displayMoat! })}
                 </span>
               )}
               {enrichmentStatus === "pending" && (

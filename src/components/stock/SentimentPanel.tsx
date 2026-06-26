@@ -2,14 +2,15 @@
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { sentimentApi } from "@/lib/api";
+import { NEUTRAL_BAND } from "@/lib/signals";
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
 
 interface Props { ticker: string }
 
 function sentimentColor(score: number) {
   if (score > 0.3) return "#22c55e";
-  if (score > 0.05) return "#86efac";
-  if (score > -0.05) return "#94a3b8";
+  if (score > NEUTRAL_BAND.sentimentScore) return "#86efac";
+  if (score > -NEUTRAL_BAND.sentimentScore) return "#94a3b8";
   if (score > -0.3) return "#fca5a5";
   return "#ef4444";
 }
