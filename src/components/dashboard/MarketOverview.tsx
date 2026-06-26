@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -9,7 +9,6 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
  */
 export function MarketOverview() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const locale = useLocale();
   const t = useTranslations("dashboard");
 
   useEffect(() => {
@@ -24,7 +23,7 @@ export function MarketOverview() {
       colorTheme: "dark",
       dateRange: "1D",
       showChart: true,
-      locale: locale === "zh" ? "zh_CN" : "en",
+      locale: "en",
       largeChartUrl: `https://www.tradingview.com/chart/${AFF_PARAMS}&`,
       isTransparent: true,
       showSymbolLogo: true,
@@ -91,7 +90,7 @@ export function MarketOverview() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, [locale, t]);
+  }, [t]);
 
   return (
     <div className="card overflow-hidden h-full">
