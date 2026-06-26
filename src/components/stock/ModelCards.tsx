@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { modelsApi, stocksApi } from "@/lib/api";
+import { NEUTRAL_BAND } from "@/lib/signals";
 import {
   Loader2, ShieldCheck, ShieldAlert,
   Activity, BarChart3, Brain, Zap, Target, Waves, Play, Clock,
@@ -51,7 +52,7 @@ function extractSignal(model: any, t: (k: string, v?: any) => string): { value: 
   if (type === "ensemble") {
     const ret = pred.predicted_3m_return ?? pred.ensemble_return ?? pred.predicted_return;
     const signal = pred.signal || "";
-    const color = ret > 0.03 ? COLOR.good : ret < -0.03 ? COLOR.bad : COLOR.warn;
+    const color = ret > NEUTRAL_BAND.ensembleReturn ? COLOR.good : ret < -NEUTRAL_BAND.ensembleReturn ? COLOR.bad : COLOR.warn;
     return { value: ret != null ? `${(ret * 100).toFixed(1)}%` : "—", label: signal.replace(/_/g, " "), color };
   }
 
@@ -101,7 +102,7 @@ function extractSignal(model: any, t: (k: string, v?: any) => string): { value: 
   // Return-based forecasters (xgboost, lightgbm, price_predictor, factor_model, lstm_forecast, kronos)
   const ret = pred.predicted_3m_return ?? pred.predicted_return ?? pred.forecast_return;
   if (ret != null) {
-    const color = ret > 0.03 ? COLOR.good : ret < -0.03 ? COLOR.bad : COLOR.warn;
+    const color = ret > NEUTRAL_BAND.ensembleReturn ? COLOR.good : ret < -NEUTRAL_BAND.ensembleReturn ? COLOR.bad : COLOR.warn;
     return { value: `${(ret * 100).toFixed(1)}%`, label: t("threeMReturn"), color };
   }
 

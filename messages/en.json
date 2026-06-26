@@ -242,6 +242,16 @@
     "sectionRiskTitle": "Risk radar",
     "sectionTodayIntro": "One-line summary of the regime.",
     "sectionTodayTitle": "Today's read",
+    "regimeAgreementTitle": "Signal agreement",
+    "regimeAgreeCount": "{agree} of {total} agree",
+    "regimeConflicting": "Conflicting signals",
+    "regimeAlignedRiskOn": "Aligned risk-on",
+    "regimeAlignedRiskOff": "Aligned risk-off",
+    "regimeMixed": "Mixed / neutral",
+    "regimeSignalToday": "Today",
+    "regimeSignalVix": "VIX",
+    "regimeSignalSwarm": "Swarm",
+    "regimeSignalCycle": "Cycle",
     "sectorAvoids": "Regime avoids:",
     "sectorColEtf": "ETF",
     "sectorColFwd": "60D Fwd",
@@ -1103,6 +1113,7 @@
     "jobRuns": "Job runs"
   },
   "stock": {
+    "livePriceLine": "Live",
     "addLot": "添加买入",
     "addTrade": "Add Trade",
     "ai": "AI",
@@ -1484,6 +1495,7 @@
     "stale": "stale or unavailable",
     "unavailable": "unavailable",
     "conflictHeadline": "{a} and {b} point in opposite directions",
+    "conflictHeadlineGeneric": "Signal sources point in opposite directions",
     "source": {
       "ensemble": "Quant ensemble",
       "pam": "Price action",

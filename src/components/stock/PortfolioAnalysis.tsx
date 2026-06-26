@@ -19,6 +19,8 @@ interface PortfolioAnalysisProps {
   position: Position;
   stockInfo: any;
   thoughts: any;
+  /** Arbitrated unified verdict mapped to buy/hold/avoid; preferred over thoughts.verdict. */
+  verdictAction?: "buy" | "hold" | "avoid";
   thoughtsGeneratedAt: string | null;
   thoughtsData: any;
   isGenerating: boolean;
@@ -92,25 +94,27 @@ function ConfidenceArc({ value, color }: { value: number; color: string }) {
 // ── Position Advice card ──────────────────────────────────────
 
 function PositionAdviceCard({
-  ticker, position, currentPrice, stockInfo, thoughts,
+  ticker, position, currentPrice, stockInfo, thoughts, verdictAction,
 }: {
   ticker: string;
   position: Position;
   currentPrice: number;
   stockInfo: any;
   thoughts: any;
+  verdictAction?: "buy" | "hold" | "avoid";
 }) {
   const t = useTranslations("portfolio");
   const pnlPct = ((currentPrice - position.avgCost) / position.avgCost) * 100;
+  const verdict = verdictAction ?? thoughts?.verdict ?? "hold";
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["position-advice", ticker, position.avgCost, currentPrice],
+    queryKey: ["position-advice", ticker, position.avgCost, currentPrice, verdict],
     queryFn: () =>
       stocksApi.positionAdvice(ticker, {
         current_price: currentPrice,
         avg_cost: position.avgCost,
         shares: position.shares,
-        verdict: thoughts?.verdict || "hold",
+        verdict,
         conviction: thoughts?.conviction || "medium",
         iv_pct: stockInfo?.implied_volatility ? stockInfo.implied_volatility * 100 : 30,
         beta: stockInfo?.beta || 1.0,
@@ -227,6 +231,7 @@ export function PortfolioAnalysis({
   position,
   stockInfo,
   thoughts,
+  verdictAction,
   thoughtsGeneratedAt,
   thoughtsData,
   isGenerating,
@@ -242,6 +247,7 @@ export function PortfolioAnalysis({
         currentPrice={currentPrice}
         stockInfo={stockInfo}
         thoughts={thoughts}
+        verdictAction={verdictAction}
       />
 
       {/* FinVibe AI thoughts */}

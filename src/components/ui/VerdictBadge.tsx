@@ -86,14 +86,17 @@ export default function VerdictBadge({
   className?: string;
 }) {
   const t = useTranslations("verdict");
-  if (!state || !STYLES[state]) {
+  // Normalize casing so a backend emitting e.g. "long"/"conflicting" still
+  // resolves instead of silently falling through to the "none" pill.
+  const norm = (state ? state.toUpperCase() : state) as VerdictState | null | undefined;
+  if (!norm || !STYLES[norm]) {
     return (
       <span className={`inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground ${className}`}>
         {t("none")}
       </span>
     );
   }
-  const s = STYLES[state];
+  const s = STYLES[norm];
   const z = SIZES[size];
   return (
     <span
@@ -109,7 +112,7 @@ export default function VerdictBadge({
       >
         <path d={s.arrow} />
       </svg>
-      {t(`state.${state}`)}
+      {t(`state.${norm}`)}
     </span>
   );
 }

@@ -18,6 +18,7 @@ import { optionsApi } from "@/lib/api";
 import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import StatChip from "@/components/ui/StatChip";
+import { ivRankTone } from "@/lib/signals";
 
 const STALE = 15 * 60 * 1000; // matches the backend chain-cache TTL
 
@@ -170,7 +171,7 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
               <StatChip
                 label={t("ivRank")}
                 value={ivr.iv_rank}
-                tone={ivr.iv_rank >= 70 ? "caution" : ivr.iv_rank >= 40 ? "neutral" : "long"}
+                tone={ivRankTone(ivr.iv_rank)}
               />
               <Sparkline
                 values={summary?.iv_rank?.history?.map((h: { iv_pct: number }) => h.iv_pct) ?? []}
@@ -187,7 +188,7 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
           <StatChip
             label={t("pcr")}
             value={fmt(summary?.pcr_oi)}
-            tone={summary?.pcr_oi > 1.2 ? "short" : summary?.pcr_oi < 0.7 ? "long" : "plain"}
+            tone={summary?.pcr_oi == null ? "plain" : summary.pcr_oi > 1.2 ? "short" : summary.pcr_oi < 0.7 ? "long" : "plain"}
           />
           <StatChip label={t("maxPain")} value={fmt(summary?.max_pain_near)} />
           {summary?.skew_25d && (

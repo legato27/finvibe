@@ -28,8 +28,10 @@ const IMPACT_COLOR: Record<string, string> = {
 
 export function TodayPanel() {
   const t = useTranslations("dashboard");
+  // Share the ["macro_dashboard"] cache entry with DashboardView/RegimeAgreement
+  // (same payload) instead of issuing a second identical request.
   const { data: today, isLoading } = useQuery({
-    queryKey: ["today_panel"],
+    queryKey: ["macro_dashboard"],
     queryFn: macroApi.dashboard,
     select: (d: any) => d.today,
     staleTime: 60_000,

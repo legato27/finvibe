@@ -61,7 +61,7 @@ function fmtVol(v: number): string {
 
 // ── Component ────────────────────────────────────────────────
 
-export function PriceChart({ ticker, priceAction }: { ticker: string; priceAction?: any }) {
+export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: string; priceAction?: any; currentPrice?: number }) {
   const t = useTranslations('stock');
   // ── DOM + chart refs ──────────────────────────────────────
   const containerRef  = useRef<HTMLDivElement>(null);
@@ -81,6 +81,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
   const [showMA50,  setShowMA50]  = useState(true);
   const [showMA200, setShowMA200] = useState(false);
   const [drawMode,  setDrawMode]  = useState(false);
+  const [chartReady, setChartReady] = useState(false); // flips true once the (re)built chart's series exists
   const [ohlcv,     setOhlcv]     = useState<OhlcvState | null>(null);
   const [periodChg, setPeriodChg] = useState<number | null>(null);
 
@@ -103,6 +104,9 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
     queryKey: ["price_history", ticker, period, interval],
     queryFn:  () => stocksApi.priceHistory(ticker, period, interval),
     staleTime: 60_000,
+    // No refetchInterval: the live forming bar (driven by the hero's polled
+    // currentPrice) conveys the live level without rebuilding the chart every
+    // minute, which would reset the user's zoom/pan.
   });
 
   const chartData = useMemo<CandleRow[]>(() => {
@@ -125,6 +129,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
     if (!containerRef.current || chartData.length === 0) return;
 
     let cancelled = false;
+    setChartReady(false);
 
     import("lightweight-charts").then(
       ({ createChart, CrosshairMode, LineStyle, ColorType }) => {
@@ -329,6 +334,7 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
         });
 
         chart.timeScale().fitContent();
+        setChartReady(true);
       }
     );
 
@@ -345,6 +351,37 @@ export function PriceChart({ ticker, priceAction }: { ticker: string; priceActio
   useEffect(() => { ma20Ref.current?.applyOptions({ visible: showMA20 }); }, [showMA20]);
   useEffect(() => { ma50Ref.current?.applyOptions({ visible: showMA50 }); }, [showMA50]);
   useEffect(() => { ma200Ref.current?.applyOptions({ visible: showMA200 }); }, [showMA200]);
+
+  // ── Live last bar — the parquet's last candle is the prior session's close.
+  // Overlay the hero's polled live price as the current/forming bar so the
+  // chart's latest point reflects the live price, not the last close. Gated on
+  // chartReady because the chart is built via an async import(); without it this
+  // effect runs before the series exists and never re-fires.
+  useEffect(() => {
+    if (!chartReady) return;
+    const series = mainSeriesRef.current;
+    if (!series || currentPrice == null || chartData.length === 0) return;
+    const last = chartData[chartData.length - 1];
+    // Daily: start a forming bar at today if it's past the last bar; otherwise
+    // (and for weekly/monthly) extend the current bar's close to the live price.
+    const today = new Date().toISOString().slice(0, 10);
+    const liveTime = interval === "1d" && today > last.time ? today : last.time;
+    const sameBar = liveTime === last.time;
+    try {
+      if (chartMode === "candle") {
+        const open = sameBar ? last.open : last.close;
+        series.update({
+          time: liveTime,
+          open,
+          high: Math.max(open, currentPrice, sameBar ? last.high : open),
+          low:  Math.min(open, currentPrice, sameBar ? last.low  : open),
+          close: currentPrice,
+        });
+      } else {
+        series.update({ time: liveTime, value: currentPrice });
+      }
+    } catch { /* ignore */ }
+  }, [currentPrice, chartReady, chartMode, interval, chartData]);
 
   // ── Resize observer ──────────────────────────────────────
   useEffect(() => {

@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import VerdictBadge, { SourceEvidence, VerdictJson } from "./VerdictBadge";
+import { NEUTRAL_BAND } from "@/lib/signals";
 
 const SOURCE_ORDER = ["ensemble", "pam", "ranked", "sentiment", "llm"] as const;
 
@@ -51,7 +52,7 @@ function AgreeMark({ s, score }: { s: SourceEvidence; score: number }) {
   }
   // A near-zero direction is a neutral stance — show it as such, not as
   // agreement (a NEUTRAL ensemble doesn't "agree" with a LONG verdict).
-  if (Math.abs(s.direction ?? 0) < 0.15) {
+  if (Math.abs(s.direction ?? 0) < NEUTRAL_BAND.verdictDirection) {
     return (
       <span className="text-signal-neutral" title={t("neutralStance")}>
         <span aria-hidden="true">–</span>
@@ -124,10 +125,12 @@ export default function VerdictCard({ verdict }: { verdict: VerdictJson | null |
       {isConflict && (
         <div className="mt-3 rounded-lg border border-signal-conflict/40 bg-signal-conflict-bg p-3 text-sm">
           <p className="font-medium text-signal-conflict">
-            {t("conflictHeadline", {
-              a: t(`source.${v.conflict?.between?.[0] ?? "ensemble"}`),
-              b: t(`source.${v.conflict?.between?.[1] ?? "pam"}`),
-            })}
+            {v.conflict?.between?.[0] && v.conflict?.between?.[1]
+              ? t("conflictHeadline", {
+                  a: t(`source.${v.conflict.between[0]}`),
+                  b: t(`source.${v.conflict.between[1]}`),
+                })
+              : t("conflictHeadlineGeneric")}
           </p>
           {v.conflict?.explanation && (
             <p className="mt-1 text-foreground">{v.conflict.explanation}</p>

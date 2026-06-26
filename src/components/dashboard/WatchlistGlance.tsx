@@ -1,13 +1,17 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useQuery } from "@tanstack/react-query";
 import { useWatchlists } from "@/lib/supabase/hooks";
 import { createClient } from "@/lib/supabase/client";
+import { stocksApi } from "@/lib/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TrendingUp, TrendingDown, Eye, ChevronRight, Lock } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { formatMoS } from "@/lib/valuation";
+import { moatStyle } from "@/lib/signals";
+import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 
 /**
  * Compact watchlist summary for the dashboard.
@@ -71,6 +75,25 @@ function AuthenticatedWatchlist() {
   const router = useRouter();
   const { data: watchlists, isLoading } = useWatchlists();
 
+  // Get default watchlist, or first one
+  const defaultWl = watchlists?.find((w: any) => w.is_default) || watchlists?.[0];
+  const items = defaultWl?.watchlist_items || [];
+
+  // Unified arbitrated verdict per visible ticker — the same signal the
+  // watchlist page shows, so the glance can't imply a bullish read (positive
+  // MoS / Wide moat) for a stock the engine rates short. (Hook must run before
+  // any early return.)
+  const tickers: string[] = items
+    .slice(0, 10)
+    .map((i: any) => i.stock_catalog?.ticker)
+    .filter(Boolean);
+  const { data: verdictMap } = useQuery<Record<string, VerdictJson | null>>({
+    queryKey: ["glance-verdicts", tickers],
+    queryFn: () => stocksApi.verdictBatch(tickers),
+    enabled: tickers.length > 0,
+    staleTime: 5 * 60_000,
+  });
+
   if (isLoading) {
     return (
       <div className="card h-full">
@@ -79,10 +102,6 @@ function AuthenticatedWatchlist() {
       </div>
     );
   }
-
-  // Get default watchlist, or first one
-  const defaultWl = watchlists?.find((w: any) => w.is_default) || watchlists?.[0];
-  const items = defaultWl?.watchlist_items || [];
 
   if (!defaultWl || items.length === 0) {
     return (
@@ -139,12 +158,11 @@ function AuthenticatedWatchlist() {
                     <span className="font-mono text-sm font-bold text-primary">
                       {stock.ticker}
                     </span>
+                    {verdictMap?.[stock.ticker]?.state && (
+                      <VerdictBadge state={verdictMap[stock.ticker]!.state} size="sm" />
+                    )}
                     {hasMoat && (
-                      <span className={`text-[9px] px-1 py-0 rounded ${
-                        stock.moat_rating === "Wide"
-                          ? "bg-signal-long-bg text-signal-long border border-signal-long/40"
-                          : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-                      }`}>
+                      <span className={`text-[9px] px-1 py-0 rounded border ${moatStyle(stock.moat_rating).badgeClass}`}>
                         {stock.moat_rating}
                       </span>
                     )}

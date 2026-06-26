@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingDown, TrendingUp, Bitcoin, Coins } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
+import { fngColor } from "@/lib/signals";
 
 interface CryptoData {
   symbol: string;
@@ -45,14 +46,6 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
       </div>
     </div>
   );
-}
-
-function fngColor(v: number): string {
-  if (v <= 25) return "#ef4444";
-  if (v <= 40) return "#f97316";
-  if (v <= 60) return "#fbbf24";
-  if (v <= 75) return "#86efac";
-  return "#22c55e";
 }
 
 export function CryptoIndicators() {

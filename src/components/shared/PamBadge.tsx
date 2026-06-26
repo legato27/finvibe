@@ -1,4 +1,5 @@
 "use client";
+import { directionBadgeClass, normalizeDirection } from "@/lib/signals";
 
 /** Compact Price Action (PAM) summary attached to ranked-book / options-book rows. */
 export interface PamSummary {
@@ -13,12 +14,7 @@ export interface PamSummary {
 
 export function PamBadge({ pam }: { pam?: PamSummary | null }) {
   if (!pam || !pam.setup) return <span className="text-muted-foreground">—</span>;
-  const color =
-    pam.direction === "long"
-      ? "text-emerald-400 border-emerald-500/30 bg-emerald-500/10"
-      : pam.direction === "short"
-      ? "text-red-400 border-red-500/30 bg-red-500/10"
-      : "text-yellow-400 border-yellow-500/30 bg-yellow-500/10";
+  const color = directionBadgeClass(normalizeDirection(pam.direction));
   // Watch (no daily FSB trigger) reads dimmer than a triggered setup.
   const dim = pam.status === "triggered" ? "" : "opacity-60";
   const title =

@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp, TrendingDown } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatMoS } from "@/lib/valuation";
+import { moatStyle } from "@/lib/signals";
 
 interface Props {
   ticker: string;
@@ -71,17 +72,13 @@ export function StockHeroHeader({
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold font-mono text-primary">{ticker}</h1>
             <span className="text-lg text-foreground/80 truncate">{detail?.name || "—"}</span>
-            {detail?.moat_rating && detail.moat_rating !== "None" && (
-              <span className={`text-[10px] px-2 py-0.5 rounded ${
-                detail.moat_rating === "Wide" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-              }`}>
-                {t('moatLabel', { rating: detail.moat_rating })}
+            {moatStyle(detail?.moat_rating).show && (
+              <span className={`text-[10px] px-2 py-0.5 rounded border ${moatStyle(detail?.moat_rating).badgeClass}`}>
+                {t('moatLabel', { rating: detail!.moat_rating })}
               </span>
             )}
-            {!detail?.moat_rating && llmData.moat && llmData.moat !== "None" && (
-              <span className={`text-[10px] px-2 py-0.5 rounded ${
-                llmData.moat === "Wide" ? "bg-signal-long-bg text-signal-long border border-signal-long/40" : "bg-signal-caution-bg text-signal-caution border border-signal-caution/40"
-              }`}>
+            {!detail?.moat_rating && moatStyle(llmData.moat).show && (
+              <span className={`text-[10px] px-2 py-0.5 rounded border ${moatStyle(llmData.moat).badgeClass}`}>
                 {t('moatLabelAi', { rating: llmData.moat })}
               </span>
             )}
@@ -109,7 +106,7 @@ export function StockHeroHeader({
               <span className={`flex items-center gap-1 text-sm font-mono ${
                 detail.quarterly_trend === "up" ? "text-green-400" : detail.quarterly_trend === "down" ? "text-red-400" : "text-muted-foreground"
               }`}>
-                {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+                {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : detail.quarterly_trend === "down" ? <TrendingDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
                 <span className="text-xs text-muted-foreground">{t('quarterlyShort')}</span>
               </span>
             )}

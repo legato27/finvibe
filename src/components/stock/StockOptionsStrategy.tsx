@@ -324,17 +324,19 @@ interface StockOptionsStrategyProps {
   currentPrice: number;
   stockInfo: any;
   thoughts: any;
+  /** Arbitrated unified verdict mapped to buy/hold/avoid; preferred over thoughts.verdict. */
+  verdictAction?: "buy" | "hold" | "avoid";
   position?: Position;
 }
 
 export function StockOptionsStrategy({
-  ticker, currentPrice, stockInfo, thoughts, position,
+  ticker, currentPrice, stockInfo, thoughts, verdictAction, position,
 }: StockOptionsStrategyProps) {
   const t = useTranslations("options");
   const isUnderwater = position ? currentPrice < position.avgCost : false;
   const [tab, setTab] = useState<Tab>("income");
 
-  const verdict = thoughts?.verdict || "hold";
+  const verdict = verdictAction ?? thoughts?.verdict ?? "hold";
   const conviction = thoughts?.conviction || "medium";
   const beta = stockInfo?.beta || 1.0;
   const high52 = stockInfo?.fifty_two_week_high || currentPrice * 1.25;
