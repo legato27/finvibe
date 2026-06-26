@@ -72,7 +72,6 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
   const ma50Ref       = useRef<any>(null);
   const ma200Ref      = useRef<any>(null);
   const drawLinesRef  = useRef<{ line: any; price: number }[]>([]);
-  const liveLineRef   = useRef<any>(null);
 
   // ── UI state ──────────────────────────────────────────────
   const [period,    setPeriod]    = useState<Period>("1y");
@@ -105,7 +104,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
     queryKey: ["price_history", ticker, period, interval],
     queryFn:  () => stocksApi.priceHistory(ticker, period, interval),
     staleTime: 60_000,
-    // No refetchInterval: the live price LINE (driven by the hero's polled
+    // No refetchInterval: the live forming bar (driven by the hero's polled
     // currentPrice) conveys the live level without rebuilding the chart every
     // minute, which would reset the user's zoom/pan.
   });
@@ -353,27 +352,36 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
   useEffect(() => { ma50Ref.current?.applyOptions({ visible: showMA50 }); }, [showMA50]);
   useEffect(() => { ma200Ref.current?.applyOptions({ visible: showMA200 }); }, [showMA200]);
 
-  // ── Live price line — the chart candles are delayed/EOD, so overlay the
-  // hero's polled live price and keep it in sync. Gated on chartReady because
-  // the chart is built via an async import(); without that gate this effect
-  // runs before the series exists and never re-fires.
+  // ── Live last bar — the parquet's last candle is the prior session's close.
+  // Overlay the hero's polled live price as the current/forming bar so the
+  // chart's latest point reflects the live price, not the last close. Gated on
+  // chartReady because the chart is built via an async import(); without it this
+  // effect runs before the series exists and never re-fires.
   useEffect(() => {
-    if (!chartReady) return;            // wait until the (re)built series exists
+    if (!chartReady) return;
     const series = mainSeriesRef.current;
-    if (!series) return;
-    if (liveLineRef.current) {
-      try { series.removePriceLine(liveLineRef.current); } catch { /* ignore */ }
-      liveLineRef.current = null;
-    }
-    if (currentPrice == null) return;
+    if (!series || currentPrice == null || chartData.length === 0) return;
+    const last = chartData[chartData.length - 1];
+    // Daily: start a forming bar at today if it's past the last bar; otherwise
+    // (and for weekly/monthly) extend the current bar's close to the live price.
+    const today = new Date().toISOString().slice(0, 10);
+    const liveTime = interval === "1d" && today > last.time ? today : last.time;
+    const sameBar = liveTime === last.time;
     try {
-      liveLineRef.current = series.createPriceLine({
-        price: currentPrice, color: "#38bdf8", lineWidth: 2,
-        lineStyle: 0, // LineStyle.Solid (enum not in scope outside the lazy chart import)
-        axisLabelVisible: true, title: t("livePriceLine"),
-      });
+      if (chartMode === "candle") {
+        const open = sameBar ? last.open : last.close;
+        series.update({
+          time: liveTime,
+          open,
+          high: Math.max(open, currentPrice, sameBar ? last.high : open),
+          low:  Math.min(open, currentPrice, sameBar ? last.low  : open),
+          close: currentPrice,
+        });
+      } else {
+        series.update({ time: liveTime, value: currentPrice });
+      }
     } catch { /* ignore */ }
-  }, [currentPrice, chartReady, t]);
+  }, [currentPrice, chartReady, chartMode, interval, chartData]);
 
   // ── Resize observer ──────────────────────────────────────
   useEffect(() => {
