@@ -51,7 +51,7 @@ export function BreadthStrip() {
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
             {t("breadthPctAbove50")} <InfoTip size={10} tip={t("breadthPctAbove50Tip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${(breadth.pct_above_50dma ?? 50) > 60 ? "text-green-400" : (breadth.pct_above_50dma ?? 50) > 40 ? "text-yellow-400" : "text-red-400"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.pct_above_50dma == null ? "text-muted-foreground" : breadth.pct_above_50dma > 60 ? "text-green-400" : breadth.pct_above_50dma > 40 ? "text-yellow-400" : "text-red-400"}`}>
             {breadth.pct_above_50dma != null ? `${breadth.pct_above_50dma}%` : "—"}
           </div>
           {breadth.pct_above_50dma_chg != null && (
@@ -64,7 +64,7 @@ export function BreadthStrip() {
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
             {t("breadthPctAbove200")} <InfoTip size={10} tip={t("breadthPctAbove200Tip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${(breadth.pct_above_200dma ?? 50) > 60 ? "text-green-400" : (breadth.pct_above_200dma ?? 50) > 40 ? "text-yellow-400" : "text-red-400"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.pct_above_200dma == null ? "text-muted-foreground" : breadth.pct_above_200dma > 60 ? "text-green-400" : breadth.pct_above_200dma > 40 ? "text-yellow-400" : "text-red-400"}`}>
             {breadth.pct_above_200dma != null ? `${breadth.pct_above_200dma}%` : "—"}
           </div>
           {breadth.pct_above_200dma_chg != null && (
@@ -77,7 +77,7 @@ export function BreadthStrip() {
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
             {t("breadthAdRatio")} <InfoTip size={10} tip={t("breadthAdRatioTip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${(breadth.adv_dec_ratio ?? 1) > 1.2 ? "text-green-400" : (breadth.adv_dec_ratio ?? 1) > 0.8 ? "text-yellow-400" : "text-red-400"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.adv_dec_ratio == null ? "text-muted-foreground" : breadth.adv_dec_ratio > 1.2 ? "text-green-400" : breadth.adv_dec_ratio > 0.8 ? "text-yellow-400" : "text-red-400"}`}>
             {breadth.adv_dec_ratio ?? "—"}
           </div>
         </div>
@@ -85,7 +85,7 @@ export function BreadthStrip() {
           <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
             {t("breadthNhNl")} <InfoTip size={10} tip={t("breadthNhNlTip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${(breadth.new_highs_lows ?? 0) > 0 ? "text-green-400" : (breadth.new_highs_lows ?? 0) < 0 ? "text-red-400" : "text-yellow-400"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.new_highs_lows == null ? "text-muted-foreground" : breadth.new_highs_lows > 0 ? "text-green-400" : breadth.new_highs_lows < 0 ? "text-red-400" : "text-yellow-400"}`}>
             {breadth.new_highs_lows ?? "—"}
           </div>
         </div>

@@ -170,7 +170,7 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
               <StatChip
                 label={t("ivRank")}
                 value={ivr.iv_rank}
-                tone={ivr.iv_rank >= 70 ? "caution" : ivr.iv_rank >= 40 ? "neutral" : "long"}
+                tone={ivr.iv_rank == null ? "neutral" : ivr.iv_rank >= 70 ? "caution" : ivr.iv_rank >= 40 ? "neutral" : "long"}
               />
               <Sparkline
                 values={summary?.iv_rank?.history?.map((h: { iv_pct: number }) => h.iv_pct) ?? []}

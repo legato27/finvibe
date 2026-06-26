@@ -12,8 +12,8 @@ interface TerminalProps {
 const SAMPLE = {
   regime: { state: "Expansion", prob: 0.78 },
   vix: { current: 14.3, change_pct: -2.1, desc: "Calm — risk-on" },
-  breadth: { above50: 68.0, advDec: 2.1, signal: "moderate" },
-  swarm: { score: 38, type: "Green" },
+  breadth: { above50: 68.0, advDec: 2.1, signal: "broad_strength" },
+  swarm: { score: 38, type: "White" },
 };
 
 function regimeTone(state: string) {
@@ -27,13 +27,20 @@ function vixTone(v: number) {
   return "text-signal-short";
 }
 function breadthTone(signal: string | undefined, above50: number) {
-  if (signal === "weak" || above50 < 40) return "text-signal-short";
+  // Match the backend breadth.signal enum first; fall back to the numeric
+  // %-above-50dma when the signal string is absent/unknown.
+  if (signal === "broad_weakness") return "text-signal-short";
+  if (signal === "broad_strength") return "text-signal-long";
+  if (signal === "narrowing") return "text-signal-caution";
+  if (above50 < 40) return "text-signal-short";
   if (above50 >= 60) return "text-signal-long";
   return "text-signal-caution";
 }
 function swarmTone(type: string) {
-  if (type === "Green") return "text-signal-long";
-  if (type === "Red") return "text-signal-short";
+  // Backend swarm.signal_type enum: White = risk-on, Black = risk-off,
+  // Gray/Neutral = caution. (Matches SwarmIndicator.)
+  if (type === "White") return "text-signal-long";
+  if (type === "Black") return "text-signal-short";
   return "text-signal-caution";
 }
 

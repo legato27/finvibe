@@ -4,7 +4,7 @@ import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from "
 import { useAppStore } from "@/store/useAppStore";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
 
 const VIX_MAX = 80;
@@ -129,9 +129,9 @@ export function VixGauge() {
         <div className="flex flex-col gap-2 sm:gap-3 flex-1 w-full">
           <div>
             <div className="stat-label text-xs">{t("vix24hChange")}</div>
-            <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change >= 0 ? "text-red-400" : "text-green-400"}`}>
-              {vix.change >= 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" /> : <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" />}
-              {vix.change >= 0 ? "+" : ""}{vix.change.toFixed(2)} ({vix.change_pct.toFixed(1)}%)
+            <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change > 0 ? "text-red-400" : vix.change < 0 ? "text-green-400" : "text-muted-foreground"}`}>
+              {vix.change > 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" /> : vix.change < 0 ? <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" /> : <Minus className="w-3 h-3 sm:w-4 sm:h-4" />}
+              {vix.change > 0 ? "+" : ""}{vix.change.toFixed(2)} ({vix.change_pct.toFixed(1)}%)
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">

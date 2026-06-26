@@ -381,7 +381,7 @@ export default function WatchlistTable({
       <td className="px-3 py-2 text-right hidden lg:table-cell">
         {r.aiMos != null ? (
           <span className={`nums font-mono text-xs ${r.aiMos > 0 ? "text-green-400" : "text-red-400"}`}>
-            {(r.aiMos * 100).toFixed(0)}%
+            {formatMoS(r.aiMos)}
           </span>
         ) : (
           <span className="text-muted-foreground/50">{DASH}</span>
