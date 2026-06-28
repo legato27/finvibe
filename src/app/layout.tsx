@@ -1,21 +1,22 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
-// "Market Terminal" type system — IBM Plex Sans for body, IBM Plex Mono for
-// numerics, tickers and labels.
-const plexSans = IBM_Plex_Sans({
+// "VibeFin App" type system — Inter for body/UI, Space Grotesk for display
+// (headings, stat figures, labels). Space Grotesk is wired to --font-mono so
+// existing `font-mono` numerics/labels render in the design's figure font.
+const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
   display: "swap",
 });
-const plexMono = IBM_Plex_Mono({
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-mono",
   display: "swap",
 });
@@ -54,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${plexSans.variable} ${plexMono.variable}`}>
+      <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

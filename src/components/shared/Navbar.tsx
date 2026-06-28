@@ -87,7 +87,7 @@ export default function Navbar() {
             </span>
             <span className="hidden sm:flex items-center gap-1.5 mt-0.5">
               <span className="font-mono text-[9px] tracking-[0.18em] uppercase text-muted-foreground">
-                Market Terminal
+                {tCommon("tagline")}
               </span>
               <span className="inline-flex items-center gap-1">
                 <span className="relative flex h-1.5 w-1.5">
