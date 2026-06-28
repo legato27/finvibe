@@ -33,7 +33,7 @@ export function BreadthStrip() {
     : t("breadthSigNeutral");
 
   return (
-    <div className="card">
+    <div className="card h-full">
       <div className="flex items-center justify-between px-3 pt-2">
         <div className="flex items-center gap-1.5">
           <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />

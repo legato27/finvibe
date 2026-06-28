@@ -57,7 +57,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
   }
 
   return (
-    <div className="card">
+    <div className="card h-full">
       <div className="card-header">
         <span className="card-title">{t("newsAndSentiment")}</span>
         <span className="text-xs text-muted-foreground">{t("articlesCount", { count: feed.length })}</span>

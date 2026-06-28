@@ -66,11 +66,13 @@ export function DashboardView() {
         <TodayPanel />
       </Section>
 
-      {/* 2 — Risk & volatility: the options trader's read (VIX + dealer gamma) */}
+      {/* 2 — Risk & volatility: the options trader's read (VIX + dealer gamma).
+          Each row uses default stretch + h-full wrappers so cards in a row share
+          one height and don't grow ragged with content. */}
       <Section title={t("sectionRiskVolTitle")} intro={t("sectionRiskVolIntro")}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 items-start">
-          <div className="card-3d min-h-[340px]"><VixGauge /></div>
-          <div className="card-3d min-h-[340px]"><GexCard /></div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
+          <div className="h-full min-h-[340px]"><VixGauge /></div>
+          <div className="h-full min-h-[340px]"><GexCard /></div>
         </div>
       </Section>
 
@@ -81,32 +83,32 @@ export function DashboardView() {
 
       {/* 4 — Crowd & breadth: how fragile is this tape */}
       <Section title={t("sectionCrowdTitle")} intro={t("sectionCrowdIntro")}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 items-start">
-          <div className="card-3d min-h-[340px]"><SwarmIndicator /></div>
-          <div className="card-3d"><BreadthStrip /></div>
-          <div className="card-3d"><BusinessCycleWheel /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+          <div className="h-full min-h-[340px]"><SwarmIndicator /></div>
+          <div className="h-full min-h-[340px]"><BreadthStrip /></div>
+          <div className="h-full min-h-[340px]"><BusinessCycleWheel /></div>
         </div>
       </Section>
 
       {/* 5 — Rotation & your watchlist: where the leadership is */}
       <Section title={t("sectionRotationTitle")} intro={t("sectionRotationIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3 sm:gap-4">
-          <div className="card-3d min-h-[420px]"><SectorRotationHeatmap /></div>
-          <div className="card-3d min-h-[420px]"><WatchlistGlance /></div>
+          <div className="h-full min-h-[420px]"><SectorRotationHeatmap /></div>
+          <div className="h-full min-h-[420px]"><WatchlistGlance /></div>
         </div>
       </Section>
 
       {/* 6 — Macro tape + broad market overview */}
       <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
         <MacroTape />
-        <div className="card-3d min-h-[420px]"><MarketOverview /></div>
+        <div className="h-full min-h-[420px]"><MarketOverview /></div>
       </Section>
 
       {/* 7 — Crypto, news & the wire: context and catalysts */}
       <Section title={t("sectionWireTitle")} intro={t("sectionWireIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 sm:gap-4">
-          <CryptoIndicators />
-          <RealtimeNewsFeed />
+          <div className="h-full min-h-[300px]"><CryptoIndicators /></div>
+          <div className="h-full min-h-[300px]"><RealtimeNewsFeed /></div>
         </div>
         <OsintFeed />
       </Section>
