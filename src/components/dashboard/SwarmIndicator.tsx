@@ -120,7 +120,7 @@ export function SwarmIndicator() {
   const conviction = Math.round((1 - noise) * 100);
 
   return (
-    <div className={`card flex flex-col max-h-[320px] ${cfg.glow}`}>
+    <div className={`card h-full flex flex-col ${cfg.glow}`}>
       {/* Header */}
       <div className="card-header flex-shrink-0">
         <span className="card-title flex items-center gap-1">
@@ -132,7 +132,7 @@ export function SwarmIndicator() {
         </span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
+      <div className="flex-1 flex flex-col gap-3">
         {/* Score */}
         <div className="flex items-end gap-3">
           <div

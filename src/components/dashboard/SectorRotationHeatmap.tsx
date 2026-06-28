@@ -73,7 +73,7 @@ export function SectorRotationHeatmap() {
   });
 
   return (
-    <div className="card flex flex-col max-h-[360px]">
+    <div className="card h-full">
       <div className="card-header">
         <span className="card-title flex items-center gap-1">
           {t("sectorRotation")}
@@ -89,7 +89,7 @@ export function SectorRotationHeatmap() {
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="text-muted-foreground">

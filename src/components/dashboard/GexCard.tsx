@@ -61,7 +61,7 @@ export function GexCard() {
         </span>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pr-1">
+      <div className="flex-1 flex flex-col gap-3">
         {/* Net GEX */}
         <div className="flex items-center gap-3">
           <div>

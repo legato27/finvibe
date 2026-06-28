@@ -67,14 +67,14 @@ export function DashboardView() {
       </Section>
 
       {/* 2 — Risk & volatility: the options trader's read (VIX + dealer gamma).
-          Fixed 300px because VixGauge's recharts gauge needs a real height;
-          GexCard fills the matched height via flex-1, so the pair stays tidy.
-          Everywhere else cards cap with max-h + internal scroll (no dead space,
-          no extending). */}
+          items-start so each card hugs its content — no forced min-heights, no
+          stretch padding, no dead space. Density by content, not by box. */}
       <Section title={t("sectionRiskVolTitle")} intro={t("sectionRiskVolIntro")}>
+        {/* VixGauge draws a recharts gauge that needs a real height; GexCard
+            fills the matched height via flex-1, so the pair stays tidy. */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="h-[300px]"><VixGauge /></div>
-          <div className="h-[300px]"><GexCard /></div>
+          <div className="h-[320px]"><VixGauge /></div>
+          <div className="h-[320px]"><GexCard /></div>
         </div>
       </Section>
 
