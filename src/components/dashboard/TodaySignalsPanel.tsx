@@ -49,7 +49,7 @@ export function TodaySignalsPanel() {
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {td("newSetups")}
           </h3>
-          <ul className="space-y-1">
+          <ul className="space-y-1 max-h-[170px] overflow-y-auto pr-1">
             {data.new_pam_triggers.slice(0, 6).map((s) => (
               <li key={`${s.ticker}-${s.triggered_at}`} className="flex flex-wrap items-center gap-2 text-sm">
                 <Link href={`/stock/${s.ticker}`} className="font-mono font-semibold text-primary hover:underline">
@@ -83,7 +83,7 @@ export function TodaySignalsPanel() {
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {td("verdictChanges")}
           </h3>
-          <ul className="space-y-1">
+          <ul className="space-y-1 max-h-[170px] overflow-y-auto pr-1">
             {data.verdict_changes.slice(0, 6).map((c) => (
               <li key={`${c.ticker}-${c.at}`} className="flex items-center gap-2 text-sm">
                 <Link href={`/stock/${c.ticker}`} className="font-mono font-semibold text-primary hover:underline">
@@ -104,7 +104,7 @@ export function TodaySignalsPanel() {
           <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             {td("conflictsToReview")}
           </h3>
-          <ul className="space-y-1">
+          <ul className="space-y-1 max-h-[170px] overflow-y-auto pr-1">
             {data.conflicts.slice(0, 6).map((c) => (
               <li key={c.ticker} className="flex flex-wrap items-center gap-2 text-sm">
                 <Link href={`/stock/${c.ticker}`} className="font-mono font-semibold text-primary hover:underline">

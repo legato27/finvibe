@@ -34,7 +34,7 @@ export function WatchlistGlance() {
 
   if (loading) {
     return (
-      <div className="card h-full">
+      <div className="card max-h-[360px] overflow-y-auto">
         <div className="card-header"><span className="card-title">{t("watchlist")}</span></div>
         <div className="text-muted-foreground text-sm animate-pulse py-8 text-center">{tc("loading")}</div>
       </div>
@@ -51,7 +51,7 @@ export function WatchlistGlance() {
 function PublicWatchlist() {
   const t = useTranslations("dashboard");
   return (
-    <div className="card h-full">
+    <div className="card max-h-[360px] overflow-y-auto">
       <div className="card-header">
         <span className="card-title">{t("watchlist")}</span>
       </div>
@@ -96,7 +96,7 @@ function AuthenticatedWatchlist() {
 
   if (isLoading) {
     return (
-      <div className="card h-full">
+      <div className="card max-h-[360px] overflow-y-auto">
         <div className="card-header"><span className="card-title">{t("watchlist")}</span></div>
         <div className="text-muted-foreground text-sm animate-pulse py-8 text-center">{t("watchlistLoading")}</div>
       </div>
@@ -105,7 +105,7 @@ function AuthenticatedWatchlist() {
 
   if (!defaultWl || items.length === 0) {
     return (
-      <div className="card h-full">
+      <div className="card max-h-[360px] overflow-y-auto">
         <div className="card-header">
           <span className="card-title">{t("watchlist")}</span>
           <Link href="/watchlist" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5">
