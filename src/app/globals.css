@@ -3,26 +3,25 @@
 @tailwind utilities;
 
 @layer base {
-  /* ── Light mode — "Market Terminal" warm paper palette ──── */
+  /* ── Light mode — "VibeFin App" cool palette, indigo accent ──── */
   :root {
-    --background: 44 24% 94%;             /* #f3f1ec paper */
-    --foreground: 220 15% 12%;            /* #1a1d23 ink */
+    --background: 220 20% 97%;            /* #f7f8fa */
+    --foreground: 227 19% 9%;             /* #13151c ink */
     --card: 0 0% 100%;                    /* #ffffff panel */
-    --card-foreground: 220 15% 12%;
-    --border: 41 17% 86%;                 /* #e2ded6 line */
-    --input: 41 17% 86%;
-    /* Primary doubles as TEXT (links, active tabs). Amber #a25c00 at 32%
-       lightness clears 4.5:1 on the warm paper background AND on its own /20
-       tint (active tab/filter chips render text-primary on bg-primary/20).
-       Solid fills/buttons can use the brighter amber via --accent-solid. */
-    --ring: 34 100% 32%;
-    --primary: 34 100% 32%;              /* #a25c00 text-safe amber */
-    --primary-foreground: 40 100% 97%;
-    --accent-solid: 37 92% 48%;          /* #e8930b bright amber (fills) */
-    --muted: 41 25% 92%;                 /* #f0ede6 chip */
-    --muted-foreground: 218 9% 40%;      /* #5d6470 */
-    --accent: 41 25% 92%;               /* subtle hover surface */
-    --accent-foreground: 220 15% 12%;
+    --card-foreground: 227 19% 9%;
+    --border: 222 17% 92%;               /* #e7e9ee line */
+    --input: 222 17% 92%;
+    /* Primary (indigo #5159e0) doubles as TEXT (links, active tabs) — ~5.5:1 on
+       the cool background and on its own /15 tint. Solid fills/buttons can use
+       the slightly brighter --accent-solid. White sits on indigo fills. */
+    --ring: 237 70% 60%;
+    --primary: 237 70% 60%;              /* #5159e0 indigo */
+    --primary-foreground: 0 0% 100%;     /* white on indigo */
+    --accent-solid: 237 76% 63%;         /* #5a62e8 */
+    --muted: 225 18% 96%;                /* #f2f3f6 chip */
+    --muted-foreground: 221 9% 39%;      /* #5b616e */
+    --accent: 225 18% 96%;              /* subtle hover surface */
+    --accent-foreground: 227 19% 9%;
     /* Semantic colors — green/red tuned to design (#1f8a5b / #c0392b) */
     --success: 154 63% 33%;
     --success-bg: 141 50% 92%;
@@ -51,25 +50,25 @@
     --signal-caution-bg: 45 70% 92%;
   }
 
-  /* ── Dark mode — "Market Terminal" near-black + amber ───── */
+  /* ── Dark mode — "VibeFin App" near-black + indigo ───── */
   .dark {
-    --background: 225 25% 3%;             /* #06070a */
-    --foreground: 220 22% 92%;            /* #e6e9ef ink */
-    --card: 218 28% 5%;                   /* #0a0d12 panel */
-    --card-foreground: 220 22% 92%;
-    --border: 220 21% 11%;                /* #171b23 line */
-    --input: 220 21% 11%;
-    --ring: 41 100% 50%;                  /* amber */
-    --primary: 41 100% 50%;              /* #ffb000 */
-    --primary-foreground: 225 25% 3%;
-    --accent-solid: 41 100% 50%;         /* same amber in dark */
-    --muted: 218 24% 9%;                 /* #11151c chip */
-    --muted-foreground: 221 14% 60%;     /* #8a93a6 */
-    --accent: 218 24% 9%;               /* subtle hover surface */
-    --accent-foreground: 220 22% 92%;
-    /* Semantic colors — green/red match design (#4ade80 / #f87171) */
-    --success: 142 69% 58%;
-    --success-bg: 142 76% 8%;
+    --background: 230 23% 5%;             /* #0a0b10 */
+    --foreground: 225 21% 96%;            /* #f4f5f8 ink */
+    --card: 228 21% 9%;                   /* #13151d panel */
+    --card-foreground: 225 21% 96%;
+    --border: 225 15% 16%;               /* #23262f line */
+    --input: 225 15% 16%;
+    --ring: 236 100% 77%;                /* indigo */
+    --primary: 236 100% 77%;            /* #8b92ff periwinkle */
+    --primary-foreground: 0 0% 100%;     /* white on indigo */
+    --accent-solid: 237 83% 69%;         /* #6f76f2 */
+    --muted: 225 20% 12%;                /* #181b24 chip */
+    --muted-foreground: 221 12% 65%;     /* #9aa1b0 */
+    --accent: 225 20% 12%;              /* subtle hover surface */
+    --accent-foreground: 225 21% 96%;
+    /* Semantic colors — green/red match design (#56e0a0 / #f87171) */
+    --success: 152 69% 61%;
+    --success-bg: 152 60% 9%;
     --danger: 0 91% 71%;
     --danger-bg: 0 63% 8%;
     --warning: 43 96% 56%;
@@ -117,14 +116,14 @@
 
   /* Scrollbar styling */
   .dark ::-webkit-scrollbar { width: 6px; height: 6px; }
-  .dark ::-webkit-scrollbar-track { background: hsl(218, 28%, 5%); }
-  .dark ::-webkit-scrollbar-thumb { background: hsl(220, 18%, 20%); border-radius: 3px; }
-  .dark ::-webkit-scrollbar-thumb:hover { background: hsl(41, 100%, 50%); }
+  .dark ::-webkit-scrollbar-track { background: hsl(228, 21%, 9%); }
+  .dark ::-webkit-scrollbar-thumb { background: hsl(225, 15%, 22%); border-radius: 3px; }
+  .dark ::-webkit-scrollbar-thumb:hover { background: hsl(236, 100%, 77%); }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: hsl(44, 24%, 92%); }
-  ::-webkit-scrollbar-thumb { background: hsl(41, 17%, 76%); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: hsl(34, 100%, 32%); }
+  ::-webkit-scrollbar-track { background: hsl(220, 20%, 95%); }
+  ::-webkit-scrollbar-thumb { background: hsl(222, 17%, 80%); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: hsl(237, 70%, 60%); }
 }
 
 @layer components {

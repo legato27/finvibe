@@ -63,8 +63,11 @@ const config: Config = {
         "swarm-neutral": "#64748b",
       },
       fontFamily: {
-        mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
-        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
+        // `mono` is repurposed as the display/figure font (Space Grotesk) — used
+        // for headings, stat figures and labels. Numerics still align via
+        // tabular-nums / the .nums utility.
+        mono: ["var(--font-mono)", "Space Grotesk", "ui-sans-serif", "sans-serif"],
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
