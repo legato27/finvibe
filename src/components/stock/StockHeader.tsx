@@ -45,7 +45,7 @@ export function StockHeader({
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold font-mono text-primary">{ticker}</h1>
               {assetType && assetType !== "stock" && (
-                <span className="text-[10px] px-2 py-0.5 bg-slate-700/50 text-slate-400 rounded uppercase tracking-wider">
+                <span className="text-[10px] px-2 py-0.5 bg-muted/50 text-muted-foreground rounded uppercase tracking-wider">
                   {assetType}
                 </span>
               )}
@@ -59,23 +59,23 @@ export function StockHeader({
                 </span>
               )}
               {enrichmentStatus === "pending" && (
-                <span className="text-[10px] px-2 py-0.5 bg-amber-500/10 text-amber-400 rounded animate-pulse">
+                <span className="text-[10px] px-2 py-0.5 bg-warning/10 text-warning rounded animate-pulse">
                   {t('statusPending')}
                 </span>
               )}
               {enrichmentStatus === "processing" && (
-                <span className="text-[10px] px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded animate-pulse">
+                <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary rounded animate-pulse">
                   {t('statusEnriching')}
                 </span>
               )}
             </div>
-            <p className="text-sm text-slate-400 mt-0.5">{name || ticker}</p>
+            <p className="text-sm text-muted-foreground mt-0.5">{name || ticker}</p>
           </div>
         </div>
 
         <div className="text-right">
           {lastPrice != null && lastPrice > 0 && (
-            <div className="text-2xl font-mono font-bold text-slate-200">
+            <div className="text-2xl font-mono font-bold text-foreground">
               ${lastPrice.toFixed(2)}
             </div>
           )}

@@ -120,7 +120,7 @@ export function RegisterMcpClientCard() {
                   className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-border hover:border-primary/40"
                 >
                   {copied === e.label ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
+                    <Check className="w-3 h-3 text-success" />
                   ) : (
                     <Copy className="w-3 h-3" />
                   )}
@@ -177,7 +177,7 @@ export function RegisterMcpClientCard() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+              <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 <div>{error}</div>
               </div>
@@ -200,8 +200,8 @@ export function RegisterMcpClientCard() {
 
         {created && (
           <div className="space-y-3">
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
-              <div className="text-xs font-medium text-amber-300 flex items-center gap-1.5">
+            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
+              <div className="text-xs font-medium text-warning flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5" /> {t("register.saveNow")}
               </div>
 
@@ -275,7 +275,7 @@ function Field({
           className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] rounded border border-border hover:border-primary/40"
         >
           {copied ? (
-            <Check className="w-3 h-3 text-emerald-400" />
+            <Check className="w-3 h-3 text-success" />
           ) : (
             <Copy className="w-3 h-3" />
           )}

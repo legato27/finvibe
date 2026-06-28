@@ -34,9 +34,9 @@ function MetricCard({
 }) {
   return (
     <div className="bg-white/[0.02] border border-border/30 rounded-lg p-3">
-      <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1">{label}</div>
-      <div className={`text-sm font-mono font-semibold ${color || "text-slate-200"}`}>{value}</div>
-      {subValue && <div className="text-[10px] text-slate-500 mt-0.5">{subValue}</div>}
+      <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1">{label}</div>
+      <div className={`text-sm font-mono font-semibold ${color || "text-foreground"}`}>{value}</div>
+      {subValue && <div className="text-[10px] text-muted-foreground mt-0.5">{subValue}</div>}
     </div>
   );
 }
@@ -75,7 +75,7 @@ export function StockMetrics({
 
   return (
     <div className="card p-5">
-      <h2 className="text-sm font-semibold text-slate-300 mb-3">{t('keyMetrics')}</h2>
+      <h2 className="text-sm font-semibold text-foreground mb-3">{t('keyMetrics')}</h2>
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
         {displaySector && (
           <MetricCard
@@ -110,7 +110,7 @@ export function StockMetrics({
           <MetricCard
             label={t('intrinsicValueAi')}
             value={`$${llmIntrinsicValue.toFixed(2)}`}
-            color="text-blue-400"
+            color="text-primary"
           />
         )}
 
@@ -134,14 +134,14 @@ export function StockMetrics({
       {/* 10-Year Price Range Bar */}
       {rangePercent != null && tenYrLow != null && tenYrHigh != null && (
         <div className="mt-4">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-1.5">
+          <div className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">
             {t('tenYearPriceRange')}
           </div>
-          <div className="flex items-center gap-2 text-[10px] text-slate-500">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             <span className="font-mono">${tenYrLow.toFixed(2)}</span>
-            <div className="flex-1 h-2 bg-slate-800 rounded-full relative overflow-hidden">
+            <div className="flex-1 h-2 bg-muted rounded-full relative overflow-hidden">
               <div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 rounded-full opacity-30"
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-danger via-warning to-success rounded-full opacity-30"
                 style={{ width: "100%" }}
               />
               <div

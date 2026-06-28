@@ -96,9 +96,9 @@ export function SentimentPanel({ ticker }: Props) {
 
       {/* Polygon precision-tagged "why" — provider per-ticker insight + reasoning */}
       {data.polygon_reasoning && (
-        <div className="mt-3 pt-3 border-t border-slate-800">
+        <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
               {t("polygonRead")}
             </span>
             {data.polygon_score != null && (
@@ -113,9 +113,9 @@ export function SentimentPanel({ ticker }: Props) {
             ) : null}
           </div>
           {data.polygon_headline && (
-            <div className="text-xs font-medium text-slate-300 mb-0.5">{data.polygon_headline}</div>
+            <div className="text-xs font-medium text-foreground mb-0.5">{data.polygon_headline}</div>
           )}
-          <p className="text-xs text-slate-400 leading-snug line-clamp-3">{data.polygon_reasoning}</p>
+          <p className="text-xs text-muted-foreground leading-snug line-clamp-3">{data.polygon_reasoning}</p>
         </div>
       )}
     </div>

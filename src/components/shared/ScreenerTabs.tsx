@@ -27,10 +27,10 @@ export function ScreenerTabs() {
           key={href}
           href={href}
           aria-current={pathname === href ? "page" : undefined}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md font-mono text-xs font-semibold transition-all ${
             pathname === href
-              ? "bg-primary/20 text-primary"
-              : "text-muted-foreground hover:text-foreground/80"
+              ? "bg-primary/15 text-primary border border-primary/40"
+              : "text-muted-foreground hover:text-foreground/80 border border-transparent"
           }`}
         >
           <Icon className="w-3.5 h-3.5" />

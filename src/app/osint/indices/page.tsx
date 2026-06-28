@@ -23,9 +23,9 @@ export default function OsintIndicesPage() {
       <div className="flex flex-wrap gap-2">
         <input value={region} onChange={(e) => setRegion(e.target.value.toUpperCase())}
           placeholder={t("regionPlaceholder")} maxLength={2}
-          className="bg-slate-700 rounded px-2 py-1 text-sm w-44" />
+          className="bg-muted border border-border text-foreground rounded px-2 py-1 text-sm w-44" />
         <select value={window} onChange={(e) => setWindow(Number(e.target.value))}
-          className="bg-slate-700 rounded px-2 py-1 text-sm">
+          className="bg-muted border border-border text-foreground rounded px-2 py-1 text-sm">
           <option value={6}>{t("window6h")}</option>
           <option value={24}>{t("window24h")}</option>
           <option value={72}>{t("window72h")}</option>
@@ -34,7 +34,7 @@ export default function OsintIndicesPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-slate-400">{tc("loading")}</div>
+        <div className="text-muted-foreground">{tc("loading")}</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {(data || []).map((ix: OsintIndex) => <IndexCard key={ix.index_name} ix={ix} />)}
@@ -50,19 +50,19 @@ function IndexCard({ ix }: { ix: OsintIndex }) {
               : ix.index_name === "sanctions_pressure" ? "bg-purple-600"
               : "bg-cyan-600";
   return (
-    <div className="p-4 bg-slate-800 rounded border border-slate-700">
-      <div className="text-xs text-slate-400 uppercase">{ix.index_name.replace(/_/g, " ")}</div>
+    <div className="p-4 bg-card rounded border border-border">
+      <div className="text-xs text-muted-foreground uppercase">{ix.index_name.replace(/_/g, " ")}</div>
       <div className={`mt-2 inline-block px-3 py-1 rounded text-white ${color}`}>
         <span className="text-3xl font-bold">{ix.value}</span>
       </div>
-      <div className="mt-3 text-xs text-slate-500">
+      <div className="mt-3 text-xs text-muted-foreground">
         {t("indexUpdated", { hours: ix.window_hours, time: new Date(ix.as_of).toLocaleTimeString() })}
       </div>
       <div className="mt-3 space-y-1">
         {Object.entries(ix.components).map(([k, v]) => (
           <div key={k} className="flex justify-between text-xs">
-            <span className="text-slate-400">{k.replace(/_/g, " ")}</span>
-            <span className="font-mono text-slate-200">{v}</span>
+            <span className="text-muted-foreground">{k.replace(/_/g, " ")}</span>
+            <span className="font-mono text-foreground">{v}</span>
           </div>
         ))}
       </div>

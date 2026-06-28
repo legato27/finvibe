@@ -11,22 +11,22 @@ const SIGNAL_VISUAL: Record<SignalKey, {
 }> = {
   Black: {
     color: "#ef4444", accent: "#991b1b", glow: "shadow-red-500/20",
-    badge: "bg-red-500/15 text-red-400 border-red-500/30",
+    badge: "bg-danger/15 text-danger border-danger/30",
     labelKey: "swarmRiskOff", actionKey: "swarmActionBlack",
   },
   Gray: {
     color: "#f59e0b", accent: "#92400e", glow: "shadow-amber-500/20",
-    badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
+    badge: "bg-warning/15 text-warning border-warning/30",
     labelKey: "swarmCaution", actionKey: "swarmActionGray",
   },
   White: {
     color: "#22c55e", accent: "#166534", glow: "shadow-green-500/20",
-    badge: "bg-green-500/15 text-green-400 border-green-500/30",
+    badge: "bg-success/15 text-success border-success/30",
     labelKey: "swarmRiskOn", actionKey: "swarmActionWhite",
   },
   Neutral: {
     color: "#64748b", accent: "#1e293b", glow: "shadow-slate-500/10",
-    badge: "bg-slate-500/15 text-slate-400 border-slate-500/30",
+    badge: "bg-muted/15 text-muted-foreground border-border/30",
     labelKey: "swarmTransitional", actionKey: "swarmActionNeutral",
   },
 };
@@ -38,9 +38,9 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
 
   return (
     <div className="flex flex-col items-center gap-1">
-      <div className="relative w-full h-3 bg-slate-800 rounded-full overflow-hidden">
+      <div className="relative w-full h-3 bg-muted rounded-full overflow-hidden">
         {/* Center mark */}
-        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-slate-600 z-10" />
+        <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted-foreground/30 z-10" />
         {/* Fill from center */}
         {isPositive ? (
           <div
@@ -64,7 +64,7 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
           />
         )}
       </div>
-      <div className="flex justify-between w-full text-[9px] text-slate-600 font-mono">
+      <div className="flex justify-between w-full text-[9px] text-muted-foreground font-mono">
         <span>-100</span>
         <span>0</span>
         <span>+100</span>
@@ -80,14 +80,14 @@ function MetricBar({ label, value, max, color, tip }: {
   return (
     <div className="space-y-0.5">
       <div className="flex items-center justify-between">
-        <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
           {label} <InfoTip size={9} tip={tip} />
         </span>
         <span className="text-[11px] font-mono font-bold" style={{ color }}>
           {typeof value === "number" && value < 1 ? `${(value * 100).toFixed(0)}%` : value}
         </span>
       </div>
-      <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden">
+      <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%`, backgroundColor: color }}
@@ -104,7 +104,7 @@ export function SwarmIndicator() {
   if (!swarm) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">{t("swarmComputing")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{t("swarmComputing")}</div>
       </div>
     );
   }
@@ -142,7 +142,7 @@ export function SwarmIndicator() {
             {score > 0 ? "+" : ""}{score.toFixed(0)}
           </div>
           <div className="flex flex-col mb-0.5">
-            <span className="text-[10px] text-slate-500">/ 100</span>
+            <span className="text-[10px] text-muted-foreground">/ 100</span>
             <span className="text-[10px] font-medium" style={{ color: cfg.color }}>
               {t("swarmConviction", { pct: conviction })}
             </span>
@@ -179,18 +179,18 @@ export function SwarmIndicator() {
 
         {/* Cluster structure summary */}
         <div className="grid grid-cols-2 gap-2">
-          <div className="bg-slate-800/40 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-slate-500">{t("swarmStocksAnalyzed")}</div>
-            <div className="text-sm font-mono font-bold text-slate-300">{stocks}</div>
+          <div className="bg-muted/40 rounded-lg p-2 text-center">
+            <div className="text-[10px] text-muted-foreground">{t("swarmStocksAnalyzed")}</div>
+            <div className="text-sm font-mono font-bold text-foreground">{stocks}</div>
           </div>
-          <div className="bg-slate-800/40 rounded-lg p-2 text-center">
-            <div className="text-[10px] text-slate-500 flex items-center justify-center gap-0.5">
+          <div className="bg-muted/40 rounded-lg p-2 text-center">
+            <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
               {t("swarmDensityDelta")}
               <InfoTip size={9} tip={t("swarmDensityDeltaTip")} />
             </div>
             <div className={`text-sm font-mono font-bold ${
-              (swarm.density_delta ?? 0) > 0 ? "text-green-400" :
-              (swarm.density_delta ?? 0) < -0.1 ? "text-red-400" : "text-slate-400"
+              (swarm.density_delta ?? 0) > 0 ? "text-success" :
+              (swarm.density_delta ?? 0) < -0.1 ? "text-danger" : "text-muted-foreground"
             }`}>
               {swarm.density_delta != null
                 ? `${swarm.density_delta > 0 ? "+" : ""}${(swarm.density_delta * 100).toFixed(1)}%`
@@ -202,7 +202,7 @@ export function SwarmIndicator() {
         {/* Top driving factors */}
         {swarm.top_factors?.length > 0 && (
           <div>
-            <div className="text-[10px] text-slate-500 mb-1 flex items-center gap-0.5">
+            <div className="text-[10px] text-muted-foreground mb-1 flex items-center gap-0.5">
               {t("swarmTopFactors")}
               <InfoTip size={9} tip={t("swarmTopFactorsTip")} />
             </div>

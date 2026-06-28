@@ -57,8 +57,8 @@ function PublicWatchlist() {
       </div>
       <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
         <Lock className="w-8 h-8 mb-3 opacity-30" />
-        <p className="text-sm font-medium text-slate-400">{t("watchlistPersonal")}</p>
-        <p className="text-xs text-slate-600 mt-1 mb-4">{t("watchlistSignInPrompt")}</p>
+        <p className="text-sm font-medium text-muted-foreground">{t("watchlistPersonal")}</p>
+        <p className="text-xs text-muted-foreground mt-1 mb-4">{t("watchlistSignInPrompt")}</p>
         <Link
           href="/login"
           className="px-4 py-2 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
@@ -108,7 +108,7 @@ function AuthenticatedWatchlist() {
       <div className="card h-full">
         <div className="card-header">
           <span className="card-title">{t("watchlist")}</span>
-          <Link href="/watchlist" className="text-xs text-slate-400 hover:text-primary flex items-center gap-0.5">
+          <Link href="/watchlist" className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5">
             {t("manage")} <ChevronRight className="w-3 h-3" />
           </Link>
         </div>
@@ -131,7 +131,7 @@ function AuthenticatedWatchlist() {
         <span className="card-title">{defaultWl.name}</span>
         <Link
           href="/watchlist"
-          className="text-xs text-slate-400 hover:text-primary flex items-center gap-0.5 transition-colors"
+          className="text-xs text-muted-foreground hover:text-primary flex items-center gap-0.5 transition-colors"
         >
           {t("viewAll")} <ChevronRight className="w-3 h-3" />
         </Link>
@@ -167,10 +167,10 @@ function AuthenticatedWatchlist() {
                       </span>
                     )}
                     {stock.enrichment_status === "pending" && (
-                      <span className="text-[9px] text-amber-400 animate-pulse">{t("statusPending")}</span>
+                      <span className="text-[9px] text-warning animate-pulse">{t("statusPending")}</span>
                     )}
                     {stock.enrichment_status === "processing" && (
-                      <span className="text-[9px] text-amber-400 animate-pulse">{t("statusEnriching")}</span>
+                      <span className="text-[9px] text-warning animate-pulse">{t("statusEnriching")}</span>
                     )}
                   </div>
                   <div className="text-[10px] text-muted-foreground truncate max-w-[120px]">
@@ -181,7 +181,7 @@ function AuthenticatedWatchlist() {
 
               <div className="flex items-center gap-3 text-right">
                 {hasPrice && (
-                  <span className="font-mono text-xs text-slate-300">
+                  <span className="font-mono text-xs text-foreground">
                     ${stock.last_price.toFixed(2)}
                   </span>
                 )}

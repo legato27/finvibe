@@ -157,7 +157,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
   }
 
   return (
-    <tr className="bg-green-500/5 border-b border-border/40">
+    <tr className="bg-success/5 border-b border-border/40">
       <td className="px-3 py-2">
         <input
           type="date"
@@ -221,7 +221,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
           <button
             onClick={submit}
             disabled={add.isPending || !fields.shares || !fields.cost_basis}
-            className="p-1.5 rounded bg-green-500/20 hover:bg-green-500/30 text-green-400 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded bg-success/20 hover:bg-success/30 text-success transition-colors disabled:opacity-40"
           >
             <Check className="w-3.5 h-3.5" />
           </button>
@@ -275,7 +275,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
   }
 
   return (
-    <tr className="bg-amber-500/5 border-b border-border/40">
+    <tr className="bg-warning/5 border-b border-border/40">
       <td className="px-3 py-2">
         <input
           type="date"
@@ -319,7 +319,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
           ${proceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}
         </div>
         {sharesNum > 0 && priceNum > 0 && (
-          <div className={`text-[10px] font-semibold ${realized >= 0 ? "text-green-500" : "text-red-500"}`}>
+          <div className={`text-[10px] font-semibold ${realized >= 0 ? "text-success" : "text-danger"}`}>
             P&L {realized >= 0 ? "+" : "−"}${Math.abs(realized).toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         )}
@@ -349,7 +349,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
           <button
             onClick={submit}
             disabled={sell.isPending || !valid}
-            className="p-1.5 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 transition-colors disabled:opacity-40"
+            className="p-1.5 rounded bg-warning/20 hover:bg-warning/30 text-warning transition-colors disabled:opacity-40"
             title={t("confirmSellTitle")}
           >
             <Check className="w-3.5 h-3.5" />
@@ -371,7 +371,7 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
   const t = useTranslations("stock");
   return (
     <div className="flex items-center gap-1.5">
-      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-red-500/20 text-red-400 rounded hover:bg-red-500/30 min-h-[36px]">{t("yes")}</button>
+      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-danger/20 text-danger rounded hover:bg-danger/30 min-h-[36px]">{t("yes")}</button>
       <button onClick={onCancel} className="text-xs px-3 py-1.5 bg-accent rounded text-muted-foreground hover:bg-accent/70 min-h-[36px]">{t("no")}</button>
     </div>
   );
@@ -394,7 +394,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
           </span>
         </div>
         <div className={`text-xs font-mono font-semibold flex items-center gap-1 ${
-          totalRealized >= 0 ? "text-green-500" : "text-red-500"
+          totalRealized >= 0 ? "text-success" : "text-danger"
         }`}>
           {totalRealized >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           Realized {totalRealized >= 0 ? "+" : "−"}${Math.abs(totalRealized).toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -436,7 +436,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
                     ${proceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </td>
                   <td className={`px-3 py-2.5 font-mono text-right font-semibold ${
-                    isGain ? "text-green-500" : "text-red-500"
+                    isGain ? "text-success" : "text-danger"
                   }`}>
                     {isGain ? "+" : "−"}${Math.abs(s.realized_pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     <div className="text-[9px] font-normal text-muted-foreground/70">
@@ -469,7 +469,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
                   ${totalProceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </td>
                 <td className={`px-3 py-2 font-mono font-semibold text-sm text-right ${
-                  totalRealized >= 0 ? "text-green-500" : "text-red-500"
+                  totalRealized >= 0 ? "text-success" : "text-danger"
                 }`}>
                   {totalRealized >= 0 ? "+" : "−"}${Math.abs(totalRealized).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </td>
@@ -592,7 +592,7 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
                       <div className="flex items-center gap-1 justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => { setSellingId(lot.id); setEditingId(null); setDeletingId(null); }}
-                          className="p-2 rounded hover:bg-amber-500/20 text-muted-foreground hover:text-amber-400 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className="p-2 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                           title="Record sell"
                         >
                           <DollarSign className="w-3.5 h-3.5" />
@@ -605,7 +605,7 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
                         </button>
                         <button
                           onClick={() => { setDeletingId(lot.id); setEditingId(null); setSellingId(null); }}
-                          className="p-2 rounded hover:bg-red-500/20 text-muted-foreground hover:text-red-400 transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className="p-2 rounded hover:bg-danger/20 text-muted-foreground hover:text-danger transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

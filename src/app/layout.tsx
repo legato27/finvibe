@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const jetbrainsMono = JetBrains_Mono({
+// "Market Terminal" type system — IBM Plex Sans for body, IBM Plex Mono for
+// numerics, tickers and labels.
+const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+  display: "swap",
+});
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   variable: "--font-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -45,7 +54,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${inter.variable} ${jetbrainsMono.variable}`}>
+      <body className={`${plexSans.variable} ${plexMono.variable}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

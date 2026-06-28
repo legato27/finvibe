@@ -25,10 +25,10 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold">{data.name}</span>
           <span className={`text-[9px] px-1 py-0 rounded ${
-            data.momentum === "bullish" ? "bg-green-500/15 text-green-400" : "bg-red-500/15 text-red-400"
+            data.momentum === "bullish" ? "bg-success/15 text-success" : "bg-danger/15 text-danger"
           }`}>{data.momentum === "bullish" ? t("cryptoBull") : t("cryptoBear")}</span>
         </div>
-        <div className="text-[10px] text-slate-500 font-mono">
+        <div className="text-[10px] text-muted-foreground font-mono">
           {t("cryptoMaSummary", {
             ma7: data.ma7?.toLocaleString() ?? "—",
             ma30: data.ma30?.toLocaleString() ?? "—",
@@ -39,7 +39,7 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
         <div className="text-sm font-bold font-mono">
           ${data.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-        <div className={`text-xs font-mono flex items-center gap-0.5 justify-end ${up ? "text-green-400" : "text-red-400"}`}>
+        <div className={`text-xs font-mono flex items-center gap-0.5 justify-end ${up ? "text-success" : "text-danger"}`}>
           {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           {up ? "+" : ""}{data.change_24h?.toFixed(2)}%
         </div>
@@ -76,7 +76,7 @@ export function CryptoIndicators() {
   if (isLoading) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">{t("cryptoLoading")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{t("cryptoLoading")}</div>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function CryptoIndicators() {
   if (error || !btc) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm">{t("cryptoUnavailable")}</div>
+        <div className="text-muted-foreground text-sm">{t("cryptoUnavailable")}</div>
       </div>
     );
   }
@@ -102,12 +102,12 @@ export function CryptoIndicators() {
           {t("cryptoTitle")}
           <InfoTip tip={t("cryptoInfo")} />
         </span>
-        <span className="text-[10px] text-slate-500">{tc("live")}</span>
+        <span className="text-[10px] text-muted-foreground">{tc("live")}</span>
       </div>
       <div className="flex-1 divide-y divide-border/30">
-        <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-orange-400 flex-shrink-0" />} />
-        {eth && <CoinRow data={eth} icon={<Coins className="w-5 h-5 text-blue-400 flex-shrink-0" />} />}
-        {sol && <CoinRow data={sol} icon={<Coins className="w-5 h-5 text-purple-400 flex-shrink-0" />} />}
+        <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-warning flex-shrink-0" />} />
+        {eth && <CoinRow data={eth} icon={<Coins className="w-5 h-5 text-primary flex-shrink-0" />} />}
+        {sol && <CoinRow data={sol} icon={<Coins className="w-5 h-5 text-signal-conflict flex-shrink-0" />} />}
       </div>
 
       {/* Fear & Greed Index — last row */}
@@ -115,18 +115,18 @@ export function CryptoIndicators() {
         <div className="border-t border-border/30 pt-2 mt-1">
           <div className="flex items-center gap-3">
             <div className="flex-1">
-              <div className="text-[10px] text-slate-500 flex items-center gap-0.5 mb-1">
+              <div className="text-[10px] text-muted-foreground flex items-center gap-0.5 mb-1">
                 {t("fngTitle")}
                 <InfoTip size={9} tip={t("fngTip")} />
               </div>
               {/* Gauge bar */}
-              <div className="relative w-full h-2 rounded-full overflow-hidden bg-gradient-to-r from-red-500 via-yellow-500 to-green-500 opacity-30">
+              <div className="relative w-full h-2 rounded-full overflow-hidden bg-gradient-to-r from-danger via-warning to-success opacity-30">
                 <div
                   className="absolute top-0 h-full w-2 rounded-full bg-white shadow-md shadow-white/40"
                   style={{ left: `calc(${fng.value}% - 4px)` }}
                 />
               </div>
-              <div className="flex justify-between text-[8px] text-slate-600 mt-0.5">
+              <div className="flex justify-between text-[8px] text-muted-foreground mt-0.5">
                 <span>{t("fngFear")}</span>
                 <span>{t("fngGreed")}</span>
               </div>

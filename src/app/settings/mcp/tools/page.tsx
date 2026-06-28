@@ -28,9 +28,9 @@ const GROUP_ORDER: ToolGroup[] = [
 //   user-data writes  → manage or full
 //   other writes      → full only
 const ACCESS_TO_SCOPE: Record<ToolAccess, { label: string; cls: string }> = {
-  read: { label: "read", cls: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30" },
-  write_user: { label: "manage", cls: "bg-amber-500/10 text-amber-500 border-amber-500/30" },
-  write_other: { label: "full", cls: "bg-rose-500/10 text-rose-500 border-rose-500/30" },
+  read: { label: "read", cls: "bg-success/10 text-success border-success/30" },
+  write_user: { label: "manage", cls: "bg-warning/10 text-warning border-warning/30" },
+  write_other: { label: "full", cls: "bg-danger/10 text-danger border-danger/30" },
 };
 
 function ScopeBadge({ access }: { access: ToolAccess }) {

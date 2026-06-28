@@ -37,8 +37,8 @@ export function WatchlistStar({ ticker, className = "" }: { ticker: string; clas
       aria-pressed={starred}
       className={`relative z-10 p-1 rounded transition-colors disabled:opacity-50 ${
         starred
-          ? "text-amber-400 hover:text-amber-300"
-          : "text-muted-foreground/40 hover:text-amber-400"
+          ? "text-warning hover:text-warning"
+          : "text-muted-foreground/40 hover:text-warning"
       } ${className}`}
     >
       <Star className={`w-3.5 h-3.5 ${starred ? "fill-current" : ""}`} aria-hidden="true" />

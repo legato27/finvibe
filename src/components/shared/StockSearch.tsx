@@ -107,7 +107,7 @@ export function StockSearch({
 
         {/* Search input */}
         <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg focus-within:ring-1 focus-within:ring-primary">
-          <Search className="w-4 h-4 text-slate-500 flex-shrink-0" />
+          <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <input
             ref={inputRef}
             type="text"
@@ -115,7 +115,7 @@ export function StockSearch({
             onChange={(e) => setQuery(e.target.value.toUpperCase())}
             onFocus={() => setFocused(true)}
             placeholder={ph}
-            className="flex-1 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-slate-600"
+            className="flex-1 bg-transparent text-sm text-foreground focus:outline-none placeholder:text-muted-foreground"
             autoFocus
           />
           {isLoading && query && (
@@ -127,10 +127,10 @@ export function StockSearch({
       {focused && query.length >= 1 && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-xl z-50 max-h-80 overflow-y-auto">
           {isLoading && (
-            <div className="px-4 py-3 text-xs text-slate-500 animate-pulse">{t("searching")}</div>
+            <div className="px-4 py-3 text-xs text-muted-foreground animate-pulse">{t("searching")}</div>
           )}
           {!isLoading && stocks.length === 0 && query.length >= 2 && (
-            <div className="px-4 py-3 text-xs text-slate-500">
+            <div className="px-4 py-3 text-xs text-muted-foreground">
               {t("noResultsFor", { query })}
               <button
                 onClick={() => onSelect(query, query, { ticker: query, name: query })}
@@ -159,47 +159,47 @@ export function StockSearch({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
-                    <span className="text-[9px] text-amber-400 bg-amber-400/10 border border-amber-400/30 px-1 rounded">
+                    <span className="text-[9px] text-warning bg-warning/10 border border-warning/30 px-1 rounded">
                       {ccy}
                     </span>
                     {stock.market && stock.market !== "US" && (
-                      <span className="text-[9px] text-slate-400 bg-slate-800 px-1 rounded">
+                      <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">
                         {stock.market}
                       </span>
                     )}
                     {stock.exchange && (
-                      <span className="text-[9px] text-slate-600 bg-slate-800 px-1 rounded">{stock.exchange}</span>
+                      <span className="text-[9px] text-muted-foreground bg-muted px-1 rounded">{stock.exchange}</span>
                     )}
                   </div>
-                  <div className="text-xs text-slate-400 truncate">{stock.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{stock.name}</div>
                   {stock.sector && (
                     <div className="flex items-center gap-1 mt-0.5">
-                      <Building2 className="w-2.5 h-2.5 text-slate-600" />
-                      <span className="text-[10px] text-slate-600">{stock.sector}</span>
+                      <Building2 className="w-2.5 h-2.5 text-muted-foreground" />
+                      <span className="text-[10px] text-muted-foreground">{stock.sector}</span>
                     </div>
                   )}
                 </div>
 
                 <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
                   {price != null && (
-                    <span className="font-mono text-xs text-slate-300">
+                    <span className="font-mono text-xs text-foreground">
                       {price.toFixed(2)} {ccy}
                     </span>
                   )}
                   {stock.change_pct != null && (
                     <span className={`flex items-center gap-0.5 font-mono text-[10px] ${
-                      stock.change_pct >= 0 ? "text-green-400" : "text-red-400"
+                      stock.change_pct >= 0 ? "text-success" : "text-danger"
                     }`}>
                       {stock.change_pct >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                       {stock.change_pct >= 0 ? "+" : ""}{stock.change_pct.toFixed(2)}%
                     </span>
                   )}
                   {stock.market_cap && (
-                    <span className="text-[9px] text-slate-600">{formatMarketCap(stock.market_cap)}</span>
+                    <span className="text-[9px] text-muted-foreground">{formatMarketCap(stock.market_cap)}</span>
                   )}
                 </div>
 
-                <Plus className="w-4 h-4 text-slate-600 flex-shrink-0" />
+                <Plus className="w-4 h-4 text-muted-foreground flex-shrink-0" />
               </button>
             );
           })}

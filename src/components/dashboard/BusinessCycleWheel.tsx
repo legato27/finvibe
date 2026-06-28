@@ -85,7 +85,7 @@ export function BusinessCycleWheel() {
   if (!cycle) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">{t("cycleDetecting")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{t("cycleDetecting")}</div>
       </div>
     );
   }
@@ -105,7 +105,7 @@ export function BusinessCycleWheel() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowLegend(!showLegend)}
-            className="text-xs text-slate-400 hover:text-slate-200 px-2 py-0.5 rounded border border-slate-700 hover:border-slate-500 transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground px-2 py-0.5 rounded border border-border hover:border-border transition-colors"
           >
             {showLegend ? t("cycleHideLegend") : t("cycleShowLegend")}
           </button>
@@ -124,15 +124,15 @@ export function BusinessCycleWheel() {
 
       {/* Legend panel */}
       {showLegend && (
-        <div className="mb-3 rounded-lg border border-slate-700/60 bg-slate-900/60 p-3 text-xs space-y-3">
-          <div className="text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+        <div className="mb-3 rounded-lg border border-border/60 bg-background/60 p-3 text-xs space-y-3">
+          <div className="text-muted-foreground font-semibold uppercase tracking-wider text-[10px]">
             {t("cycleLegendTitle")}
           </div>
           {STATES.map((s) => {
             const cfg = STATE_VISUAL[s];
             const isActive = s === currentState;
             return (
-              <div key={s} className={`flex gap-2.5 p-2 rounded ${isActive ? "bg-slate-800/70" : ""}`}>
+              <div key={s} className={`flex gap-2.5 p-2 rounded ${isActive ? "bg-muted/70" : ""}`}>
                 <div className="mt-0.5 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
@@ -143,20 +143,20 @@ export function BusinessCycleWheel() {
                     >
                       {t(cfg.signalKey)}
                     </span>
-                    {isActive && <span className="text-[10px] text-slate-400">{t("cycleCurrentMark")}</span>}
+                    {isActive && <span className="text-[10px] text-muted-foreground">{t("cycleCurrentMark")}</span>}
                   </div>
-                  <p className="text-slate-400 leading-relaxed">{t(cfg.detailKey)}</p>
+                  <p className="text-muted-foreground leading-relaxed">{t(cfg.detailKey)}</p>
                   <div className="flex flex-wrap gap-1 mt-1.5">
-                    <span className="text-[10px] text-slate-500">{t("cycleFavour")} </span>
+                    <span className="text-[10px] text-muted-foreground">{t("cycleFavour")} </span>
                     {cfg.assetKeys.map((ak) => (
-                      <span key={ak} className="px-1.5 py-0.5 rounded text-[10px] bg-slate-800 text-slate-300">{t(ak)}</span>
+                      <span key={ak} className="px-1.5 py-0.5 rounded text-[10px] bg-muted text-foreground">{t(ak)}</span>
                     ))}
                   </div>
                 </div>
               </div>
             );
           })}
-          <p className="text-[10px] text-slate-600 pt-1 border-t border-slate-800">
+          <p className="text-[10px] text-muted-foreground pt-1 border-t border-border">
             {t("cycleModelNote")}
           </p>
         </div>
@@ -222,7 +222,7 @@ export function BusinessCycleWheel() {
 
           {/* Probabilities */}
           <div>
-            <div className="text-xs text-slate-500 mb-1.5">{t("cycleStateProbabilities")}</div>
+            <div className="text-xs text-muted-foreground mb-1.5">{t("cycleStateProbabilities")}</div>
             {STATES.map((state) => {
               const prob = ((cycle.probabilities?.[state] ?? 0) as number);
               const cfg = STATE_VISUAL[state];
@@ -235,7 +235,7 @@ export function BusinessCycleWheel() {
                   >
                     {t(cfg.phaseKey)}
                   </div>
-                  <div className="flex-1 bg-slate-800 rounded-full h-1.5">
+                  <div className="flex-1 bg-muted rounded-full h-1.5">
                     <div
                       className="h-1.5 rounded-full transition-all duration-500"
                       style={{ width: `${prob * 100}%`, backgroundColor: cfg.color }}
@@ -271,8 +271,8 @@ export function BusinessCycleWheel() {
               {Object.entries(cycle.indicator_values as Record<string, number>)
                 .slice(0, 4)
                 .map(([key, val]) => (
-                  <div key={key} className="bg-slate-800/50 rounded p-1.5">
-                    <div className="text-[10px] text-slate-500 leading-tight truncate">
+                  <div key={key} className="bg-muted/50 rounded p-1.5">
+                    <div className="text-[10px] text-muted-foreground leading-tight truncate">
                       {getIndicatorLabel(key)}
                     </div>
                     <div className="font-mono text-xs font-semibold">

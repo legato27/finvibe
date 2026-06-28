@@ -29,10 +29,10 @@ interface PamRead {
   near_pivot?: boolean;
 }
 const PAM_STYLE: Record<string, string> = {
-  UC: "text-emerald-400",
-  DC: "text-red-400",
-  "UR zone": "text-amber-400",
-  "DR zone": "text-amber-400",
+  UC: "text-success",
+  DC: "text-danger",
+  "UR zone": "text-warning",
+  "DR zone": "text-warning",
   Ranging: "text-muted-foreground",
 };
 
@@ -97,14 +97,14 @@ interface ScanResult {
 }
 
 const REGIME_STYLE: Record<string, string> = {
-  risk_on: "text-emerald-400 border-emerald-400/40 bg-emerald-400/10",
-  neutral: "text-amber-400 border-amber-400/40 bg-amber-400/10",
-  risk_off: "text-red-400 border-red-400/40 bg-red-400/10",
+  risk_on: "text-success border-success/40 bg-success/10",
+  neutral: "text-warning border-warning/40 bg-warning/10",
+  risk_off: "text-danger border-danger/40 bg-danger/10",
 };
 const VERDICT_STYLE: Record<string, string> = {
-  clean: "text-emerald-400",
-  caution: "text-amber-400",
-  avoid: "text-red-400",
+  clean: "text-success",
+  caution: "text-warning",
+  avoid: "text-danger",
 };
 const TIPS = {
   track:
@@ -125,7 +125,7 @@ const TIPS = {
 const pct = (x?: number | null) =>
   x == null ? "—" : `${x > 0 ? "+" : ""}${x.toFixed(1)}%`;
 const pctColor = (x?: number | null) =>
-  x == null ? "text-muted-foreground" : x >= 0 ? "text-emerald-400" : "text-red-400";
+  x == null ? "text-muted-foreground" : x >= 0 ? "text-success" : "text-danger";
 
 export default function MultibaggerPage() {
   const [track, setTrack] = useState<"all" | "A" | "B">("all");
@@ -266,7 +266,7 @@ export default function MultibaggerPage() {
           <ColumnFilterBar rows={wlRows} defs={filterDefs} state={filterState} setState={setFilterState} />
 
           {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
-          {error && <div className="card p-6 text-sm text-red-400">Failed to load candidates.</div>}
+          {error && <div className="card p-6 text-sm text-danger">Failed to load candidates.</div>}
 
           {data && (
             <>
@@ -334,7 +334,7 @@ export default function MultibaggerPage() {
                         </td>
                         <td className="p-2 text-center">
                           <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${
-                            c.track === "A" ? "bg-sky-400/15 text-sky-400" : "bg-violet-400/15 text-violet-400"
+                            c.track === "A" ? "bg-primary/15 text-primary" : "bg-signal-conflict/15 text-signal-conflict"
                           }`}>{c.track}</span>
                         </td>
                         <td className="p-2 text-right">
@@ -459,7 +459,7 @@ export default function MultibaggerPage() {
                         <td className="p-2 text-right font-mono">{a.hit_rate_pos_pct}%</td>
                         <td className="p-2 text-right font-mono text-primary">{a.hit_rate_2x_pct}%</td>
                         <td className={`p-2 text-right font-mono ${pctColor(a.median_ret_pct)}`}>{a.median_ret_pct}%</td>
-                        <td className="p-2 text-right font-mono text-emerald-400">{a.p90_ret_pct}%</td>
+                        <td className="p-2 text-right font-mono text-success">{a.p90_ret_pct}%</td>
                       </tr>
                     );
                   })}

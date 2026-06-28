@@ -21,7 +21,7 @@ function CountdownBadge({ days }: { days: number }) {
   const soon = days <= 30;
   return (
     <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${
-      urgent ? "bg-orange-500/20 text-orange-400" :
+      urgent ? "bg-warning/20 text-warning" :
       soon   ? "bg-signal-caution-bg text-signal-caution border border-signal-caution/40" :
                "bg-muted text-muted-foreground"
     }`}>

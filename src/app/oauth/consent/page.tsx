@@ -202,7 +202,7 @@ export default async function ConsentPage(props: {
         </button>
         <button
           formAction={deny}
-          className="flex-1 px-4 py-2 rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground hover:border-red-400/40 text-sm"
+          className="flex-1 px-4 py-2 rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground hover:border-danger/40 text-sm"
         >
           {t("consent.deny")}
         </button>

@@ -33,6 +33,8 @@ const config: Config = {
         },
         success: "hsl(var(--success))",
         danger: "hsl(var(--danger))",
+        warning: "hsl(var(--warning))",
+        "accent-solid": "hsl(var(--accent-solid))",
         // ── Signal tokens (AA-checked CSS vars; see globals.css). New
         // components use ONLY these for directional/verdict coloring.
         signal: {
@@ -52,7 +54,6 @@ const config: Config = {
         bull: "#22c55e",
         bear: "#ef4444",
         neutral: "#94a3b8",
-        warning: "#f59e0b",
         "moat-wide": "#10b981",
         "moat-narrow": "#f59e0b",
         "moat-none": "#ef4444",
@@ -62,8 +63,8 @@ const config: Config = {
         "swarm-neutral": "#64748b",
       },
       fontFamily: {
-        mono: ["JetBrains Mono", "Fira Code", "monospace"],
-        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "IBM Plex Mono", "ui-monospace", "monospace"],
+        sans: ["var(--font-sans)", "IBM Plex Sans", "system-ui", "sans-serif"],
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",

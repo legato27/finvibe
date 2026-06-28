@@ -59,9 +59,9 @@ interface PriceActionData {
 
 /* ── Helpers ── */
 function dirColor(direction: string | null) {
-  if (direction === "long") return { text: "text-signal-long", bg: "bg-green-500/10", border: "border-green-500/30" };
-  if (direction === "short") return { text: "text-signal-short", bg: "bg-red-500/10", border: "border-red-500/30" };
-  return { text: "text-signal-caution", bg: "bg-yellow-500/10", border: "border-yellow-500/30" };
+  if (direction === "long") return { text: "text-signal-long", bg: "bg-success/10", border: "border-success/30" };
+  if (direction === "short") return { text: "text-signal-short", bg: "bg-danger/10", border: "border-danger/30" };
+  return { text: "text-signal-caution", bg: "bg-warning/10", border: "border-warning/30" };
 }
 function structDir(type: string): "long" | "short" | null {
   if (type === "UC" || type.startsWith("UR")) return "long";
@@ -152,9 +152,9 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
         <div
           className={`rounded-lg border p-3 mb-3 ${
             syn.trade_plan.action.startsWith("enter")
-              ? "border-green-500/30 bg-green-500/5"
+              ? "border-success/30 bg-success/5"
               : syn.trade_plan.action.startsWith("wait")
-              ? "border-yellow-500/30 bg-yellow-500/5"
+              ? "border-warning/30 bg-warning/5"
               : "border-border/40 bg-accent/20"
           }`}
         >

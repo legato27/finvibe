@@ -104,10 +104,10 @@ function buildPayoffSeries(legs: Leg[], currentPrice: number) {
 type CategoryKey = "income" | "protection" | "speculation" | "hedge";
 
 const CATEGORY_STYLE: Record<CategoryKey, { color: string; icon: React.ReactNode }> = {
-  income:       { color: "text-emerald-400 border-emerald-500/40 bg-emerald-500/10",  icon: <TrendingUp className="w-3.5 h-3.5" /> },
-  protection:   { color: "text-sky-400 border-sky-500/40 bg-sky-500/10",              icon: <Shield className="w-3.5 h-3.5" /> },
-  speculation:  { color: "text-amber-400 border-amber-500/40 bg-amber-500/10",        icon: <Target className="w-3.5 h-3.5" /> },
-  hedge:        { color: "text-purple-400 border-purple-500/40 bg-purple-500/10",     icon: <Shield className="w-3.5 h-3.5" /> },
+  income:       { color: "text-success border-success/40 bg-success/10",  icon: <TrendingUp className="w-3.5 h-3.5" /> },
+  protection:   { color: "text-primary border-primary/40 bg-primary/10",              icon: <Shield className="w-3.5 h-3.5" /> },
+  speculation:  { color: "text-warning border-warning/40 bg-warning/10",        icon: <Target className="w-3.5 h-3.5" /> },
+  hedge:        { color: "text-signal-conflict border-signal-conflict/40 bg-signal-conflict/10",     icon: <Shield className="w-3.5 h-3.5" /> },
 };
 
 function Markdown({ children }: { children: string }) {
@@ -121,8 +121,8 @@ function Markdown({ children }: { children: string }) {
 function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "pos" | "neg" | "muted" }) {
   const toneClass = {
     default: "text-foreground",
-    pos: "text-emerald-400",
-    neg: "text-red-400",
+    pos: "text-success",
+    neg: "text-danger",
     muted: "text-muted-foreground",
   }[tone];
   return (
@@ -272,7 +272,7 @@ export function OptionsStrategyRecommendation({
             ))}
           </div>
           {isUnderwater && (
-            <div className="text-[10px] text-amber-400/80 mt-1">
+            <div className="text-[10px] text-warning/80 mt-1">
               {t("repairHelp", { shares: position!.shares, ticker, cost: position!.avgCost.toFixed(2), lossPerShare: lossPerShareStr })}
             </div>
           )}
@@ -304,7 +304,7 @@ export function OptionsStrategyRecommendation({
 
   if (errorMessage) {
     return (
-      <div className="card p-6 text-sm text-amber-400 flex items-start gap-2">
+      <div className="card p-6 text-sm text-warning flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
         <div className="flex-1">
           <div className="font-semibold">{t("engineUnavailable")}</div>
@@ -427,7 +427,7 @@ export function OptionsStrategyRecommendation({
             <tbody>
               {data.trade_setup.legs.map((leg, i) => (
                 <tr key={i} className="border-b border-border/20 last:border-0">
-                  <td className={`py-1.5 font-semibold ${leg.action === "sell" ? "text-rose-400" : "text-emerald-400"}`}>
+                  <td className={`py-1.5 font-semibold ${leg.action === "sell" ? "text-danger" : "text-success"}`}>
                     {leg.action.toUpperCase()}
                   </td>
                   <td className="py-1.5 uppercase">{leg.type}</td>
@@ -533,8 +533,8 @@ export function OptionsStrategyRecommendation({
       </div>
 
       {/* Risks */}
-      <div className="card p-4 space-y-2 border-amber-500/20">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-400">
+      <div className="card p-4 space-y-2 border-warning/20">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-warning">
           <AlertTriangle className="w-3.5 h-3.5" />
           {t("risks")}
         </div>

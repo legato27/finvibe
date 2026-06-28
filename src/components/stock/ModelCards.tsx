@@ -39,9 +39,9 @@ const MODEL_META: Record<
 const GROUP_ORDER: ModelGroup[] = ["forecast", "risk", "fundamentals"];
 
 const COLOR = {
-  good: "text-green-700 dark:text-green-400",
-  bad:  "text-red-700 dark:text-red-400",
-  warn: "text-yellow-700 dark:text-yellow-400",
+  good: "text-success dark:text-success",
+  bad:  "text-danger dark:text-danger",
+  warn: "text-warning dark:text-warning",
   neutral: "text-muted-foreground",
 } as const;
 
@@ -499,7 +499,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
             </span>
           )}
           {runError && (
-            <span className="text-amber-700 dark:text-amber-400">{runError}</span>
+            <span className="text-warning dark:text-warning">{runError}</span>
           )}
         </div>
         <button

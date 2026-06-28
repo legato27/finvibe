@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
-import { BarChart2, Briefcase, BookOpen, LogOut, LogIn, Sun, Moon, Monitor, Settings, ListOrdered } from "lucide-react";
+import { Activity, Briefcase, Eye, LogOut, LogIn, Sun, Moon, Monitor, Settings, ListOrdered, Radio } from "lucide-react";
 import { useTheme } from "@/components/shared/ThemeProvider";
 import { useTranslations } from "next-intl";
 import type { User } from "@supabase/supabase-js";
@@ -14,6 +14,16 @@ const themeOptions = [
   { value: "dark" as const, icon: Moon },
   { value: "auto" as const, icon: Monitor },
 ];
+
+// Active when the path equals the href, sits beneath it, or matches one of the
+// secondary routes that share a top-level entry (e.g. Screeners → ranked /
+// multibagger / options; Intelligence → /osint/*). "/" matches exactly only.
+function isActive(pathname: string, href: string, match?: string[]): boolean {
+  const targets = match ?? [href];
+  return targets.some((t) =>
+    t === "/" ? pathname === "/" : pathname === t || pathname.startsWith(t + "/")
+  );
+}
 
 export default function Navbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -52,13 +62,15 @@ export default function Navbar() {
     : theme === "dark" ? tCommon("themeDark")
     : tCommon("themeAuto");
 
-  const navItems: { href: string; label: string; icon: typeof BarChart2; public: boolean; match?: string[] }[] = [
-    { href: "/", label: tNav("dashboard"), icon: BarChart2, public: true },
-    { href: "/watchlist", label: tNav("watchlist"), icon: BookOpen, public: false },
-    // Ranked Book / Multibagger / Options Book share one entry; the
-    // ScreenerTabs bar on those pages is the second-level navigation.
+  // Primary IA: Market Dashboard · Screeners · Intelligence · Portfolios · Watchlists.
+  // Screeners fans out to ranked/multibagger/options via ScreenerTabs;
+  // Intelligence fans out to wire/map/timeline (+ actors/indices) under /osint.
+  const navItems: { href: string; label: string; icon: typeof Activity; public: boolean; match?: string[] }[] = [
+    { href: "/", label: tNav("dashboard"), icon: Activity, public: true },
     { href: "/ranked", label: tNav("screeners"), icon: ListOrdered, public: true, match: ["/ranked", "/multibagger", "/options"] },
+    { href: "/osint", label: tNav("osint"), icon: Radio, public: true, match: ["/osint"] },
     { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
+    { href: "/watchlist", label: tNav("watchlist"), icon: Eye, public: false },
   ];
 
   const visibleItems = navItems.filter((item) => item.public || user);
@@ -66,35 +78,52 @@ export default function Navbar() {
   return (
     <header className="border-b border-border bg-card/80 backdrop-blur sticky top-0 z-50">
       <div className="container mx-auto px-3 sm:px-4 max-w-[1600px] flex items-center h-14 gap-2 sm:gap-6">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
-          <Image src="/vibefin-icon.svg" alt="VibeFin" width={28} height={28} />
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-foreground leading-tight">{tCommon("appName")}</span>
-            <span className="text-[10px] text-muted-foreground leading-tight hidden sm:block">{tCommon("tagline")}</span>
+        {/* Wordmark — terminal style */}
+        <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Image src="/vibefin-icon.svg" alt="VibeFin" width={26} height={26} />
+          <div className="flex flex-col leading-none">
+            <span className="font-mono text-sm font-semibold lowercase tracking-tight text-foreground">
+              {tCommon("appName")}
+            </span>
+            <span className="hidden sm:flex items-center gap-1.5 mt-0.5">
+              <span className="font-mono text-[9px] tracking-[0.18em] uppercase text-muted-foreground">
+                Market Terminal
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+                </span>
+                <span className="font-mono text-[9px] tracking-[0.18em] uppercase text-success">Live</span>
+              </span>
+            </span>
           </div>
         </Link>
 
-        {/* Nav */}
-        <nav className="flex gap-1">
-          {visibleItems.map(({ href, label, icon: Icon, match }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                (match ?? [href]).includes(pathname)
-                  ? "bg-primary/20 text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="hidden sm:inline">{label}</span>
-            </Link>
-          ))}
+        {/* Primary nav */}
+        <nav className="flex gap-0.5 sm:gap-1 overflow-x-auto">
+          {visibleItems.map(({ href, label, icon: Icon, match }) => {
+            const active = isActive(pathname, href, match);
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? "page" : undefined}
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap transition-colors ${
+                  active
+                    ? "bg-primary/15 text-primary font-medium"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span className="hidden md:inline">{label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         {/* Right side */}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Theme toggle */}
           <button
             onClick={cycleTheme}
@@ -102,33 +131,33 @@ export default function Navbar() {
             title={`${tCommon("theme")}: ${themeLabel}`}
           >
             <ThemeIcon className="w-4 h-4" />
-            <span className="text-[10px] uppercase tracking-wider hidden sm:inline">{themeLabel}</span>
+            <span className="text-[10px] uppercase tracking-wider hidden lg:inline">{themeLabel}</span>
           </button>
 
           {user ? (
             <>
-              <span className="text-xs text-muted-foreground hidden sm:block">
+              <span className="font-mono text-xs text-muted-foreground hidden lg:block">
                 {user.user_metadata?.full_name || user.email}
               </span>
               <Link
                 href="/settings"
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 title={tCommon("settings")}
               >
-                <Settings className="w-3.5 h-3.5" />
+                <Settings className="w-4 h-4" />
               </Link>
               <button
                 onClick={handleSignOut}
-                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="flex items-center p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                 title={tCommon("signOut")}
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4" />
               </button>
             </>
           ) : (
             <Link
               href="/login"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-primary hover:bg-primary/10 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
             >
               <LogIn className="w-4 h-4" />
               {tCommon("signIn")}

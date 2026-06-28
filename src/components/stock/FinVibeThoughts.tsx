@@ -143,10 +143,10 @@ export function FinVibeThoughts({
       <div
         className={`rounded-lg p-4 mb-4 ${
           verdict === "buy"
-            ? "bg-green-500/10 border border-green-500/20"
+            ? "bg-success/10 border border-success/20"
             : verdict === "avoid"
-            ? "bg-red-500/10 border border-red-500/20"
-            : "bg-yellow-500/10 border border-yellow-500/20"
+            ? "bg-danger/10 border border-danger/20"
+            : "bg-warning/10 border border-warning/20"
         }`}
       >
         <div className="flex items-center justify-between">
@@ -179,7 +179,7 @@ export function FinVibeThoughts({
             {llmIntrinsicValue != null && (
               <div className="text-right">
                 <div className="text-[10px] text-muted-foreground">{t('intrinsicAi')}</div>
-                <span className="font-mono text-sm text-sky-700 dark:text-sky-400">
+                <span className="font-mono text-sm text-primary dark:text-primary">
                   ${llmIntrinsicValue.toFixed(2)}
                 </span>
               </div>
@@ -228,7 +228,7 @@ export function FinVibeThoughts({
       {/* Bull/Bear Cases */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         {thoughts.bull_case && (
-          <div className="border border-green-500/20 bg-green-500/5 rounded-lg p-4">
+          <div className="border border-success/20 bg-success/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-signal-long uppercase tracking-wider">{t('bullCase')}</span>
               {thoughts.bull_case.price_target_12m != null && (
@@ -241,7 +241,7 @@ export function FinVibeThoughts({
           </div>
         )}
         {thoughts.bear_case && (
-          <div className="border border-red-500/20 bg-red-500/5 rounded-lg p-4">
+          <div className="border border-danger/20 bg-danger/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-signal-short uppercase tracking-wider">{t('bearCase')}</span>
               {thoughts.bear_case.price_target_12m != null && (
@@ -355,9 +355,9 @@ export function FinVibeThoughts({
               <div
                 className={`mt-3 rounded-md border p-2.5 ${
                   plan.action.startsWith("enter")
-                    ? "border-green-500/30 bg-green-500/5"
+                    ? "border-success/30 bg-success/5"
                     : plan.action.startsWith("wait")
-                    ? "border-yellow-500/30 bg-yellow-500/5"
+                    ? "border-warning/30 bg-warning/5"
                     : "border-border/40 bg-accent/20"
                 }`}
               >
