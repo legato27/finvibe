@@ -95,7 +95,7 @@ export function BusinessCycleWheel() {
   const cx = 88, cy = 88, r = 66;
 
   return (
-    <div className="card h-full">
+    <div className="card max-h-[320px] overflow-y-auto">
       {/* Header */}
       <div className="card-header">
         <span className="card-title flex items-center gap-1">

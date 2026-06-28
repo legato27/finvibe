@@ -105,7 +105,7 @@ export function MarketOverview() {
       <div
         ref={containerRef}
         className="tradingview-widget-container"
-        style={{ height: "100%", minHeight: 420, width: "100%" }}
+        style={{ height: "100%", minHeight: 340, width: "100%" }}
       />
     </div>
   );

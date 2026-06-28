@@ -96,7 +96,7 @@ export function CryptoIndicators() {
   const hasFng = fng && !fng.error;
 
   return (
-    <div className="card h-full flex flex-col">
+    <div className="card flex flex-col max-h-[300px]">
       <div className="card-header flex-shrink-0">
         <span className="card-title flex items-center gap-1">
           {t("cryptoTitle")}
@@ -104,7 +104,7 @@ export function CryptoIndicators() {
         </span>
         <span className="text-[10px] text-muted-foreground">{tc("live")}</span>
       </div>
-      <div className="flex-1 divide-y divide-border/30">
+      <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-border/30 pr-1">
         <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-warning flex-shrink-0" />} />
         {eth && <CoinRow data={eth} icon={<Coins className="w-5 h-5 text-primary flex-shrink-0" />} />}
         {sol && <CoinRow data={sol} icon={<Coins className="w-5 h-5 text-signal-conflict flex-shrink-0" />} />}
