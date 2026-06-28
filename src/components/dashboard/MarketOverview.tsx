@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useTheme } from "@/components/shared/ThemeProvider";
 
 const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 
@@ -10,17 +11,24 @@ const AFF_PARAMS = "?aff_id=165399&source=fin.vibelife.sg";
 export function MarketOverview() {
   const containerRef = useRef<HTMLDivElement>(null);
   const t = useTranslations("dashboard");
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!containerRef.current) return;
     containerRef.current.innerHTML = "";
+
+    // Follow the app theme so the (transparent) widget isn't a dark island on a
+    // light card. "auto" resolves from the <html> class set by the theme script.
+    const isDark =
+      theme === "dark" ||
+      (theme === "auto" && typeof document !== "undefined" && document.documentElement.classList.contains("dark"));
 
     const script = document.createElement("script");
     script.src = "https://s3.tradingview.com/external-embedding/embed-widget-market-overview.js";
     script.type = "text/javascript";
     script.async = true;
     script.innerHTML = JSON.stringify({
-      colorTheme: "dark",
+      colorTheme: isDark ? "dark" : "light",
       dateRange: "1D",
       showChart: true,
       locale: "en",
@@ -90,7 +98,7 @@ export function MarketOverview() {
     return () => {
       if (containerRef.current) containerRef.current.innerHTML = "";
     };
-  }, [t]);
+  }, [t, theme]);
 
   return (
     <div className="card overflow-hidden h-full">
