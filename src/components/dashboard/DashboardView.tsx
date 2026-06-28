@@ -9,7 +9,6 @@ import { TodayPanel } from "@/components/dashboard/TodayPanel";
 import { TodaySignalsPanel } from "@/components/dashboard/TodaySignalsPanel";
 import { RegimeAgreement } from "@/components/dashboard/RegimeAgreement";
 import { MacroTape } from "@/components/dashboard/MacroTape";
-import { MarketOverview } from "@/components/dashboard/MarketOverview";
 import { WatchlistGlance } from "@/components/dashboard/WatchlistGlance";
 import { VixGauge } from "@/components/dashboard/VixGauge";
 import { SwarmIndicator } from "@/components/dashboard/SwarmIndicator";
@@ -53,13 +52,6 @@ export function DashboardView() {
         <MarketTickerTape />
       </div>
 
-      <div>
-        <h1 className="text-base sm:text-lg font-bold text-foreground">{t("marketDashboard")}</h1>
-        <p className="text-xs text-muted-foreground">
-          {t("subtitle")}
-        </p>
-      </div>
-
       {/* 1 — Today's read: arbitrated regime, risk score, positioning */}
       <Section title={t("sectionTodayTitle")} intro={t("sectionTodayIntro")}>
         <RegimeAgreement />
@@ -92,18 +84,17 @@ export function DashboardView() {
         </div>
       </Section>
 
-      {/* 5 — Rotation & your watchlist: where the leadership is */}
+      {/* 5 — Macro tape (cross-asset sparklines) */}
+      <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
+        <MacroTape />
+      </Section>
+
+      {/* 6 — Rotation & your watchlist: where the leadership is */}
       <Section title={t("sectionRotationTitle")} intro={t("sectionRotationIntro")}>
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
           <SectorRotationHeatmap />
           <WatchlistGlance />
         </div>
-      </Section>
-
-      {/* 6 — Macro tape + broad market overview */}
-      <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
-        <MacroTape />
-        <MarketOverview />
       </Section>
 
       {/* 7 — Crypto, news & the wire: three packed columns fill the width */}
