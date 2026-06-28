@@ -109,9 +109,9 @@ export default function DataTable<Row>({
                   key={c.key}
                   scope="col"
                   aria-sort={sortedHere ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}
-                  className={`px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground ${
-                    c.align === "right" ? "text-right" : "text-left"
-                  } ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
+                  className={`px-3 py-2 text-xs font-mono font-semibold uppercase tracking-wider ${
+                    sortedHere ? "text-primary" : "text-muted-foreground"
+                  } ${c.align === "right" ? "text-right" : "text-left"} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
                 >
                   {c.sortable ? (
                     <button
@@ -121,7 +121,7 @@ export default function DataTable<Row>({
                       className="inline-flex items-center gap-1 hover:text-foreground"
                     >
                       {c.header}
-                      <span aria-hidden="true" className="text-[11px]">
+                      <span aria-hidden="true" className={`text-[11px] ${sortedHere ? "text-primary" : "text-muted-foreground/60"}`}>
                         {sortedHere ? (sort!.dir === "asc" ? "▲" : "▼") : "↕"}
                       </span>
                     </button>

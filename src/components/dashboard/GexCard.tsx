@@ -32,7 +32,7 @@ export function GexCard() {
   if (!gex || gex.error) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">{t("gexLoading")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{t("gexLoading")}</div>
       </div>
     );
   }
@@ -47,7 +47,7 @@ export function GexCard() {
     <div className="card h-full flex flex-col">
       <div className="card-header flex-shrink-0">
         <div className="flex items-center gap-1.5">
-          <ShieldAlert className="w-4 h-4 text-slate-400" />
+          <ShieldAlert className="w-4 h-4 text-muted-foreground" />
           <span className="card-title flex items-center gap-1">
             {t("gexTitle")}
             <InfoTip tip={t("gexInfo")} />
@@ -65,14 +65,14 @@ export function GexCard() {
         {/* Net GEX */}
         <div className="flex items-center gap-3">
           <div>
-            <div className="text-[10px] text-slate-500 flex items-center gap-0.5">
+            <div className="text-[10px] text-muted-foreground flex items-center gap-0.5">
               {t("gexNet")} <InfoTip size={10} tip={t("gexNetTip")} />
             </div>
             <div className="flex items-center gap-1">
               {isPositive ? (
-                <TrendingUp className="w-4 h-4 text-green-400" />
+                <TrendingUp className="w-4 h-4 text-success" />
               ) : (
-                <TrendingDown className="w-4 h-4 text-red-400" />
+                <TrendingDown className="w-4 h-4 text-danger" />
               )}
               <span
                 className="text-2xl font-bold font-mono"
@@ -83,37 +83,37 @@ export function GexCard() {
             </div>
           </div>
           <div className="flex-1 grid grid-cols-2 gap-2 text-center">
-            <div className="bg-slate-800/50 rounded p-1.5">
-              <div className="text-[10px] text-slate-500">{t("gexCall")}</div>
-              <div className="font-mono text-xs text-green-400">{gex.call_gex}{gex.net_gex_unit || "M"}</div>
+            <div className="bg-muted/50 rounded p-1.5">
+              <div className="text-[10px] text-muted-foreground">{t("gexCall")}</div>
+              <div className="font-mono text-xs text-success">{gex.call_gex}{gex.net_gex_unit || "M"}</div>
             </div>
-            <div className="bg-slate-800/50 rounded p-1.5">
-              <div className="text-[10px] text-slate-500">{t("gexPut")}</div>
-              <div className="font-mono text-xs text-red-400">{gex.put_gex}{gex.net_gex_unit || "M"}</div>
+            <div className="bg-muted/50 rounded p-1.5">
+              <div className="text-[10px] text-muted-foreground">{t("gexPut")}</div>
+              <div className="font-mono text-xs text-danger">{gex.put_gex}{gex.net_gex_unit || "M"}</div>
             </div>
           </div>
         </div>
 
         {/* Zero-Gamma Level */}
         {gex.zero_gamma_level && (
-          <div className="bg-slate-800/30 rounded-lg p-2.5 border border-border/50">
+          <div className="bg-muted/30 rounded-lg p-2.5 border border-border/50">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                <div className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                   {t("gexZero")} <InfoTip size={10} tip={t("gexZeroTip")} />
                 </div>
-                <div className="text-lg font-bold font-mono text-amber-400">
+                <div className="text-lg font-bold font-mono text-warning">
                   ${gex.zero_gamma_level}
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-[10px] text-slate-500">{t("gexSpot")}</div>
-                <div className="text-sm font-mono text-slate-300">${gex.spot}</div>
+                <div className="text-[10px] text-muted-foreground">{t("gexSpot")}</div>
+                <div className="text-sm font-mono text-foreground">${gex.spot}</div>
               </div>
               {gex.distance_to_zero != null && (
                 <div className="text-right">
-                  <div className="text-[10px] text-slate-500">{t("gexDistance")}</div>
-                  <div className={`text-sm font-mono font-bold ${gex.distance_to_zero > 0 ? "text-green-400" : "text-red-400"}`}>
+                  <div className="text-[10px] text-muted-foreground">{t("gexDistance")}</div>
+                  <div className={`text-sm font-mono font-bold ${gex.distance_to_zero > 0 ? "text-success" : "text-danger"}`}>
                     {gex.distance_to_zero > 0 ? "+" : ""}{gex.distance_to_zero}%
                   </div>
                 </div>
@@ -123,7 +123,7 @@ export function GexCard() {
         )}
 
         {/* Regime description */}
-        <p className="text-xs text-slate-400 italic leading-relaxed">{gex.regime_description}</p>
+        <p className="text-xs text-muted-foreground italic leading-relaxed">{gex.regime_description}</p>
       </div>
     </div>
   );

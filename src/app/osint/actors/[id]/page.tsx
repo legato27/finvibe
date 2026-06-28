@@ -30,30 +30,30 @@ export default function ActorProfilePage({ params }: { params: Promise<{ id: str
     queryFn: () => osintApi.actor(decoded),
   });
 
-  if (isLoading) return <div className="p-6 text-slate-400">{tc("loading")}</div>;
-  if (!data) return <div className="p-6 text-slate-500">{t("actorNotFound")}</div>;
+  if (isLoading) return <div className="p-6 text-muted-foreground">{tc("loading")}</div>;
+  if (!data) return <div className="p-6 text-muted-foreground">{t("actorNotFound")}</div>;
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-4">
-      <Link href="/osint" className="text-sm text-slate-400 hover:text-slate-200">{t("backToFeed")}</Link>
-      <div className="p-4 bg-slate-800 rounded border border-slate-700">
-        <div className="text-xs text-slate-400 uppercase">{data.kind}</div>
+      <Link href="/osint" className="text-sm text-muted-foreground hover:text-foreground">{t("backToFeed")}</Link>
+      <div className="p-4 bg-card rounded border border-border">
+        <div className="text-xs text-muted-foreground uppercase">{data.kind}</div>
         <h1 className="text-3xl font-bold">{data.name}</h1>
-        <div className="text-xs text-slate-500 mt-1">{data.id}</div>
+        <div className="text-xs text-muted-foreground mt-1">{data.id}</div>
       </div>
 
       <h2 className="text-lg font-semibold">{t("recentEventsCount", { count: data.recent_events.length })}</h2>
       <div className="space-y-2">
         {data.recent_events.map((ev) => (
           <Link key={ev.id} href={`/osint?event=${ev.id}`}
-            className="block p-3 bg-slate-800/30 rounded border border-slate-700/50 hover:bg-slate-800/60">
-            <div className="flex items-center gap-2 text-xs text-slate-400">
+            className="block p-3 bg-muted/30 rounded border border-border/60 hover:bg-muted/60">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{ev.event_type}</span>
-              <span className="px-1.5 py-0.5 bg-slate-700 rounded">{ev.urgency}</span>
-              <span className="px-1.5 py-0.5 bg-slate-700 rounded">{t("roleLabel", { role: ev.role })}</span>
+              <span className="px-1.5 py-0.5 bg-muted rounded">{ev.urgency}</span>
+              <span className="px-1.5 py-0.5 bg-muted rounded">{t("roleLabel", { role: ev.role })}</span>
               {ev.occurred_at && <span className="ml-auto">{new Date(ev.occurred_at).toLocaleString()}</span>}
             </div>
-            <div className="mt-1 text-sm text-slate-200">{ev.summary || <span className="italic text-slate-500">{t("noSummary")}</span>}</div>
+            <div className="mt-1 text-sm text-foreground">{ev.summary || <span className="italic text-muted-foreground">{t("noSummary")}</span>}</div>
           </Link>
         ))}
       </div>

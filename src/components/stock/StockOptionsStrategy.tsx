@@ -184,7 +184,7 @@ function buildRepair(ticker: string, price: number, iv: number, costBasis: numbe
 
 function ConfidenceRing({ value, loading }: { value: number; loading?: boolean }) {
   const pct = Math.max(0, Math.min(100, value));
-  const color = pct >= 70 ? "text-green-400" : pct >= 50 ? "text-yellow-400" : "text-red-400";
+  const color = pct >= 70 ? "text-success" : pct >= 50 ? "text-warning" : "text-danger";
   const stroke = pct >= 70 ? "#4ade80" : pct >= 50 ? "#facc15" : "#f87171";
   const r = 14, circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
@@ -231,7 +231,7 @@ function StrategyCard({
           </span>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-xs font-mono text-green-400 hidden sm:inline">${rec.premium.toFixed(2)}/sh</span>
+          <span className="text-xs font-mono text-success hidden sm:inline">${rec.premium.toFixed(2)}/sh</span>
           {rec.annualized > 0 && (
             <span className="text-xs font-mono text-primary hidden md:inline">{t("ivAnn", { pct: rec.annualized.toFixed(0) })}</span>
           )}
@@ -270,12 +270,12 @@ function StrategyCard({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div className="bg-green-500/5 border border-green-500/20 rounded-lg p-3">
-              <div className="text-[10px] text-green-400 uppercase tracking-wider font-semibold mb-1">{t("entryLabel")}</div>
+            <div className="bg-success/5 border border-success/20 rounded-lg p-3">
+              <div className="text-[10px] text-success uppercase tracking-wider font-semibold mb-1">{t("entryLabel")}</div>
               <p className="text-xs text-muted-foreground">{rec.entryCriteria}</p>
             </div>
-            <div className="bg-orange-500/5 border border-orange-500/20 rounded-lg p-3">
-              <div className="text-[10px] text-orange-400 uppercase tracking-wider font-semibold mb-1">{t("exitLabel")}</div>
+            <div className="bg-warning/5 border border-warning/20 rounded-lg p-3">
+              <div className="text-[10px] text-warning uppercase tracking-wider font-semibold mb-1">{t("exitLabel")}</div>
               <p className="text-xs text-muted-foreground">{rec.exitCriteria}</p>
             </div>
           </div>
@@ -387,9 +387,9 @@ export function StockOptionsStrategy({
 
   const contextBanner: Record<Tab, { style: string; text: string }> = {
     income: { style: "bg-primary/5 border-primary/20", text: position ? t("bannerIncomeWithPos", { shares: position.shares, cost: position.avgCost.toFixed(2) }) : t("bannerIncomeNoPos") },
-    wheel: { style: "bg-purple-500/5 border-purple-500/20", text: t("bannerWheel") },
-    hedge: { style: "bg-blue-500/5 border-blue-500/20", text: position ? t("bannerHedgeWithPos", { shares: position.shares, ticker, value: (currentPrice * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 }) }) : t("bannerHedgeNoPos") },
-    repair: { style: "bg-orange-500/5 border-orange-500/20", text: position && isUnderwater ? t("bannerRepairUnderwater", { amount: ((position.avgCost - currentPrice) * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 }) }) : t("bannerRepairOk") },
+    wheel: { style: "bg-signal-conflict/5 border-signal-conflict/20", text: t("bannerWheel") },
+    hedge: { style: "bg-primary/5 border-primary/20", text: position ? t("bannerHedgeWithPos", { shares: position.shares, ticker, value: (currentPrice * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 }) }) : t("bannerHedgeNoPos") },
+    repair: { style: "bg-warning/5 border-warning/20", text: position && isUnderwater ? t("bannerRepairUnderwater", { amount: ((position.avgCost - currentPrice) * position.shares).toLocaleString(undefined, { maximumFractionDigits: 0 }) }) : t("bannerRepairOk") },
   };
 
   const banner = contextBanner[tab];
@@ -407,7 +407,7 @@ export function StockOptionsStrategy({
             {position && (
               <>
                 <span>·</span>
-                <span className={isUnderwater ? "text-orange-400" : "text-green-400"}>
+                <span className={isUnderwater ? "text-warning" : "text-success"}>
                   {isUnderwater
                     ? t("underwaterPerSh", { amount: (position.avgCost - currentPrice).toFixed(2) })
                     : t("upPerSh", { amount: (currentPrice - position.avgCost).toFixed(2) })}
@@ -441,7 +441,7 @@ export function StockOptionsStrategy({
 
       {/* Context banner */}
       <div className={`text-xs text-muted-foreground border rounded-lg px-3 py-2 ${banner.style}`}>
-        {tab === "repair" && isUnderwater && <AlertTriangle className="w-3 h-3 inline mr-1 text-orange-400" />}
+        {tab === "repair" && isUnderwater && <AlertTriangle className="w-3 h-3 inline mr-1 text-warning" />}
         {banner.text}
       </div>
 

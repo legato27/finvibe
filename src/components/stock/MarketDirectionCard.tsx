@@ -25,9 +25,9 @@ export function MarketDirectionCard({ horizon, direction, priceAction }: MarketD
     <div
       className={`border rounded-lg p-4 ${
         isBullish
-          ? "border-green-500/30 bg-green-500/5"
+          ? "border-success/30 bg-success/5"
           : isBearish
-          ? "border-red-500/30 bg-red-500/5"
+          ? "border-danger/30 bg-danger/5"
           : "border-border bg-muted/30"
       }`}
     >

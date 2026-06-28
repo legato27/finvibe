@@ -40,7 +40,7 @@ export function SignOutEverywhereCard() {
           {t("signOutEverywhereLong")}
         </p>
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+          <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div>{error}</div>
           </div>
@@ -48,7 +48,7 @@ export function SignOutEverywhereCard() {
         <button
           onClick={signOutEverywhere}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-danger/10 border border-danger/30 text-danger hover:bg-danger/20 disabled:opacity-50"
         >
           {busy ? (
             <Loader2 className="w-3.5 h-3.5 animate-spin" />

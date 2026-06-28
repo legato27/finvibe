@@ -50,12 +50,12 @@ export default function OsintTimelinePage() {
 
       <div className="flex flex-wrap gap-2">
         <select value={granularity} onChange={(e) => setGranularity(e.target.value as "hour" | "day")}
-          className="bg-slate-700 rounded px-2 py-1 text-sm">
+          className="bg-muted border border-border text-foreground rounded px-2 py-1 text-sm">
           <option value="hour">{t("hourlyBuckets")}</option>
           <option value="day">{t("dailyBuckets")}</option>
         </select>
         <select value={hours} onChange={(e) => setHours(Number(e.target.value))}
-          className="bg-slate-700 rounded px-2 py-1 text-sm">
+          className="bg-muted border border-border text-foreground rounded px-2 py-1 text-sm">
           <option value={24}>{t("last24h")}</option>
           <option value={72}>{t("last72h")}</option>
           <option value={168}>{t("last7d")}</option>
@@ -63,9 +63,9 @@ export default function OsintTimelinePage() {
         </select>
       </div>
 
-      <div className="h-[400px] bg-slate-900 rounded p-4 border border-slate-700">
+      <div className="h-[400px] bg-muted rounded p-4 border border-border">
         {isLoading ? (
-          <div className="text-slate-400">{tc("loading")}</div>
+          <div className="text-muted-foreground">{tc("loading")}</div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>

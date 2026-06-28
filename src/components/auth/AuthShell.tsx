@@ -48,9 +48,9 @@ export function AuthShell({
           {/* Mini terminal sample */}
           <div className="rounded-xl border border-[hsl(217,33%,17%)] bg-[hsl(222,47%,9%)] overflow-hidden shadow-2xl">
             <div className="flex items-center gap-1.5 px-3 py-2 border-b border-[hsl(217,33%,17%)]">
-              <span className="w-2 h-2 rounded-full bg-red-500/60" aria-hidden />
-              <span className="w-2 h-2 rounded-full bg-amber-500/60" aria-hidden />
-              <span className="w-2 h-2 rounded-full bg-green-500/60" aria-hidden />
+              <span className="w-2 h-2 rounded-full bg-danger/60" aria-hidden />
+              <span className="w-2 h-2 rounded-full bg-warning/60" aria-hidden />
+              <span className="w-2 h-2 rounded-full bg-success/60" aria-hidden />
               <span className="flex-1 text-center font-mono text-[10px] text-[hsl(215,20%,55%)]">
                 vibefin · market pulse
               </span>

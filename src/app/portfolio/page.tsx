@@ -102,7 +102,7 @@ function TickerInput({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
-                    <span className="text-[9px] text-amber-400 bg-amber-400/10 border border-amber-400/30 px-1 rounded">{ccy}</span>
+                    <span className="text-[9px] text-warning bg-warning/10 border border-warning/30 px-1 rounded">{ccy}</span>
                     {stock.exchange && (
                       <span className="text-[9px] text-muted-foreground/60 bg-muted px-1 rounded">{stock.exchange}</span>
                     )}
@@ -360,7 +360,7 @@ export default function PortfolioPage() {
                     e.stopPropagation();
                     if (confirm(t("deletePrompt", { name: p.name }))) deletePortfolio.mutate(p.id);
                   }}
-                  className="text-muted-foreground/30 hover:text-red-500"
+                  className="text-muted-foreground/30 hover:text-danger"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -396,7 +396,7 @@ export default function PortfolioPage() {
             <div className="card p-3">
               <div className="stat-label">{t("gainLoss")}</div>
               <div className={`text-lg font-bold font-mono flex items-center gap-1 ${
-                totalGainLoss >= 0 ? "text-green-500" : "text-red-500"
+                totalGainLoss >= 0 ? "text-success" : "text-danger"
               }`}>
                 {totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                 {hideBalances
@@ -536,7 +536,7 @@ export default function PortfolioPage() {
               <span className="card-title">{activePortfolio?.name || "Holdings"}</span>
               {positions.length ? (
                 <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                   Auto-refresh 60s
                 </span>
               ) : null}
@@ -592,7 +592,7 @@ export default function PortfolioPage() {
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-1.5">
                               <span className="font-mono font-bold text-primary">{pos.ticker}</span>
-                              <span className="text-[9px] text-amber-400/80 bg-amber-400/10 border border-amber-400/30 px-1 rounded font-mono">
+                              <span className="text-[9px] text-warning/80 bg-warning/10 border border-warning/30 px-1 rounded font-mono">
                                 {nativeCcy}
                               </span>
                             </div>
@@ -613,7 +613,7 @@ export default function PortfolioPage() {
                             <div className="flex items-center justify-end gap-1">
                               {price > 0 ? formatCurrency(price, nativeCcy) : "—"}
                               {isStale && price > 0 && (
-                                <span title="Price may be stale (>24h)"><Clock className="w-3 h-3 text-yellow-500" /></span>
+                                <span title="Price may be stale (>24h)"><Clock className="w-3 h-3 text-warning" /></span>
                               )}
                             </div>
                           </td>
@@ -630,7 +630,7 @@ export default function PortfolioPage() {
                             ) : "—"}
                           </td>
                           <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
-                            gainLoss > 0 ? "text-green-500" : gainLoss < 0 ? "text-red-500" : "text-muted-foreground"
+                            gainLoss > 0 ? "text-success" : gainLoss < 0 ? "text-danger" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (
                               <div className="flex flex-col items-end">
@@ -644,7 +644,7 @@ export default function PortfolioPage() {
                             ) : "—"}
                           </td>
                           <td className={`px-3 py-2.5 text-right font-mono font-semibold hidden sm:table-cell ${
-                            returnPct > 0 ? "text-green-500" : returnPct < 0 ? "text-red-500" : "text-muted-foreground"
+                            returnPct > 0 ? "text-success" : returnPct < 0 ? "text-danger" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (
                               <>
@@ -661,7 +661,7 @@ export default function PortfolioPage() {
                                   : `Delete ${pos.ticker}?`;
                                 if (confirm(msg)) deleteHolding.mutate(pos.lotIds);
                               }}
-                              className="text-muted-foreground/30 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="text-muted-foreground/30 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

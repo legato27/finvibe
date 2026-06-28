@@ -204,8 +204,8 @@ function AddToPortfolioModal({
             />
           </div>
 
-          {error && <div className="text-xs text-red-400">{error}</div>}
-          {success && <div className="text-xs text-green-400">{tp("addedToPortfolio")}</div>}
+          {error && <div className="text-xs text-danger">{error}</div>}
+          {success && <div className="text-xs text-success">{tp("addedToPortfolio")}</div>}
 
           <button
             onClick={handleSubmit}
@@ -407,7 +407,7 @@ export default function WatchlistPage() {
               onClick={handleRefreshPrices}
               disabled={refreshing}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${
-                refreshError ? "text-red-400 hover:text-red-300" : "text-muted-foreground hover:text-foreground"
+                refreshError ? "text-danger hover:text-danger" : "text-muted-foreground hover:text-foreground"
               }`}
               title={refreshError ? t("refreshFailedTitle") : t("refreshNowTitle")}
             >
@@ -477,7 +477,7 @@ export default function WatchlistPage() {
                     e.stopPropagation();
                     if (confirm(t("deletePrompt", { name: wl.name }))) deleteWatchlist.mutate(wl.id);
                   }}
-                  className="text-muted-foreground/50 hover:text-red-500"
+                  className="text-muted-foreground/50 hover:text-danger"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -532,7 +532,7 @@ export default function WatchlistPage() {
                   )}
                   {activeTickers.length > 0 && (
                     <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                       {tc("live")}
                     </span>
                   )}

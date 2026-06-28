@@ -17,22 +17,22 @@ import { osintApi, type OsintEvent } from "@/lib/api";
  */
 
 const URGENCY_COLOR: Record<string, string> = {
-  low: "text-slate-400 border-slate-700/50",
-  medium: "text-amber-400 border-amber-900/50",
-  high: "text-orange-400 border-orange-900/50",
-  critical: "text-red-400 border-red-900/50",
+  low: "text-muted-foreground border-border/50",
+  medium: "text-warning border-warning/50",
+  high: "text-warning border-warning/50",
+  critical: "text-danger border-danger/50",
 };
 
 const TYPE_ICON: Record<string, React.ReactNode> = {
-  armed_conflict: <AlertTriangle className="w-3 h-3 text-red-400" />,
-  protest: <Activity className="w-3 h-3 text-amber-400" />,
-  cyber_advisory: <Shield className="w-3 h-3 text-cyan-400" />,
-  cyber_incident: <Shield className="w-3 h-3 text-cyan-400" />,
-  sanctions_change: <Scale className="w-3 h-3 text-purple-400" />,
-  humanitarian: <Users className="w-3 h-3 text-green-400" />,
-  diplomatic: <Globe className="w-3 h-3 text-blue-400" />,
-  regulatory_action: <Scale className="w-3 h-3 text-pink-400" />,
-  economic: <Activity className="w-3 h-3 text-yellow-400" />,
+  armed_conflict: <AlertTriangle className="w-3 h-3 text-danger" />,
+  protest: <Activity className="w-3 h-3 text-warning" />,
+  cyber_advisory: <Shield className="w-3 h-3 text-primary" />,
+  cyber_incident: <Shield className="w-3 h-3 text-primary" />,
+  sanctions_change: <Scale className="w-3 h-3 text-signal-conflict" />,
+  humanitarian: <Users className="w-3 h-3 text-success" />,
+  diplomatic: <Globe className="w-3 h-3 text-primary" />,
+  regulatory_action: <Scale className="w-3 h-3 text-danger" />,
+  economic: <Activity className="w-3 h-3 text-warning" />,
 };
 
 function typeLabel(t: string) {
@@ -71,7 +71,7 @@ export function OsintFeed({ ticker, sinceHours, limit = 60, title }: Props) {
     <div className="card">
       <div className="card-header">
         <span className="card-title">{heading}</span>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>{t("eventsCountLastHours", { count: events.length, hours })}</span>
           <Link href="/osint" className="text-primary hover:underline">{t("allLink")}</Link>
         </div>
@@ -79,12 +79,12 @@ export function OsintFeed({ ticker, sinceHours, limit = 60, title }: Props) {
 
       <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
         {isLoading && (
-          <div className="text-slate-500 text-sm animate-pulse py-4 text-center">
+          <div className="text-muted-foreground text-sm animate-pulse py-4 text-center">
             {t("loadingFeed")}
           </div>
         )}
         {!isLoading && events.length === 0 && (
-          <div className="text-slate-500 text-sm py-4 text-center">
+          <div className="text-muted-foreground text-sm py-4 text-center">
             {ticker
               ? t("noEventsForTicker", { ticker, hours })
               : t("noEventsYet")}
@@ -103,17 +103,17 @@ function OsintEventRow({ event }: { event: OsintEvent }) {
   return (
     <div className={`flex items-start gap-2 p-2 rounded-lg border bg-white/[0.02] hover:bg-white/5 transition-colors ${urgencyCls}`}>
       <div className="flex-shrink-0 mt-0.5">
-        {TYPE_ICON[event.event_type] ?? <Activity className="w-3 h-3 text-slate-500" />}
+        {TYPE_ICON[event.event_type] ?? <Activity className="w-3 h-3 text-muted-foreground" />}
       </div>
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 mb-0.5 text-xs text-slate-500">
+        <div className="flex items-center gap-1.5 mb-0.5 text-xs text-muted-foreground">
           <span className="uppercase tracking-wide">{typeLabel(event.event_type)}</span>
-          <span className="px-1 py-0.5 rounded bg-slate-800/80 text-slate-400 text-[10px]">
+          <span className="px-1 py-0.5 rounded bg-muted/80 text-muted-foreground text-[10px]">
             {event.urgency}
           </span>
           {event.country_code && (
-            <span className="px-1 py-0.5 rounded bg-slate-800/80 text-slate-400 font-mono text-[10px]">
+            <span className="px-1 py-0.5 rounded bg-muted/80 text-muted-foreground font-mono text-[10px]">
               {event.country_code}
             </span>
           )}
@@ -128,15 +128,15 @@ function OsintEventRow({ event }: { event: OsintEvent }) {
         </div>
 
         <div className="flex items-start gap-1">
-          <p className="text-xs text-slate-300 leading-relaxed line-clamp-2 flex-1">
-            {event.summary || <span className="italic text-slate-600">{t("noSummary")}</span>}
+          <p className="text-xs text-foreground leading-relaxed line-clamp-2 flex-1">
+            {event.summary || <span className="italic text-muted-foreground">{t("noSummary")}</span>}
           </p>
           {event.primary_article_url && (
             <a
               href={event.primary_article_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-shrink-0 text-slate-600 hover:text-primary"
+              className="flex-shrink-0 text-muted-foreground hover:text-primary"
               title={t("openSource")}
             >
               <ExternalLink className="w-3 h-3" />
@@ -150,20 +150,20 @@ function OsintEventRow({ event }: { event: OsintEvent }) {
               <Link
                 key={`${a.id}-${a.role}`}
                 href={`/osint/actors/${encodeURIComponent(a.id)}`}
-                className="text-[10px] px-1.5 py-0.5 bg-slate-800/70 hover:bg-slate-700 rounded text-slate-300"
+                className="text-[10px] px-1.5 py-0.5 bg-muted/70 hover:bg-muted rounded text-foreground"
                 title={a.role}
               >
                 {a.name}
               </Link>
             ))}
             {event.actors.length > 4 && (
-              <span className="text-[10px] text-slate-500 px-1">+{event.actors.length - 4}</span>
+              <span className="text-[10px] text-muted-foreground px-1">+{event.actors.length - 4}</span>
             )}
           </div>
         )}
       </div>
 
-      <span className="flex-shrink-0 text-[10px] text-slate-500 font-mono">
+      <span className="flex-shrink-0 text-[10px] text-muted-foreground font-mono">
         {event.verification_level.split("_")[0]}
       </span>
     </div>

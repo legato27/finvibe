@@ -289,12 +289,12 @@ export default function WatchlistTable({
             </span>
           )}
           {r.enrichmentStatus === "pending" && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-amber-500/10 text-signal-caution rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 bg-warning/10 text-signal-caution rounded animate-pulse">
               {t("pending")}
             </span>
           )}
           {r.enrichmentStatus === "processing" && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-blue-500/10 text-sky-700 dark:text-sky-400 rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary dark:text-primary rounded animate-pulse">
               {t("enriching")}
             </span>
           )}
@@ -337,7 +337,7 @@ export default function WatchlistTable({
             {r.livePrice == null && r.lastPriceUpdatedAt && (
               <div
                 className={`text-[10px] ${
-                  isStale(r.lastPriceUpdatedAt) ? "text-amber-400/70" : "text-muted-foreground/40"
+                  isStale(r.lastPriceUpdatedAt) ? "text-warning/70" : "text-muted-foreground/40"
                 }`}
               >
                 {timeAgo(r.lastPriceUpdatedAt)}

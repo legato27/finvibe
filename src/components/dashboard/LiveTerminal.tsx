@@ -121,7 +121,7 @@ export function LiveTerminal({ data }: TerminalProps) {
         <span
           className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
             live
-              ? "text-signal-long border-green-500/40 bg-green-500/10"
+              ? "text-signal-long border-success/40 bg-success/10"
               : "text-muted-foreground border-border bg-muted/40"
           }`}
         >

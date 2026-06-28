@@ -55,7 +55,7 @@ export function VixGauge() {
   if (!vix) {
     return (
       <div className="card h-full flex items-center justify-center">
-        <div className="text-slate-500 text-sm animate-pulse">{t("vixLoading")}</div>
+        <div className="text-muted-foreground text-sm animate-pulse">{t("vixLoading")}</div>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export function VixGauge() {
             <span className="text-2xl sm:text-3xl font-bold font-mono" style={{ color }}>
               {vix.current.toFixed(1)}
             </span>
-            <span className="text-xs text-slate-500">{t("vix")}</span>
+            <span className="text-xs text-muted-foreground">{t("vix")}</span>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export function VixGauge() {
         <div className="flex flex-col gap-2 sm:gap-3 flex-1 w-full">
           <div>
             <div className="stat-label text-xs">{t("vix24hChange")}</div>
-            <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change > 0 ? "text-red-400" : vix.change < 0 ? "text-green-400" : "text-muted-foreground"}`}>
+            <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change > 0 ? "text-danger" : vix.change < 0 ? "text-success" : "text-muted-foreground"}`}>
               {vix.change > 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" /> : vix.change < 0 ? <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" /> : <Minus className="w-3 h-3 sm:w-4 sm:h-4" />}
               {vix.change > 0 ? "+" : ""}{vix.change.toFixed(2)} ({vix.change_pct.toFixed(1)}%)
             </div>
@@ -138,8 +138,8 @@ export function VixGauge() {
             {stats.map(({ labelKey, value: v, tipKey }) => {
               const tip = t(tipKey);
               return (
-                <div key={labelKey} className="bg-slate-800/50 rounded p-1.5 sm:p-2 cursor-help" title={tip}>
-                  <div className="text-[10px] sm:text-xs text-slate-500 flex items-center justify-center gap-0.5">
+                <div key={labelKey} className="bg-muted/50 rounded p-1.5 sm:p-2 cursor-help" title={tip}>
+                  <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center justify-center gap-0.5">
                     {t(labelKey)} <InfoTip tip={tip} size={10} />
                   </div>
                   <div className="font-mono font-semibold text-xs sm:text-sm">{v.toFixed(1)}</div>
@@ -154,7 +154,7 @@ export function VixGauge() {
       {ts && (
         <div className="border-t border-border/50 mt-2 pt-2">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] text-slate-500 font-medium flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground font-medium flex items-center gap-0.5">
               {t("vixTermStructure")}
               <InfoTip size={10} tip={t("vixTermStructureTip")} />
             </span>
@@ -172,10 +172,10 @@ export function VixGauge() {
               const isHigher = prev != null && val != null && val > prev;
               const isLower = prev != null && val != null && val < prev;
               return (
-                <div key={key} className="flex-1 text-center bg-slate-800/40 rounded py-1 px-1">
-                  <div className="text-[9px] text-slate-500">{key}</div>
+                <div key={key} className="flex-1 text-center bg-muted/40 rounded py-1 px-1">
+                  <div className="text-[9px] text-muted-foreground">{key}</div>
                   <div className={`text-xs font-mono font-bold ${
-                    isHigher ? "text-red-400" : isLower ? "text-green-400" : "text-slate-300"
+                    isHigher ? "text-danger" : isLower ? "text-success" : "text-foreground"
                   }`}>
                     {val?.toFixed(1) ?? "—"}
                   </div>
@@ -184,8 +184,8 @@ export function VixGauge() {
             })}
           </div>
           {termStructure.spread_9d_3m != null && (
-            <div className="text-[9px] text-slate-500 mt-1 italic">
-              {t("vixSpread9d3m")} <span className={termStructure.spread_9d_3m > 0 ? "text-red-400" : "text-green-400"}>
+            <div className="text-[9px] text-muted-foreground mt-1 italic">
+              {t("vixSpread9d3m")} <span className={termStructure.spread_9d_3m > 0 ? "text-danger" : "text-success"}>
                 {termStructure.spread_9d_3m > 0 ? "+" : ""}{termStructure.spread_9d_3m}
               </span>
               {" · "}{termStructure.structure_description}

@@ -184,10 +184,10 @@ export default function StockDetailPage() {
             aria-selected={activeTab === tab.id}
             aria-controls={activeTab === tab.id ? `tabpanel-${tab.id}` : undefined}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium transition-all flex-1 justify-center ${
+            className={`flex items-center gap-1.5 px-4 py-2 rounded-md font-mono text-sm font-semibold transition-all flex-1 justify-center ${
               activeTab === tab.id
-                ? "bg-primary text-primary-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground/80 hover:bg-accent/50"
+                ? "bg-primary/15 text-primary border border-primary/40"
+                : "text-muted-foreground hover:text-foreground/80 hover:bg-accent/50 border border-transparent"
             }`}
           >
             {tab.icon}

@@ -130,7 +130,7 @@ export function McpOauthGrantsCard() {
                     <span
                       className={`text-[9px] px-1.5 py-0.5 rounded font-mono uppercase tracking-wider ${
                         g.status === "active"
-                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                          ? "bg-success/15 text-success border border-success/30"
                           : "bg-muted/30 text-muted-foreground border border-border/40"
                       }`}
                     >
@@ -166,7 +166,7 @@ export function McpOauthGrantsCard() {
                       onClick={() => revokeTokens(g)}
                       disabled={busyId === g.client_id}
                       title={t("grants.signOutTitle")}
-                      className="px-2 py-1 text-[11px] rounded border border-border text-muted-foreground hover:text-amber-400 hover:border-amber-400/40 disabled:opacity-50"
+                      className="px-2 py-1 text-[11px] rounded border border-border text-muted-foreground hover:text-warning hover:border-warning/40 disabled:opacity-50"
                     >
                       {t("grants.signOut")}
                     </button>
@@ -176,7 +176,7 @@ export function McpOauthGrantsCard() {
                       onClick={() => deleteClient(g)}
                       disabled={busyId === g.client_id}
                       title={t("grants.deleteTitle")}
-                      className="p-1.5 text-muted-foreground hover:text-red-400 disabled:opacity-50"
+                      className="p-1.5 text-muted-foreground hover:text-danger disabled:opacity-50"
                     >
                       {busyId === g.client_id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -192,7 +192,7 @@ export function McpOauthGrantsCard() {
         )}
 
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+          <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div>{error}</div>
           </div>

@@ -170,7 +170,7 @@ export function PortfolioAnalysisPanel({
         )}
 
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg text-xs text-red-400">
+          <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div>{error}</div>
           </div>
@@ -251,7 +251,7 @@ function AnalysisBlock({
   const providerTint =
     analysis.provider === "claude"
       ? "bg-primary/15 text-primary border-primary/30"
-      : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+      : "bg-success/15 text-success border-success/30";
 
   const structured = (analysis.summary as any)?.structured as
     | StructuredAnalysis
@@ -284,7 +284,7 @@ function AnalysisBlock({
             {providerLabel}
           </span>
           {isLatest && (
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-green-500/15 text-green-400 border border-green-500/30 flex-shrink-0">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-success/15 text-success border border-success/30 flex-shrink-0">
               {t("latest")}
             </span>
           )}
@@ -301,7 +301,7 @@ function AnalysisBlock({
         </button>
         <button
           onClick={onDelete}
-          className="text-muted-foreground/40 hover:text-red-500 transition-colors flex-shrink-0"
+          className="text-muted-foreground/40 hover:text-danger transition-colors flex-shrink-0"
           title={t("deleteAnalysis")}
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -380,10 +380,10 @@ function AnalysisBlock({
 // ── Structured memo renderer ──────────────────────────────────
 
 const SEVERITY_STYLES: Record<string, string> = {
-  normal: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30",
-  elevated: "bg-amber-500/10 text-amber-400 border-amber-500/30",
-  high: "bg-orange-500/10 text-orange-400 border-orange-500/30",
-  critical: "bg-red-500/10 text-red-400 border-red-500/30",
+  normal: "bg-success/10 text-success border-success/30",
+  elevated: "bg-warning/10 text-warning border-warning/30",
+  high: "bg-warning/10 text-warning border-warning/30",
+  critical: "bg-danger/10 text-danger border-danger/30",
 };
 
 function SeverityPill({ severity }: { severity: string }) {
@@ -466,7 +466,7 @@ function StructuredMemo({
                     <td className="px-2.5 py-1.5 text-right font-mono">
                       {p.ann_vol_pct != null ? `${p.ann_vol_pct}%` : "—"}
                     </td>
-                    <td className="px-2.5 py-1.5 text-right font-mono text-red-400">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-danger">
                       {p.max_drawdown_pct != null ? `${p.max_drawdown_pct}%` : "—"}
                     </td>
                     <td className="px-2.5 py-1.5 text-foreground/80">{p.notes || "—"}</td>
@@ -513,7 +513,7 @@ function StructuredMemo({
                 {structured.stress_test.map((s, i) => (
                   <tr key={i} className="hover:bg-accent/10">
                     <td className="px-2.5 py-1.5 font-medium">{s.scenario}</td>
-                    <td className="px-2.5 py-1.5 text-right font-mono text-red-400">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-danger">
                       {s.portfolio_return_pct != null ? `${s.portfolio_return_pct}%` : "—"}
                     </td>
                     <td className="px-2.5 py-1.5 text-right font-mono text-muted-foreground">
@@ -653,7 +653,7 @@ function UnstructuredFallback({ raw }: { raw: string }) {
   if (looksLikeJson) {
     return (
       <div className="space-y-2">
-        <div className="flex items-start gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-xs text-amber-400">
+        <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg text-xs text-warning">
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           <div>
             Model returned JSON but it couldn&apos;t be parsed — likely truncated

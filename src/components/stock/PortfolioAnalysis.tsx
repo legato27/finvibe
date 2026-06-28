@@ -34,33 +34,33 @@ const ACTION_CONFIG = {
   add: {
     labelKey: "adviceAddToPosition",
     icon: PlusCircle,
-    bg: "bg-green-500/15",
-    text: "text-green-400",
-    border: "border-green-500/30",
+    bg: "bg-success/15",
+    text: "text-success",
+    border: "border-success/30",
     ring: "#22c55e",
   },
   hold: {
     labelKey: "adviceHold",
     icon: Minus,
-    bg: "bg-yellow-500/15",
-    text: "text-yellow-400",
-    border: "border-yellow-500/30",
+    bg: "bg-warning/15",
+    text: "text-warning",
+    border: "border-warning/30",
     ring: "#eab308",
   },
   reduce: {
     labelKey: "adviceReducePosition",
     icon: MinusCircle,
-    bg: "bg-orange-500/15",
-    text: "text-orange-400",
-    border: "border-orange-500/30",
+    bg: "bg-warning/15",
+    text: "text-warning",
+    border: "border-warning/30",
     ring: "#f97316",
   },
   exit: {
     labelKey: "adviceExitPosition",
     icon: LogOut,
-    bg: "bg-red-500/15",
-    text: "text-red-400",
-    border: "border-red-500/30",
+    bg: "bg-danger/15",
+    text: "text-danger",
+    border: "border-danger/30",
     ring: "#ef4444",
   },
 } as const;
@@ -145,7 +145,7 @@ function PositionAdviceCard({
     return (
       <div className="card p-5 flex items-center justify-between text-muted-foreground text-sm">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-yellow-500" />
+          <AlertTriangle className="w-4 h-4 text-warning" />
           {t("adviceUnavailable")}
         </div>
         <button onClick={() => refetch()} className="text-xs text-primary hover:underline flex items-center gap-1">
@@ -199,18 +199,18 @@ function PositionAdviceCard({
               {data.target_price && (
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("target")}</div>
-                  <div className="text-sm font-mono font-semibold text-green-400">${Number(data.target_price).toFixed(2)}</div>
+                  <div className="text-sm font-mono font-semibold text-success">${Number(data.target_price).toFixed(2)}</div>
                 </div>
               )}
               {data.stop_loss && (
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("stopLoss")}</div>
-                  <div className="text-sm font-mono font-semibold text-red-400">${Number(data.stop_loss).toFixed(2)}</div>
+                  <div className="text-sm font-mono font-semibold text-danger">${Number(data.stop_loss).toFixed(2)}</div>
                 </div>
               )}
               <div className="ml-auto">
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("unrealisedPnl")}</div>
-                <div className={`text-sm font-mono font-semibold ${pnlPct >= 0 ? "text-green-400" : "text-red-400"}`}>
+                <div className={`text-sm font-mono font-semibold ${pnlPct >= 0 ? "text-success" : "text-danger"}`}>
                   {pnlPct >= 0 ? <TrendingUp className="w-3.5 h-3.5 inline mr-1" /> : <TrendingDown className="w-3.5 h-3.5 inline mr-1" />}
                   {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%
                 </div>

@@ -70,11 +70,11 @@ export function MacroTape() {
   return (
     <div className="card">
       <div className="flex items-center justify-between px-3 pt-2 pb-1">
-        <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
           {t("macroTapeTitle")}
           <InfoTip tip={t("macroTapeInfo")} />
         </span>
-        <span className="text-[9px] text-slate-600">{t("macroTapeSubtitle")}</span>
+        <span className="text-[9px] text-muted-foreground">{t("macroTapeSubtitle")}</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border/20">
@@ -88,13 +88,13 @@ export function MacroTape() {
           return (
             <div key={inst.key} className="bg-card p-3 space-y-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                   {inst.label}
                   <InfoTip size={9} tip={tipText} />
                 </span>
               </div>
 
-              <div className="text-sm font-bold font-mono text-slate-200">
+              <div className="text-sm font-bold font-mono text-foreground">
                 {inst.key === "US10Y" ? `${inst.value}%` :
                  inst.key === "DXY" ? inst.value.toFixed(2) :
                  `$${inst.value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`}
@@ -103,11 +103,11 @@ export function MacroTape() {
               <Sparkline data={inst.sparkline} color={sparkColor} />
 
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-mono flex items-center gap-0.5 ${up1d ? "text-green-400" : "text-red-400"}`}>
+                <span className={`text-[10px] font-mono flex items-center gap-0.5 ${up1d ? "text-success" : "text-danger"}`}>
                   {up1d ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                   {up1d ? "+" : ""}{inst.change_1d.toFixed(2)}%
                 </span>
-                <span className={`text-[9px] font-mono ${up1m ? "text-green-500/60" : "text-red-500/60"}`}>
+                <span className={`text-[9px] font-mono ${up1m ? "text-success/60" : "text-danger/60"}`}>
                   1M {up1m ? "+" : ""}{inst.change_1m.toFixed(1)}%
                 </span>
               </div>

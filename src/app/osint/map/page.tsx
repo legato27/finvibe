@@ -47,7 +47,7 @@ export default function OsintMapPage() {
 
       <div className="flex flex-wrap gap-2">
         <select value={eventType} onChange={(e) => setEventType(e.target.value)}
-          className="bg-slate-700 rounded px-2 py-1 text-sm">
+          className="bg-muted border border-border text-foreground rounded px-2 py-1 text-sm">
           <option value="">{t("allTypes")}</option>
           <option value="armed_conflict">{t("etArmedConflict")}</option>
           <option value="cyber_advisory">{t("etCyber")}</option>
@@ -55,7 +55,7 @@ export default function OsintMapPage() {
           <option value="humanitarian">{t("etHumanitarian")}</option>
         </select>
         <select value={hours} onChange={(e) => setHours(Number(e.target.value))}
-          className="bg-slate-700 rounded px-2 py-1 text-sm">
+          className="bg-muted border border-border text-foreground rounded px-2 py-1 text-sm">
           <option value={6}>{t("last6h")}</option>
           <option value={24}>{t("last24h")}</option>
           <option value={72}>{t("last72h")}</option>
@@ -63,9 +63,9 @@ export default function OsintMapPage() {
       </div>
 
       {isLoading ? (
-        <div className="text-slate-400">{t("loadingEvents")}</div>
+        <div className="text-muted-foreground">{t("loadingEvents")}</div>
       ) : (
-        <div className="relative w-full aspect-[2/1] bg-slate-900 rounded overflow-hidden border border-slate-700">
+        <div className="relative w-full aspect-[2/1] bg-muted rounded overflow-hidden border border-border">
           <svg viewBox="0 0 1000 500" className="w-full h-full">
             {/* Simple world-outline placeholder grid (until a real basemap is wired) */}
             {[0, 1, 2, 3, 4].map((i) => (
@@ -91,12 +91,12 @@ export default function OsintMapPage() {
               );
             })}
           </svg>
-          <div className="absolute top-2 right-2 text-xs text-slate-400 bg-slate-900/70 px-2 py-1 rounded">
+          <div className="absolute top-2 right-2 text-xs text-muted-foreground bg-card/80 px-2 py-1 rounded">
             {t("eventsCount", { count: features.length })}
           </div>
         </div>
       )}
-      <div className="text-xs text-slate-500">
+      <div className="text-xs text-muted-foreground">
         {t("mapPlaceholderNote")}
       </div>
     </div>

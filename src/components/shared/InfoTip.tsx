@@ -39,7 +39,7 @@ export function InfoTip({ label, tip, size = 13, className = "" }: InfoTipProps)
         onClick={() => setOpen((v) => !v)}
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
-        className={`text-slate-600 hover:text-slate-400 transition-colors cursor-help ${className}`}
+        className={`text-muted-foreground hover:text-muted-foreground transition-colors cursor-help ${className}`}
         aria-label={t("moreInfo")}
       >
         {label && <span className="text-[10px] mr-0.5">{label}</span>}
@@ -47,12 +47,12 @@ export function InfoTip({ label, tip, size = 13, className = "" }: InfoTipProps)
       </button>
       {open && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 sm:w-72">
-          <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-3 text-xs text-slate-300 leading-relaxed">
+          <div className="bg-muted border border-border rounded-lg shadow-xl p-3 text-xs text-foreground leading-relaxed">
             {tip}
           </div>
           {/* Arrow */}
           <div className="flex justify-center">
-            <div className="w-2 h-2 bg-slate-800 border-b border-r border-slate-700 rotate-45 -mt-1" />
+            <div className="w-2 h-2 bg-muted border-b border-r border-border rotate-45 -mt-1" />
           </div>
         </div>
       )}

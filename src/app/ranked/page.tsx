@@ -175,7 +175,7 @@ export default function RankedBookPage() {
       />
 
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">Computing cross-sectional ranking…</div>}
-      {error && <div className="card p-6 text-sm text-red-400">Failed to load ranking.</div>}
+      {error && <div className="card p-6 text-sm text-danger">Failed to load ranking.</div>}
 
       {data && (
         <>

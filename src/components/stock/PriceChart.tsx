@@ -432,7 +432,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
             </span>
           )}
           {drawMode && (
-            <span className="text-xs text-amber-400 animate-pulse">
+            <span className="text-xs text-warning animate-pulse">
               {t('drawHint')}
             </span>
           )}
@@ -442,7 +442,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           <button
             onClick={() => setDrawMode((m) => !m)}
             title={t('drawHLineTitle')}
-            className={`p-1 rounded transition-colors ${drawMode ? "text-amber-400 bg-amber-400/10" : "text-muted-foreground hover:text-primary"}`}
+            className={`p-1 rounded transition-colors ${drawMode ? "text-warning bg-warning/10" : "text-muted-foreground hover:text-primary"}`}
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
@@ -467,17 +467,17 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
       <div className="h-4 flex gap-3 px-1 mb-1 text-[10px] font-mono text-muted-foreground">
         {ohlcv ? (
           <>
-            <span className="text-slate-400">{ohlcv.time}</span>
+            <span className="text-muted-foreground">{ohlcv.time}</span>
             {ohlcv.open !== undefined && (
               <>
-                <span>O <span className="text-slate-200">{ohlcv.open.toFixed(2)}</span></span>
-                <span>H <span className="text-slate-200">{ohlcv.high!.toFixed(2)}</span></span>
-                <span>L <span className="text-slate-200">{ohlcv.low!.toFixed(2)}</span></span>
+                <span>O <span className="text-foreground">{ohlcv.open.toFixed(2)}</span></span>
+                <span>H <span className="text-foreground">{ohlcv.high!.toFixed(2)}</span></span>
+                <span>L <span className="text-foreground">{ohlcv.low!.toFixed(2)}</span></span>
               </>
             )}
-            <span>C <span className="text-slate-200">{ohlcv.close.toFixed(2)}</span></span>
+            <span>C <span className="text-foreground">{ohlcv.close.toFixed(2)}</span></span>
             {ohlcv.volume > 0 && (
-              <span>V <span className="text-slate-200">{fmtVol(ohlcv.volume)}</span></span>
+              <span>V <span className="text-foreground">{fmtVol(ohlcv.volume)}</span></span>
             )}
           </>
         ) : (
@@ -494,7 +494,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         />
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-[#0a0a12]/60 rounded">
-            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         )}
       </div>
@@ -503,7 +503,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
       <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-border">
 
         {/* Period selector */}
-        <div className="flex gap-px bg-slate-900 rounded p-0.5">
+        <div className="flex gap-px bg-background rounded p-0.5">
           {PERIODS.map(([p, label]) => (
             <button
               key={p}
@@ -511,7 +511,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               className={`px-2 py-0.5 text-xs rounded transition-colors
                 ${period === p
                   ? "bg-primary text-background font-bold"
-                  : "text-slate-400 hover:text-slate-100"}`}
+                  : "text-muted-foreground hover:text-foreground"}`}
             >
               {t(label)}
             </button>
@@ -519,7 +519,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         </div>
 
         {/* Interval selector */}
-        <div className="flex gap-px bg-slate-900 rounded p-0.5">
+        <div className="flex gap-px bg-background rounded p-0.5">
           {INTERVALS.map(([iv, label]) => (
             <button
               key={iv}
@@ -527,7 +527,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               className={`px-2 py-0.5 text-xs rounded transition-colors
                 ${interval === iv
                   ? "bg-primary text-background font-bold"
-                  : "text-slate-400 hover:text-slate-100"}`}
+                  : "text-muted-foreground hover:text-foreground"}`}
             >
               {t(label)}
             </button>
@@ -535,7 +535,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         </div>
 
         {/* Chart type */}
-        <div className="flex gap-px bg-slate-900 rounded p-0.5">
+        <div className="flex gap-px bg-background rounded p-0.5">
           {(["candle", "line"] as ChartMode[]).map((m) => (
             <button
               key={m}
@@ -543,7 +543,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               className={`px-2 py-0.5 text-xs rounded transition-colors capitalize
                 ${chartMode === m
                   ? "bg-primary text-background font-bold"
-                  : "text-slate-400 hover:text-slate-100"}`}
+                  : "text-muted-foreground hover:text-foreground"}`}
             >
               {m === "candle" ? t('candle') : t('line')}
             </button>
@@ -574,7 +574,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
       </div>
 
       {/* ── Legend ────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 mt-1.5 px-0.5 text-[10px] text-slate-600">
+      <div className="flex items-center gap-3 mt-1.5 px-0.5 text-[10px] text-muted-foreground">
         <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#3b82f6]"/>MA20</span>
         <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#f97316]"/>MA50</span>
         <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#a855f7]"/>MA200</span>
