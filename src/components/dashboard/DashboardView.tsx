@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
@@ -24,19 +25,27 @@ export function DashboardView() {
   const t = useTranslations("dashboard");
   const { setVix, setBusinessCycle, setSectorRotation, setSwarm } = useAppStore();
 
-  useQuery({
+  // NOTE: RegimeAgreement and TodayPanel observe the SAME ["macro_dashboard"]
+  // query key with a bare `macroApi.dashboard` queryFn. React Query dedupes by
+  // key and runs only one queryFn per fetch, so we must NOT put the store-
+  // population side-effects inside this queryFn — if another observer's queryFn
+  // wins the fetch, those side-effects never run and Swarm/Cycle/Rotation/VIX
+  // hang on their loading state. Populate the store from `data` in an effect
+  // instead, so it fires whenever the shared query resolves.
+  const { data } = useQuery({
     queryKey: ["macro_dashboard"],
-    queryFn: async () => {
-      const data = await macroApi.dashboard();
-      if (data.vix) setVix(data.vix);
-      if (data.business_cycle) setBusinessCycle(data.business_cycle);
-      if (data.sector_rotation) setSectorRotation(data.sector_rotation);
-      if (data.swarm) setSwarm(data.swarm);
-      return data;
-    },
+    queryFn: macroApi.dashboard,
     refetchInterval: 60 * 1000,
     staleTime: 50 * 1000,
   });
+
+  useEffect(() => {
+    if (!data) return;
+    if (data.vix) setVix(data.vix);
+    if (data.business_cycle) setBusinessCycle(data.business_cycle);
+    if (data.sector_rotation) setSectorRotation(data.sector_rotation);
+    if (data.swarm) setSwarm(data.swarm);
+  }, [data, setVix, setBusinessCycle, setSectorRotation, setSwarm]);
 
   return (
     <div className="space-y-6 sm:space-y-8 p-2 sm:p-0">
