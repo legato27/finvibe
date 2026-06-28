@@ -48,7 +48,7 @@ export function DashboardView() {
   }, [data, setVix, setBusinessCycle, setSectorRotation, setSwarm]);
 
   return (
-    <div className="space-y-6 sm:space-y-8 p-2 sm:p-0">
+    <div className="space-y-5 p-2 sm:p-0">
       <div className="-mx-2 sm:-mx-0 -mt-2 sm:-mt-2">
         <MarketTickerTape />
       </div>
@@ -67,12 +67,14 @@ export function DashboardView() {
       </Section>
 
       {/* 2 — Risk & volatility: the options trader's read (VIX + dealer gamma).
-          Each row uses default stretch + h-full wrappers so cards in a row share
-          one height and don't grow ragged with content. */}
+          items-start so each card hugs its content — no forced min-heights, no
+          stretch padding, no dead space. Density by content, not by box. */}
       <Section title={t("sectionRiskVolTitle")} intro={t("sectionRiskVolIntro")}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
-          <div className="h-full min-h-[340px]"><VixGauge /></div>
-          <div className="h-full min-h-[340px]"><GexCard /></div>
+        {/* VixGauge draws a recharts gauge that needs a real height; GexCard
+            fills the matched height via flex-1, so the pair stays tidy. */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="h-[320px]"><VixGauge /></div>
+          <div className="h-[320px]"><GexCard /></div>
         </div>
       </Section>
 
@@ -83,34 +85,34 @@ export function DashboardView() {
 
       {/* 4 — Crowd & breadth: how fragile is this tape */}
       <Section title={t("sectionCrowdTitle")} intro={t("sectionCrowdIntro")}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <div className="h-full min-h-[340px]"><SwarmIndicator /></div>
-          <div className="h-full min-h-[340px]"><BreadthStrip /></div>
-          <div className="h-full min-h-[340px]"><BusinessCycleWheel /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+          <SwarmIndicator />
+          <BreadthStrip />
+          <BusinessCycleWheel />
         </div>
       </Section>
 
       {/* 5 — Rotation & your watchlist: where the leadership is */}
       <Section title={t("sectionRotationTitle")} intro={t("sectionRotationIntro")}>
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-3 sm:gap-4">
-          <div className="h-full min-h-[420px]"><SectorRotationHeatmap /></div>
-          <div className="h-full min-h-[420px]"><WatchlistGlance /></div>
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
+          <SectorRotationHeatmap />
+          <WatchlistGlance />
         </div>
       </Section>
 
       {/* 6 — Macro tape + broad market overview */}
       <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
         <MacroTape />
-        <div className="h-full min-h-[420px]"><MarketOverview /></div>
+        <MarketOverview />
       </Section>
 
-      {/* 7 — Crypto, news & the wire: context and catalysts */}
+      {/* 7 — Crypto, news & the wire: three packed columns fill the width */}
       <Section title={t("sectionWireTitle")} intro={t("sectionWireIntro")}>
-        <div className="grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-3 sm:gap-4">
-          <div className="h-full min-h-[300px]"><CryptoIndicators /></div>
-          <div className="h-full min-h-[300px]"><RealtimeNewsFeed /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
+          <CryptoIndicators />
+          <RealtimeNewsFeed />
+          <OsintFeed />
         </div>
-        <OsintFeed />
       </Section>
     </div>
   );
