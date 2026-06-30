@@ -218,6 +218,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "atm_iv",
+      optional: true,
       header: ts("colAtmIv"),
       sortable: true,
       sortValue: (r) => r.atm_iv_pct,
@@ -227,6 +228,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "em",
+      optional: true,
       header: ts("colExpectedMove"),
       sortable: true,
       sortValue: (r) => r.expected_move_30d_pct,
@@ -237,6 +239,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "pcr",
+      optional: true,
       header: ts("colPcr"),
       sortable: true,
       sortValue: (r) => r.pcr_oi,
@@ -247,6 +250,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "skew",
+      optional: true,
       header: ts("colSkew"),
       sortable: true,
       sortValue: (r) => r.skew_25d_pp,
@@ -257,6 +261,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "unusual",
+      optional: true,
       header: ts("colUnusual"),
       ariaLabel: ts("colUnusualLong"),
       sortable: true,
