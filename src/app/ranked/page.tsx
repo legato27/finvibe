@@ -53,7 +53,7 @@ const TIPS = {
     "Cross-sectional composite z-score equal-weighting momentum, forecast, quality, value (margin of safety), moat and low-volatility vs the whole universe. Higher = stronger relative rank.",
   percentile:
     "Rank percentile (0–100) within the universe — 100 = top-ranked composite-z conviction.",
-  signal: "Cross-sectional rank bucket: top quintile = Long, bottom = Short, middle = Neutral. This is purely the factor-composite ranking — distinct from the arbitrated Verdict, which can differ (e.g. when sentiment or the ensemble outweighs a weak factor rank).",
+  signal: "Where the six-factor quant model alone ranks this name: Strong = top quintile, Weak = bottom quintile, Mid = middle. This is purely the factor ranking — distinct from the Verdict (the arbitrated final call), which can differ (e.g. when sentiment or the ensemble outweighs a weak factor rank).",
   verdict: "The unified verdict — ensemble, price action, ranking, sentiment and FinVibe Thoughts arbitrated into one conflict-aware state.",
   price: "Live price, refreshed every 60s.",
 };
@@ -138,9 +138,11 @@ export default function RankedBookPage() {
           <h1 className="text-lg font-semibold">Ranked Book</h1>
           <LastUpdated at={data?.as_of} />
         </div>
-        <p className="text-xs text-muted-foreground mt-1">
-          Cross-sectional composite z-score across the watchlist universe — ranked by conviction (top quintile = long,
-          bottom = short). Highest-conviction names first.
+        <p className="text-xs text-muted-foreground mt-1 max-w-3xl">
+          Your watchlist names scored against each other on six factors and ranked best → worst.{" "}
+          <span className="text-foreground/80">How to read it:</span> the <strong className="text-foreground/80">Verdict</strong> is
+          the system&rsquo;s final call; <strong className="text-foreground/80">Factor rank</strong> is where the quant
+          model alone places the name (they can differ). Sort by probability of profit or conviction.
         </p>
       </div>
 
@@ -210,13 +212,13 @@ export default function RankedBookPage() {
 
           {/* legend (kept above the table — InfoTip cards would be clipped inside the scroll container) */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
-            <span className="text-foreground/70 font-medium">Legend:</span>
-            <InfoTip label="Price" tip={TIPS.price} size={11} />
-            <InfoTip label="Prob" tip={TIPS.prob} size={11} />
-            <InfoTip label="Composite z" tip={TIPS.composite} size={11} />
-            <InfoTip label="%ile" tip={TIPS.percentile} size={11} />
-            <InfoTip label="Bucket" tip={TIPS.signal} size={11} />
+            <span className="text-foreground/70 font-medium">What the columns mean:</span>
             <InfoTip label="Verdict" tip={TIPS.verdict} size={11} />
+            <InfoTip label="Price" tip={TIPS.price} size={11} />
+            <InfoTip label="Prob. profit" tip={TIPS.prob} size={11} />
+            <InfoTip label="Conviction" tip={TIPS.composite} size={11} />
+            <InfoTip label="Percentile" tip={TIPS.percentile} size={11} />
+            <InfoTip label="Factor rank" tip={TIPS.signal} size={11} />
           </div>
 
           <div className="card overflow-x-auto">
@@ -225,13 +227,13 @@ export default function RankedBookPage() {
                 <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
                   <th scope="col" className="text-left p-2">#</th>
                   <th scope="col" className="text-left p-2">Ticker</th>
-                  <th scope="col" className="text-right p-2" title={TIPS.price}>Price</th>
-                  <th scope="col" className="text-right p-2" title={TIPS.prob}>Prob</th>
-                  <th scope="col" className="text-left p-2 hidden sm:table-cell">Sector</th>
-                  <th scope="col" className="text-right p-2" title={TIPS.composite}>Composite z</th>
-                  <th scope="col" className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>%ile</th>
-                  <th scope="col" className="text-center p-2" title={TIPS.signal}>Bucket</th>
                   <th scope="col" className="text-center p-2" title={TIPS.verdict}>Verdict</th>
+                  <th scope="col" className="text-right p-2" title={TIPS.price}>Price</th>
+                  <th scope="col" className="text-right p-2" title={TIPS.prob}>Prob. profit</th>
+                  <th scope="col" className="text-left p-2 hidden sm:table-cell">Sector</th>
+                  <th scope="col" className="text-right p-2" title={TIPS.composite}>Conviction</th>
+                  <th scope="col" className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>Percentile</th>
+                  <th scope="col" className="text-center p-2" title={TIPS.signal}>Factor rank</th>
                 </tr>
               </thead>
               <tbody>
@@ -256,6 +258,9 @@ export default function RankedBookPage() {
                           <WatchlistStar ticker={r.ticker} />
                         </span>
                       </td>
+                      <td className="p-2 text-center">
+                        <VerdictBadge state={verdictMap?.[r.ticker]?.state} size="sm" />
+                      </td>
                       <td className="p-2 text-right">
                         <LivePrice price={live} currency="$" live={live != null} className="text-xs" />
                       </td>
@@ -275,11 +280,8 @@ export default function RankedBookPage() {
                       <td className={`p-2 ${BUCKET_STYLE[r.bucket]}`}>
                         <span className="flex items-center justify-center gap-1 capitalize">
                           {bucketIcon(r.bucket)}
-                          {r.bucket}
+                          {r.bucket === "long" ? "Strong" : r.bucket === "short" ? "Weak" : "Mid"}
                         </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <VerdictBadge state={verdictMap?.[r.ticker]?.state} size="sm" />
                       </td>
                     </tr>
                   );

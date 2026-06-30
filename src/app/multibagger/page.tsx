@@ -190,10 +190,12 @@ export default function MultibaggerPage() {
           <h1 className="text-lg font-semibold flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Multibagger Scanner
           </h1>
-          <p className="text-xs text-muted-foreground mt-1 max-w-2xl">
-            Two-track full-US-market hunt — Track A rides confirmed leaders (Trend Template + RS); Track B
-            catches early-stage base/VCP breakouts with an RS-line new high. Fundamentally confirmed,
-            catalyst-aware, regime-adaptive.
+          <p className="text-xs text-muted-foreground mt-1 max-w-3xl">
+            A scan of the whole US market for potential big winners.{" "}
+            <span className="text-foreground/80">Two tracks:</span> <strong className="text-foreground/80">Track A</strong> =
+            established leaders already trending up; <strong className="text-foreground/80">Track B</strong> = early-stage
+            names breaking out of a base. Higher Score = stronger candidate; the banner below shows whether today&rsquo;s
+            market favours A or B.
           </p>
           <LastUpdated at={data?.as_of} className="mt-1 inline-block" />
         </div>
@@ -278,16 +280,16 @@ export default function MultibaggerPage() {
               </div>
 
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
-                <span className="text-foreground/70 font-medium">Legend:</span>
-                <InfoTip label="Trk" tip={TIPS.track} size={11} />
+                <span className="text-foreground/70 font-medium">What the columns mean:</span>
+                <InfoTip label="Track" tip={TIPS.track} size={11} />
                 <InfoTip label="Score" tip={TIPS.score} size={11} />
-                <InfoTip label="RS" tip={TIPS.rs} size={11} />
-                <InfoTip label="12m" tip={TIPS.ret12m} size={11} />
-                <InfoTip label="% from 52wH" tip={TIPS.frm52h} size={11} />
-                <InfoTip label="Fund" tip={TIPS.fund} size={11} />
+                <InfoTip label="Rel. str." tip={TIPS.rs} size={11} />
+                <InfoTip label="12m %" tip={TIPS.ret12m} size={11} />
+                <InfoTip label="% from 52w high" tip={TIPS.frm52h} size={11} />
+                <InfoTip label="Fund. accel." tip={TIPS.fund} size={11} />
                 <InfoTip label="Theme" tip={TIPS.theme} size={11} />
-                <InfoTip label="PAM" tip={TIPS.pam} size={11} />
-                <InfoTip label="Flags" tip={TIPS.redflag} size={11} />
+                <InfoTip label="Trend (PAM)" tip={TIPS.pam} size={11} />
+                <InfoTip label="Risk flags" tip={TIPS.redflag} size={11} />
               </div>
 
               <div className="card overflow-x-auto">
@@ -296,17 +298,17 @@ export default function MultibaggerPage() {
                     <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
                       <th className="text-left p-2">#</th>
                       <th className="text-left p-2">Ticker</th>
-                      <th className="text-center p-2" title={TIPS.track}>Trk</th>
+                      <th className="text-center p-2" title={TIPS.track}>Track</th>
                       <th className="text-right p-2">Price</th>
                       <th className="text-right p-2" title={TIPS.score}>Score</th>
-                      <th className="text-right p-2" title={TIPS.rs}>RS</th>
-                      <th className="text-right p-2 hidden md:table-cell">12m</th>
-                      <th className="text-right p-2 hidden lg:table-cell">% from 52wH</th>
-                      <th className="text-right p-2 hidden lg:table-cell" title={TIPS.fund}>Fund</th>
+                      <th className="text-right p-2" title={TIPS.rs}>Rel. str.</th>
+                      <th className="text-right p-2 hidden md:table-cell">12m %</th>
+                      <th className="text-right p-2 hidden lg:table-cell">% from 52w high</th>
+                      <th className="text-right p-2 hidden lg:table-cell" title={TIPS.fund}>Fund. accel.</th>
                       <th className="text-left p-2 hidden sm:table-cell">Theme</th>
                       <th className="text-center p-2" title={TIPS.status}>Status</th>
-                      <th className="text-center p-2" title={TIPS.pam}>PAM</th>
-                      <th className="text-center p-2" title={TIPS.redflag}>Flags</th>
+                      <th className="text-center p-2" title={TIPS.pam}>Trend (PAM)</th>
+                      <th className="text-center p-2" title={TIPS.redflag}>Risk flags</th>
                     </tr>
                   </thead>
                   <tbody>
