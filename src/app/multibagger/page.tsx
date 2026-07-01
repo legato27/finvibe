@@ -2,21 +2,18 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { TrendingUp, Sparkles, ShieldAlert, RefreshCw } from "lucide-react";
 import { scannerApi, stocksApi } from "@/lib/api";
 import { useWatchlistGroups } from "@/lib/supabase/hooks";
 import LivePrice from "@/components/ui/LivePrice";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { LastUpdated } from "@/components/common/LastUpdated";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
-import {
-  ColumnFilterBar,
-  useColumnFilters,
-  type FilterDef,
-} from "@/components/shared/ColumnFilters";
+import { type FilterDef } from "@/components/shared/ColumnFilters";
 
 // Scanner emits a lighter PAM read than the watchlist PamSummary.
 interface PamRead {
@@ -151,6 +148,9 @@ export default function MultibaggerPage() {
   });
   const livePriceMap = new Map((livePrices ?? []).map((x) => [x.ticker, x.price]));
 
+  // Nearest weekly swing low/high (support / resistance) per candidate.
+  const swingMap = useSwingMap(candTickers);
+
   const { data: perf } = useQuery({
     queryKey: ["multibagger-performance"],
     queryFn: () => scannerApi.multibaggerPerformance(),
@@ -177,10 +177,168 @@ export default function MultibaggerPage() {
     { key: "ret12m", label: "12m %", kind: "number", value: (c) => c.ret_12m ?? null },
     { key: "frm52h", label: "% from 52wH", kind: "number", value: (c) => c.pct_from_52w_high ?? null },
   ];
-  const { filtered: candidates, state: filterState, setState: setFilterState } = useColumnFilters(
-    wlRows,
-    filterDefs,
-  );
+  const columns: Column<Candidate>[] = [
+    {
+      key: "ticker",
+      header: "Ticker",
+      cell: (c) => (
+        <span className="font-mono whitespace-nowrap">
+          <span className="text-muted-foreground mr-1.5">{c.rank}</span>
+          <span className="font-semibold text-primary">{c.ticker}</span>
+          {c.market_cap_band && (
+            <span className="text-[9px] text-muted-foreground uppercase ml-1">{c.market_cap_band}</span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "watch",
+      header: <span className="sr-only">Watchlist</span>,
+      ariaLabel: "Watchlist",
+      cell: (c) => <WatchlistStar ticker={c.ticker} />,
+    },
+    {
+      key: "track",
+      header: "Track",
+      ariaLabel: "Track (A leaders / B early)",
+      sortable: true,
+      sortValue: (c) => c.track,
+      cell: (c) => (
+        <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${
+          c.track === "A" ? "bg-primary/15 text-primary" : "bg-signal-conflict/15 text-signal-conflict"
+        }`}>{c.track}</span>
+      ),
+    },
+    {
+      key: "price",
+      header: "Price",
+      align: "right",
+      sortable: true,
+      sortValue: (c) => livePriceMap.get(c.ticker) ?? c.price ?? null,
+      cell: (c) => (
+        <LivePrice
+          price={livePriceMap.get(c.ticker) ?? c.price}
+          currency="$"
+          live={livePriceMap.get(c.ticker) != null}
+          className="text-xs"
+        />
+      ),
+    },
+    {
+      key: "score",
+      header: "Score",
+      align: "right",
+      sortable: true,
+      sortValue: (c) => c.composite ?? null,
+      cell: (c) => <span className="font-mono font-semibold text-foreground">{c.composite?.toFixed(1)}</span>,
+    },
+    {
+      key: "rs",
+      header: "Rel. str.",
+      ariaLabel: "Relative strength",
+      align: "right",
+      sortable: true,
+      sortValue: (c) => c.rs_rating ?? null,
+      cell: (c) => <span className="font-mono">{c.rs_rating}</span>,
+    },
+    {
+      key: "swing",
+      header: "Swing L / H",
+      ariaLabel: "Swing low / high",
+      align: "right",
+      cell: (c) => <SwingCell swing={swingMap.get(c.ticker)} />,
+    },
+    {
+      key: "status",
+      header: "Status",
+      ariaLabel: "Breakout status",
+      cell: (c) =>
+        c.breakout_state === "breakout_confirmed" ? (
+          <span className="inline-flex items-center gap-0.5 rounded border border-signal-long/40 bg-signal-long-bg px-1.5 py-0.5 text-[10px] font-semibold text-signal-long" title={`Pivot $${c.pivot?.toFixed(2)} crossed on volume`}>Breakout ✓</span>
+        ) : c.breakout_state === "breakout_unconfirmed" ? (
+          <span className="inline-flex items-center rounded border border-signal-caution/40 bg-signal-caution-bg px-1.5 py-0.5 text-[10px] font-semibold text-signal-caution" title={`Pivot $${c.pivot?.toFixed(2)} crossed, volume weak`}>Breakout?</span>
+        ) : c.breakout_state === "basing" ? (
+          <span className="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground" title={`Watching: ${c.dist_to_pivot_pct != null ? c.dist_to_pivot_pct + "% to" : "below"} pivot $${c.pivot?.toFixed(2)}`}>Basing {c.dist_to_pivot_pct != null ? `${c.dist_to_pivot_pct}%` : ""}</span>
+        ) : c.breakout_state === "extended" ? (
+          <span className="inline-flex items-center rounded border border-signal-short/40 bg-signal-short-bg px-1.5 py-0.5 text-[10px] text-signal-short">Extended</span>
+        ) : (
+          <span className="text-muted-foreground text-[10px]">{c.breakout_state === "above_pivot" ? "Above pivot" : "—"}</span>
+        ),
+    },
+    {
+      key: "pam",
+      header: "Trend (PAM)",
+      ariaLabel: "Trend (Price Action)",
+      cell: (c) =>
+        c.pam?.structure ? (
+          <span
+            title={`Weekly ${c.pam.structure} · ${c.pam.clarity ?? ""} clarity${c.pam.rsi != null ? ` · RSI ${c.pam.rsi}` : ""}${c.pam.near_pivot ? " · near pivot" : ""}${c.pam.daily_fsb_bull ? " · daily FSB ⚡" : ""}`}
+            className={`text-[10px] font-medium ${PAM_STYLE[c.pam.structure] ?? "text-muted-foreground"}`}
+          >
+            {c.pam.structure}
+            {c.pam.near_pivot && "*"}
+            {c.pam.daily_fsb_bull && <span title="Daily bullish Force Strike Bar" aria-label="daily bullish force strike bar"> ⚡</span>}
+          </span>
+        ) : (
+          <span className="text-muted-foreground text-[10px]">—</span>
+        ),
+    },
+    {
+      key: "ret12m",
+      header: "12m %",
+      align: "right",
+      optional: true,
+      sortable: true,
+      sortValue: (c) => c.ret_12m ?? null,
+      cell: (c) => <span className={`font-mono ${pctColor(c.ret_12m)}`}>{pct(c.ret_12m)}</span>,
+    },
+    {
+      key: "frm52h",
+      header: "% from 52w high",
+      align: "right",
+      optional: true,
+      sortable: true,
+      sortValue: (c) => c.pct_from_52w_high ?? null,
+      cell: (c) => <span className="font-mono text-muted-foreground">{pct(c.pct_from_52w_high)}</span>,
+    },
+    {
+      key: "fund",
+      header: "Fund. accel.",
+      ariaLabel: "Fundamental acceleration",
+      align: "right",
+      optional: true,
+      cell: (c) =>
+        c.fundamentals?.rev_growth_yoy != null ? (
+          <span className={pctColor(c.fundamentals.rev_growth_yoy)}>
+            {pct(c.fundamentals.rev_growth_yoy)}
+            {c.fundamentals.accelerating && <TrendingUp className="inline w-3 h-3 ml-0.5" />}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+    {
+      key: "theme",
+      header: "Theme",
+      optional: true,
+      cell: (c) => <span className="text-muted-foreground">{c.theme_cluster ?? "—"}</span>,
+    },
+    {
+      key: "flags",
+      header: "Risk flags",
+      ariaLabel: "Risk flags",
+      optional: true,
+      cell: (c) =>
+        c.redflags?.verdict ? (
+          <span title={c.redflags.note || (c.redflags.redflags ?? []).join("; ")} className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${VERDICT_STYLE[c.redflags.verdict] ?? ""}`}>
+            {c.redflags.verdict === "avoid" && <ShieldAlert className="w-3 h-3" />}
+            {c.redflags.verdict}
+          </span>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        ),
+    },
+  ];
 
   return (
     <div className="space-y-4 max-w-[1200px] mx-auto">
@@ -264,9 +422,6 @@ export default function MultibaggerPage() {
             <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
           </div>
 
-          {/* type-aware column filters */}
-          <ColumnFilterBar rows={wlRows} defs={filterDefs} state={filterState} setState={setFilterState} />
-
           {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
           {error && <div className="card p-6 text-sm text-danger">Failed to load candidates.</div>}
 
@@ -275,7 +430,7 @@ export default function MultibaggerPage() {
               <div className="flex items-center gap-2 text-xs text-muted-foreground flex-wrap">
                 <span>{data.universe_size?.toLocaleString() ?? 0} scanned</span>
                 <span>· {data.pass1_survivors} survivors</span>
-                <span>· {candidates.length} candidates</span>
+                <span>· {wlRows.length} candidates</span>
                 {data.matrix_end && <span>· as of {data.matrix_end}</span>}
               </div>
 
@@ -292,134 +447,15 @@ export default function MultibaggerPage() {
                 <InfoTip label="Risk flags" tip={TIPS.redflag} size={11} />
               </div>
 
-              <div className="card overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
-                      <th className="text-left p-2">#</th>
-                      <th className="text-left p-2">Ticker</th>
-                      <th className="text-center p-2" title={TIPS.track}>Track</th>
-                      <th className="text-right p-2">Price</th>
-                      <th className="text-right p-2" title={TIPS.score}>Score</th>
-                      <th className="text-right p-2" title={TIPS.rs}>Rel. str.</th>
-                      <th className="text-right p-2 hidden md:table-cell">12m %</th>
-                      <th className="text-right p-2 hidden lg:table-cell">% from 52w high</th>
-                      <th className="text-right p-2 hidden lg:table-cell" title={TIPS.fund}>Fund. accel.</th>
-                      <th className="text-left p-2 hidden sm:table-cell">Theme</th>
-                      <th className="text-center p-2" title={TIPS.status}>Status</th>
-                      <th className="text-center p-2" title={TIPS.pam}>Trend (PAM)</th>
-                      <th className="text-center p-2" title={TIPS.redflag}>Risk flags</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.length === 0 && (
-                      <tr>
-                        <td colSpan={13} className="p-6 text-center text-muted-foreground">
-                          No candidates. The scanner needs a paid Polygon plan with
-                          {" "}<code className="text-[10px]">polygon_universe_enabled</code>.
-                        </td>
-                      </tr>
-                    )}
-                    {candidates.map((c) => (
-                      <tr key={c.ticker} className="border-b border-border/10 hover:bg-accent/40">
-                        <td className="p-2 text-muted-foreground font-mono">{c.rank}</td>
-                        <td className="p-2">
-                          <span className="flex items-center gap-0.5">
-                            <Link href={`/stock/${c.ticker}`} className="font-medium text-primary hover:underline">
-                              {c.ticker}
-                            </Link>
-                            <WatchlistStar ticker={c.ticker} />
-                            {c.market_cap_band && (
-                              <span className="text-[9px] text-muted-foreground uppercase">{c.market_cap_band}</span>
-                            )}
-                          </span>
-                        </td>
-                        <td className="p-2 text-center">
-                          <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${
-                            c.track === "A" ? "bg-primary/15 text-primary" : "bg-signal-conflict/15 text-signal-conflict"
-                          }`}>{c.track}</span>
-                        </td>
-                        <td className="p-2 text-right">
-                          <LivePrice
-                            price={livePriceMap.get(c.ticker) ?? c.price}
-                            currency="$"
-                            live={livePriceMap.get(c.ticker) != null}
-                            className="text-xs"
-                          />
-                        </td>
-                        <td className="p-2 text-right font-mono font-semibold text-foreground">{c.composite?.toFixed(1)}</td>
-                        <td className="p-2 text-right font-mono">{c.rs_rating}</td>
-                        <td className={`p-2 text-right font-mono hidden md:table-cell ${pctColor(c.ret_12m)}`}>{pct(c.ret_12m)}</td>
-                        <td className="p-2 text-right font-mono hidden lg:table-cell text-muted-foreground">{pct(c.pct_from_52w_high)}</td>
-                        <td className="p-2 text-right hidden lg:table-cell">
-                          {c.fundamentals?.rev_growth_yoy != null ? (
-                            <span className={pctColor(c.fundamentals.rev_growth_yoy)}>
-                              {pct(c.fundamentals.rev_growth_yoy)}
-                              {c.fundamentals.accelerating && <TrendingUp className="inline w-3 h-3 ml-0.5" />}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="p-2 hidden sm:table-cell text-muted-foreground">{c.theme_cluster ?? "—"}</td>
-                        <td className="p-2 text-center">
-                          {c.breakout_state === "breakout_confirmed" ? (
-                            <span className="inline-flex items-center gap-0.5 rounded border border-signal-long/40 bg-signal-long-bg px-1.5 py-0.5 text-[10px] font-semibold text-signal-long"
-                                  title={`Pivot $${c.pivot?.toFixed(2)} crossed on volume`}>
-                              Breakout ✓
-                            </span>
-                          ) : c.breakout_state === "breakout_unconfirmed" ? (
-                            <span className="inline-flex items-center rounded border border-signal-caution/40 bg-signal-caution-bg px-1.5 py-0.5 text-[10px] font-semibold text-signal-caution"
-                                  title={`Pivot $${c.pivot?.toFixed(2)} crossed, volume weak`}>
-                              Breakout?
-                            </span>
-                          ) : c.breakout_state === "basing" ? (
-                            <span className="inline-flex items-center rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
-                                  title={`Watching: ${c.dist_to_pivot_pct != null ? c.dist_to_pivot_pct + "% to" : "below"} pivot $${c.pivot?.toFixed(2)}`}>
-                              Basing {c.dist_to_pivot_pct != null ? `${c.dist_to_pivot_pct}%` : ""}
-                            </span>
-                          ) : c.breakout_state === "extended" ? (
-                            <span className="inline-flex items-center rounded border border-signal-short/40 bg-signal-short-bg px-1.5 py-0.5 text-[10px] text-signal-short">
-                              Extended
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground text-[10px]">{c.breakout_state === "above_pivot" ? "Above pivot" : "—"}</span>
-                          )}
-                        </td>
-                        <td className="p-2 text-center">
-                          {c.pam?.structure ? (
-                            <span
-                              title={`Weekly ${c.pam.structure} · ${c.pam.clarity ?? ""} clarity${c.pam.rsi != null ? ` · RSI ${c.pam.rsi}` : ""}${c.pam.near_pivot ? " · near pivot" : ""}${c.pam.daily_fsb_bull ? " · daily FSB ⚡" : ""}`}
-                              className={`text-[10px] font-medium ${PAM_STYLE[c.pam.structure] ?? "text-muted-foreground"}`}
-                            >
-                              {c.pam.structure}
-                              {c.pam.near_pivot && "*"}
-                              {c.pam.daily_fsb_bull && (
-                                <span title="Daily bullish Force Strike Bar — confirmation candle" aria-label="daily bullish force strike bar"> ⚡</span>
-                              )}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                        <td className="p-2 text-center">
-                          {c.redflags?.verdict ? (
-                            <span
-                              title={c.redflags.note || (c.redflags.redflags ?? []).join("; ")}
-                              className={`inline-flex items-center gap-0.5 text-[10px] font-medium ${VERDICT_STYLE[c.redflags.verdict] ?? ""}`}
-                            >
-                              {c.redflags.verdict === "avoid" && <ShieldAlert className="w-3 h-3" />}
-                              {c.redflags.verdict}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption="Multibagger candidates — two-track full-market scan"
+                columns={columns}
+                rows={wlRows}
+                rowKey={(c) => c.ticker}
+                rowHref={(c) => `/stock/${c.ticker}`}
+                filters={filterDefs}
+                emptyText="No candidates match. The scanner needs a paid Polygon plan with polygon_universe_enabled."
+              />
               <p className="text-[10px] text-muted-foreground">{data.method}</p>
             </>
           )}

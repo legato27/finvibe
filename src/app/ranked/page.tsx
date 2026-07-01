@@ -2,23 +2,20 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { modelsApi, stocksApi } from "@/lib/api";
 import { useWatchlistGroups } from "@/lib/supabase/hooks";
 import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 import LivePrice from "@/components/ui/LivePrice";
 import GuideCard from "@/components/ui/GuideCard";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { LastUpdated } from "@/components/common/LastUpdated";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
-import {
-  ColumnFilterBar,
-  useColumnFilters,
-  type FilterDef,
-} from "@/components/shared/ColumnFilters";
+import { type FilterDef } from "@/components/shared/ColumnFilters";
 
 interface RankedRow {
   ticker: string;
@@ -67,7 +64,6 @@ const usd = (x?: number | null) =>
   x == null ? "—" : `$${x.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 
 export default function RankedBookPage() {
-  const [sort, setSort] = useState<"prob" | "z">("prob");
   const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
 
   const { data, isLoading, error } = useQuery<RankedBook>({
@@ -98,6 +94,9 @@ export default function RankedBookPage() {
     staleTime: 5 * 60_000,
   });
 
+  // Nearest weekly swing low/high (support / resistance) per name.
+  const swingMap = useSwingMap(tickers);
+
   // Honesty stat: realized forward returns by bucket (fills as snapshots mature).
   const { data: perf } = useQuery<{
     tracking_since: string | null;
@@ -109,26 +108,119 @@ export default function RankedBookPage() {
     retry: 1,
   });
 
-  // Backend rank (the `rank` column) reflects composite-z; display order follows
-  // the chosen sort — prob-of-profit (default) or composite-z conviction.
-  const sortKey = (r: RankedRow) =>
-    sort === "prob" ? r.prob_profit_pct ?? -1 : r.composite_z;
-
-  // Watchlist scope → type-aware column filters → sort.
+  // Watchlist scope; DataTable owns column filtering + sort (click a header).
   const wlRows = (data?.ranked ?? []).filter(
     (r) => !wlSet || wlSet.has(r.ticker.toUpperCase()),
   );
+  const bucketLabel = (b: string) => (b === "long" ? "Strong" : b === "short" ? "Weak" : "Mid");
   const filterDefs: FilterDef<RankedRow>[] = [
     { key: "ticker", label: "Ticker", kind: "text", value: (r) => r.ticker },
-    { key: "bucket", label: "Bucket", kind: "select", value: (r) => r.bucket },
+    { key: "bucket", label: "Factor rank", kind: "select", value: (r) => r.bucket, optionLabel: bucketLabel },
     { key: "sector", label: "Sector", kind: "select", value: (r) => r.sector ?? "" },
     { key: "verdict", label: "Verdict", kind: "select", value: (r) => verdictMap?.[r.ticker]?.state ?? "" },
     { key: "prob", label: "Prob %", kind: "number", value: (r) => r.prob_profit_pct ?? null },
-    { key: "composite_z", label: "Composite z", kind: "number", value: (r) => r.composite_z },
-    { key: "percentile", label: "%ile", kind: "number", value: (r) => r.percentile },
+    { key: "composite_z", label: "Conviction", kind: "number", value: (r) => r.composite_z },
+    { key: "percentile", label: "Percentile", kind: "number", value: (r) => r.percentile },
   ];
-  const { filtered, state: filterState, setState: setFilterState } = useColumnFilters(wlRows, filterDefs);
-  const visibleRows = filtered.slice().sort((a, b) => sortKey(b) - sortKey(a));
+
+  const columns: Column<RankedRow>[] = [
+    {
+      key: "ticker",
+      header: "Ticker",
+      cell: (r) => (
+        <span className="font-mono">
+          <span className="text-muted-foreground mr-1.5">{r.rank}</span>
+          <span className="font-semibold text-primary">{r.ticker}</span>
+        </span>
+      ),
+    },
+    {
+      key: "watch",
+      header: <span className="sr-only">Watchlist</span>,
+      ariaLabel: "Watchlist",
+      cell: (r) => <WatchlistStar ticker={r.ticker} />,
+    },
+    {
+      key: "verdict",
+      header: "Verdict",
+      ariaLabel: "Verdict",
+      sortable: true,
+      sortValue: (r) => verdictMap?.[r.ticker]?.state ?? "",
+      cell: (r) => <VerdictBadge state={verdictMap?.[r.ticker]?.state} size="sm" />,
+    },
+    {
+      key: "price",
+      header: "Price",
+      align: "right",
+      sortable: true,
+      sortValue: (r) => priceMap.get(r.ticker) ?? null,
+      cell: (r) => {
+        const live = priceMap.get(r.ticker) ?? null;
+        return <LivePrice price={live} currency="$" live={live != null} className="text-xs" />;
+      },
+    },
+    {
+      key: "prob",
+      header: "Prob. profit",
+      align: "right",
+      sortable: true,
+      sortValue: (r) => r.prob_profit_pct ?? -1,
+      cell: (r) => (
+        <span className={`font-mono ${r.prob_profit_pct == null ? "text-muted-foreground" : r.prob_profit_pct >= 50 ? "text-signal-long" : "text-signal-short"}`}>
+          {r.prob_profit_pct == null ? "—" : `${r.prob_profit_pct.toFixed(0)}%`}
+        </span>
+      ),
+    },
+    {
+      key: "swing",
+      header: "Swing L / H",
+      ariaLabel: "Swing low / high",
+      align: "right",
+      cell: (r) => <SwingCell swing={swingMap.get(r.ticker)} />,
+    },
+    {
+      key: "sector",
+      header: "Sector",
+      optional: true,
+      sortable: true,
+      sortValue: (r) => r.sector ?? "",
+      cell: (r) => <span className="text-muted-foreground">{r.sector ?? "—"}</span>,
+    },
+    {
+      key: "composite_z",
+      header: "Conviction",
+      align: "right",
+      sortable: true,
+      sortValue: (r) => r.composite_z,
+      cell: (r) => (
+        <span className={`font-mono ${r.composite_z >= 0 ? "text-signal-long" : "text-signal-short"}`}>
+          {r.composite_z >= 0 ? "+" : ""}{r.composite_z.toFixed(2)}
+        </span>
+      ),
+    },
+    {
+      key: "percentile",
+      header: "Percentile",
+      align: "right",
+      optional: true,
+      sortable: true,
+      sortValue: (r) => r.percentile,
+      cell: (r) => <span className="font-mono text-muted-foreground">{r.percentile.toFixed(0)}</span>,
+    },
+    {
+      key: "bucket",
+      header: "Factor rank",
+      ariaLabel: "Factor rank",
+      sortable: true,
+      sortValue: (r) => r.composite_z,
+      cell: (r) => (
+        <span className={`inline-flex items-center gap-1 ${BUCKET_STYLE[r.bucket]}`}>
+          {bucketIcon(r.bucket)}
+          {bucketLabel(r.bucket)}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-4 max-w-[1100px] mx-auto">
@@ -191,24 +283,11 @@ export default function RankedBookPage() {
             <span>factors: {data.factors.join(", ")}</span>
           </div>
 
-          {/* watchlist scope + sort */}
+          {/* watchlist scope */}
           <div className="flex flex-wrap items-center gap-3">
             <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
-            <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              Sort
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as "prob" | "z")}
-                className="bg-muted/50 border border-border/30 rounded-md px-2 py-1 text-xs text-foreground/90 focus:outline-none"
-              >
-                <option value="prob">Prob of profit</option>
-                <option value="z">Conviction (z)</option>
-              </select>
-            </label>
+            <span className="text-[11px] text-muted-foreground">Click a column header to sort · use the filters to narrow.</span>
           </div>
-
-          {/* type-aware column filters (ticker, bucket, sector, verdict, ranges) */}
-          <ColumnFilterBar rows={wlRows} defs={filterDefs} state={filterState} setState={setFilterState} />
 
           {/* legend (kept above the table — InfoTip cards would be clipped inside the scroll container) */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
@@ -221,74 +300,20 @@ export default function RankedBookPage() {
             <InfoTip label="Factor rank" tip={TIPS.signal} size={11} />
           </div>
 
-          <div className="card overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
-                  <th scope="col" className="text-left p-2">#</th>
-                  <th scope="col" className="text-left p-2">Ticker</th>
-                  <th scope="col" className="text-center p-2" title={TIPS.verdict}>Verdict</th>
-                  <th scope="col" className="text-right p-2" title={TIPS.price}>Price</th>
-                  <th scope="col" className="text-right p-2" title={TIPS.prob}>Prob. profit</th>
-                  <th scope="col" className="text-left p-2 hidden sm:table-cell">Sector</th>
-                  <th scope="col" className="text-right p-2" title={TIPS.composite}>Conviction</th>
-                  <th scope="col" className="text-right p-2 hidden md:table-cell" title={TIPS.percentile}>Percentile</th>
-                  <th scope="col" className="text-center p-2" title={TIPS.signal}>Factor rank</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRows.length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="p-6 text-center text-muted-foreground">
-                      No names match.{" "}
-                      {wlSet && "Your watchlist names may be excluded for sparse data — try “All names”."}
-                    </td>
-                  </tr>
-                )}
-                {visibleRows.map((r) => {
-                  const live = priceMap.get(r.ticker) ?? null;
-                  return (
-                    <tr key={r.ticker} className="border-b border-border/10 hover:bg-accent/40">
-                      <td className="p-2 text-muted-foreground font-mono">{r.rank}</td>
-                      <td className="p-2">
-                        <span className="flex items-center gap-0.5">
-                          <Link href={`/stock/${r.ticker}`} className="font-medium text-primary hover:underline">
-                            {r.ticker}
-                          </Link>
-                          <WatchlistStar ticker={r.ticker} />
-                        </span>
-                      </td>
-                      <td className="p-2 text-center">
-                        <VerdictBadge state={verdictMap?.[r.ticker]?.state} size="sm" />
-                      </td>
-                      <td className="p-2 text-right">
-                        <LivePrice price={live} currency="$" live={live != null} className="text-xs" />
-                      </td>
-                      <td className={`p-2 text-right font-mono ${
-                        r.prob_profit_pct == null ? "text-muted-foreground" : r.prob_profit_pct >= 50 ? "text-signal-long" : "text-signal-short"
-                      }`}>
-                        {r.prob_profit_pct == null ? "—" : `${r.prob_profit_pct.toFixed(0)}%`}
-                      </td>
-                      <td className="p-2 text-muted-foreground hidden sm:table-cell">{r.sector ?? "—"}</td>
-                      <td className={`p-2 text-right font-mono ${r.composite_z >= 0 ? "text-signal-long" : "text-signal-short"}`}>
-                        {r.composite_z >= 0 ? "+" : ""}
-                        {r.composite_z.toFixed(2)}
-                      </td>
-                      <td className="p-2 text-right font-mono text-muted-foreground hidden md:table-cell">
-                        {r.percentile.toFixed(0)}
-                      </td>
-                      <td className={`p-2 ${BUCKET_STYLE[r.bucket]}`}>
-                        <span className="flex items-center justify-center gap-1 capitalize">
-                          {bucketIcon(r.bucket)}
-                          {r.bucket === "long" ? "Strong" : r.bucket === "short" ? "Weak" : "Mid"}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            caption="Ranked Book — watchlist names scored on six factors"
+            columns={columns}
+            rows={wlRows}
+            rowKey={(r) => r.ticker}
+            rowHref={(r) => `/stock/${r.ticker}`}
+            filters={filterDefs}
+            defaultSort={{ key: "prob", dir: "desc" }}
+            emptyText={
+              wlSet
+                ? "No names match — your watchlist names may be excluded for sparse data; try All names."
+                : "No names match."
+            }
+          />
 
           {perf?.tracking_since && (
             <div className="card px-4 py-3 text-xs">

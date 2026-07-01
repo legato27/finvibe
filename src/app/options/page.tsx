@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { optionsApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
+import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
@@ -83,6 +84,9 @@ export default function OptionsScreenerPage() {
   const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
   const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
   const rows = (data?.rows ?? []).filter((r) => !wlSet || wlSet.has(r.ticker.toUpperCase()));
+
+  // Nearest weekly swing low/high (support / resistance) per name.
+  const swingMap = useSwingMap((data?.rows ?? []).map((r) => r.ticker));
 
   // No top-level timestamp on this endpoint — use the newest per-row snapshot
   // date as the "last updated by job" stamp (ISO dates compare lexically).
@@ -197,6 +201,13 @@ export default function OptionsScreenerPage() {
       },
     },
     {
+      key: "swing",
+      header: "Swing L / H",
+      ariaLabel: "Swing low / high",
+      align: "right",
+      cell: (r) => <SwingCell swing={swingMap.get(r.ticker)} />,
+    },
+    {
       key: "iv_rank",
       header: ts("colIvRank"),
       ariaLabel: ts("colIvRankLong"),
@@ -218,6 +229,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "atm_iv",
+      optional: true,
       header: ts("colAtmIv"),
       sortable: true,
       sortValue: (r) => r.atm_iv_pct,
@@ -227,6 +239,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "em",
+      optional: true,
       header: ts("colExpectedMove"),
       sortable: true,
       sortValue: (r) => r.expected_move_30d_pct,
@@ -237,6 +250,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "pcr",
+      optional: true,
       header: ts("colPcr"),
       sortable: true,
       sortValue: (r) => r.pcr_oi,
@@ -247,6 +261,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "skew",
+      optional: true,
       header: ts("colSkew"),
       sortable: true,
       sortValue: (r) => r.skew_25d_pp,
@@ -257,6 +272,7 @@ export default function OptionsScreenerPage() {
     },
     {
       key: "unusual",
+      optional: true,
       header: ts("colUnusual"),
       ariaLabel: ts("colUnusualLong"),
       sortable: true,
