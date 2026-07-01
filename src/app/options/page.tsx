@@ -11,8 +11,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import { optionsApi } from "@/lib/api";
+import { optionsApi, stocksApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
+import LivePrice from "@/components/ui/LivePrice";
 import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
@@ -88,6 +89,17 @@ export default function OptionsScreenerPage() {
   // Nearest weekly swing low/high (support / resistance) per name.
   const swingMap = useSwingMap((data?.rows ?? []).map((r) => r.ticker));
 
+  // Live underlying price (60s) — the screener's last_price is delayed/EOD.
+  const priceTickers = (data?.rows ?? []).map((r) => r.ticker);
+  const { data: livePrices } = useQuery<Array<{ ticker: string; price: number | null }>>({
+    queryKey: ["options-live-prices", priceTickers.length],
+    queryFn: () => stocksApi.refreshPrices(priceTickers),
+    enabled: priceTickers.length > 0,
+    refetchInterval: 60_000,
+    staleTime: 55_000,
+  });
+  const priceMap = new Map((livePrices ?? []).map((p) => [p.ticker, p.price]));
+
   // No top-level timestamp on this endpoint — use the newest per-row snapshot
   // date as the "last updated by job" stamp (ISO dates compare lexically).
   const screenerAsOf = (data?.rows ?? []).reduce<string | null>(
@@ -140,6 +152,17 @@ export default function OptionsScreenerPage() {
         </>
       ),
       cell: (r) => <WatchlistStar ticker={r.ticker} />,
+    },
+    {
+      key: "price",
+      header: "Price",
+      align: "right",
+      sortable: true,
+      sortValue: (r) => priceMap.get(r.ticker) ?? r.last_price ?? null,
+      cell: (r) => {
+        const live = priceMap.get(r.ticker) ?? r.last_price ?? null;
+        return <LivePrice price={live} currency="$" live={priceMap.get(r.ticker) != null} className="text-xs" />;
+      },
     },
     {
       key: "verdict",
