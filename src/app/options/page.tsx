@@ -13,6 +13,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { optionsApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
+import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
@@ -83,6 +84,9 @@ export default function OptionsScreenerPage() {
   const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
   const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
   const rows = (data?.rows ?? []).filter((r) => !wlSet || wlSet.has(r.ticker.toUpperCase()));
+
+  // Nearest weekly swing low/high (support / resistance) per name.
+  const swingMap = useSwingMap((data?.rows ?? []).map((r) => r.ticker));
 
   // No top-level timestamp on this endpoint — use the newest per-row snapshot
   // date as the "last updated by job" stamp (ISO dates compare lexically).
@@ -195,6 +199,13 @@ export default function OptionsScreenerPage() {
           </span>
         );
       },
+    },
+    {
+      key: "swing",
+      header: "Swing L / H",
+      ariaLabel: "Swing low / high",
+      align: "right",
+      cell: (r) => <SwingCell swing={swingMap.get(r.ticker)} />,
     },
     {
       key: "iv_rank",

@@ -9,6 +9,7 @@ import VerdictBadge, { type VerdictJson } from "@/components/ui/VerdictBadge";
 import LivePrice from "@/components/ui/LivePrice";
 import GuideCard from "@/components/ui/GuideCard";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { LastUpdated } from "@/components/common/LastUpdated";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
@@ -93,6 +94,9 @@ export default function RankedBookPage() {
     staleTime: 5 * 60_000,
   });
 
+  // Nearest weekly swing low/high (support / resistance) per name.
+  const swingMap = useSwingMap(tickers);
+
   // Honesty stat: realized forward returns by bucket (fills as snapshots mature).
   const { data: perf } = useQuery<{
     tracking_since: string | null;
@@ -166,6 +170,13 @@ export default function RankedBookPage() {
           {r.prob_profit_pct == null ? "—" : `${r.prob_profit_pct.toFixed(0)}%`}
         </span>
       ),
+    },
+    {
+      key: "swing",
+      header: "Swing L / H",
+      ariaLabel: "Swing low / high",
+      align: "right",
+      cell: (r) => <SwingCell swing={swingMap.get(r.ticker)} />,
     },
     {
       key: "sector",

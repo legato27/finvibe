@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import VerdictBadge, { type VerdictJson, type VerdictState } from "@/components/ui/VerdictBadge";
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
+import { SwingCell } from "@/components/shared/SwingLevels";
 import LivePrice from "@/components/ui/LivePrice";
 import { formatMoS } from "@/lib/valuation";
 import { moatStyle, signTextClass, directionTextClass, normalizeDirection } from "@/lib/signals";
@@ -228,7 +229,7 @@ export default function WatchlistTable({
     });
   }, [sorted, groupBy]);
 
-  const COL_COUNT = 13;
+  const COL_COUNT = 14; // +1 for the Swing L / H column
 
   const arrow = (key: SortKey) =>
     sort.key === key ? (sort.dir === "asc" ? "▲" : "▼") : "↕";
@@ -404,6 +405,11 @@ export default function WatchlistTable({
         <PamBadge pam={r.pam} />
       </td>
 
+      {/* Swing low / high */}
+      <td className="px-3 py-2 text-right hidden md:table-cell">
+        <SwingCell swing={r.pam ? { low: r.pam.swing_low ?? null, high: r.pam.swing_high ?? null } : null} />
+      </td>
+
       {/* Option strategy */}
       <td className="px-3 py-2 hidden md:table-cell">
         {r.opt?.strategy ? (
@@ -506,6 +512,9 @@ export default function WatchlistTable({
               {header("trend", t("trend"), { align: "right", hide: "md" })}
               {header("verdict", t("columnVerdict"))}
               {header("pam", t("columnPam"), { hide: "md" })}
+              <th scope="col" className="px-3 py-2 text-right hidden md:table-cell" title="Nearest weekly swing low (support) / swing high (resistance)">
+                Swing L / H
+              </th>
               {header("opt", t("columnOption"), { hide: "md" })}
               <th scope="col" className="px-3 py-2 text-right">
                 <span className="sr-only">{t("remove")}</span>

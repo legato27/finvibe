@@ -7,6 +7,7 @@ import { scannerApi, stocksApi } from "@/lib/api";
 import { useWatchlistGroups } from "@/lib/supabase/hooks";
 import LivePrice from "@/components/ui/LivePrice";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { LastUpdated } from "@/components/common/LastUpdated";
@@ -147,6 +148,9 @@ export default function MultibaggerPage() {
   });
   const livePriceMap = new Map((livePrices ?? []).map((x) => [x.ticker, x.price]));
 
+  // Nearest weekly swing low/high (support / resistance) per candidate.
+  const swingMap = useSwingMap(candTickers);
+
   const { data: perf } = useQuery({
     queryKey: ["multibagger-performance"],
     queryFn: () => scannerApi.multibaggerPerformance(),
@@ -236,6 +240,13 @@ export default function MultibaggerPage() {
       sortable: true,
       sortValue: (c) => c.rs_rating ?? null,
       cell: (c) => <span className="font-mono">{c.rs_rating}</span>,
+    },
+    {
+      key: "swing",
+      header: "Swing L / H",
+      ariaLabel: "Swing low / high",
+      align: "right",
+      cell: (c) => <SwingCell swing={swingMap.get(c.ticker)} />,
     },
     {
       key: "status",

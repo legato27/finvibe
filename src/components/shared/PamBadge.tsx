@@ -10,6 +10,9 @@ export interface PamSummary {
   monthly: string | null;
   weekly: string | null;
   daily: string | null;
+  /** nearest weekly swing pivots straddling the close (support / resistance) */
+  swing_low?: number | null;
+  swing_high?: number | null;
 }
 
 export function PamBadge({ pam }: { pam?: PamSummary | null }) {
