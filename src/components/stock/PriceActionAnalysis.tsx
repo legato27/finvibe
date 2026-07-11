@@ -27,10 +27,12 @@ interface Timeframe {
 interface Synthesis {
   headline: string;
   setup_code: string;
+  direction_label?: string | null;
   status: "triggered" | "watch" | "no_setup";
   direction: "long" | "short" | null;
   confidence: string;
   conviction_score: number;
+  zone_lost?: boolean;
   key_levels: {
     sweet_spot: { low: number; high: number } | null;
     invalidation: number | null;
@@ -40,21 +42,35 @@ interface Synthesis {
   trade_plan?: {
     action: string;
     entry_zone: { low: number; high: number } | null;
+    entry_refinement?: { low: number; high: number } | null;
     stop: number | null;
     target: number | null;
     reward_risk: number | null;
+    rr_min?: number | null;
     note: string;
   } | null;
   invalidation: string;
   divergence: { status: string; implication: string; rsi_now: number };
   accum_dist: { present: string; notes: string } | null;
+  majority_flush?: { qualified: boolean; flush_pct: number | null } | null;
+  manipulation?: { type: string; dir: string; level: number; date: string } | null;
+  market_context?: { benchmark: string; structure: string; tide: string } | null;
+  binary_event?: { next_earnings_date: string; days_away: number } | null;
+  warnings?: string[];
   last_close: number;
+}
+interface Gate {
+  status: "qualified" | "below_bar" | "measuring";
+  qualified: boolean | null;
+  measured_hit_rate: number | null;
+  sample_n: number | null;
 }
 interface PriceActionData {
   ticker: string;
   as_of: string;
   timeframes: { daily: Timeframe | null; weekly: Timeframe | null; monthly: Timeframe | null };
   synthesis: Synthesis;
+  gate?: Gate | null;
 }
 
 /* ── Helpers ── */
@@ -108,8 +124,26 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
         <span className="card-title flex items-center gap-2">
           <Zap className="w-4 h-4 text-primary" /> {t("title")}
         </span>
-        <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${c.bg} ${c.text} ${c.border}`}>
-          {syn.setup_code}
+        <span className="flex items-center gap-1.5">
+          {data.gate && (
+            <span
+              className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                data.gate.status === "qualified"
+                  ? "bg-success/10 text-signal-long border-success/30"
+                  : data.gate.status === "below_bar"
+                  ? "bg-danger/10 text-signal-short border-danger/30"
+                  : "bg-accent/30 text-muted-foreground border-border/40"
+              }`}
+              title={t("gateTitle")}
+            >
+              {data.gate.status === "qualified" && data.gate.measured_hit_rate != null
+                ? `${t("gate.qualified")} ${(data.gate.measured_hit_rate * 100).toFixed(0)}% (n=${data.gate.sample_n})`
+                : t(`gate.${data.gate.status}`)}
+            </span>
+          )}
+          <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${c.bg} ${c.text} ${c.border}`}>
+            {syn.setup_code}
+          </span>
         </span>
       </div>
 
@@ -121,9 +155,39 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
           <div className="text-[11px] text-muted-foreground mt-0.5">
             {t("status")}: <span className={c.text}>{t(`statusVal.${syn.status}`)}</span> · {t("conviction")}:{" "}
             <span className={c.text}>{syn.confidence}</span> ({syn.conviction_score}/95)
+            {syn.direction_label && <> · {syn.direction_label}</>}
+            {syn.market_context?.tide && (
+              <>
+                {" · "}
+                {t("tide")}:{" "}
+                <span
+                  className={
+                    syn.market_context.tide === "bull"
+                      ? "text-signal-long"
+                      : syn.market_context.tide === "bear"
+                      ? "text-signal-short"
+                      : "text-signal-caution"
+                  }
+                >
+                  {syn.market_context.benchmark} {syn.market_context.tide}
+                </span>
+              </>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Course-rule warnings (divergence, flush, tide, earnings, zone lost) */}
+      {!!syn.warnings?.length && (
+        <div className="rounded-lg border border-warning/30 bg-warning/5 p-2.5 mb-3 space-y-1">
+          {syn.warnings.map((w, i) => (
+            <div key={i} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
+              <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-signal-caution" />
+              <span>{w}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Key levels (pure price action) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs mb-3">
@@ -173,11 +237,62 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
             {syn.trade_plan.reward_risk != null && (
               <span className="font-mono text-[11px] text-foreground/80">
                 {t("rewardRisk")} {Number(syn.trade_plan.reward_risk).toFixed(2)}:1
+                {syn.trade_plan.rr_min != null && (
+                  <span className="text-muted-foreground"> ({t("rrMin")} {syn.trade_plan.rr_min}:1)</span>
+                )}
               </span>
             )}
           </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px] mt-2">
+            <div>
+              <span className="text-muted-foreground">{t("entryZone")}: </span>
+              <span className="font-mono">
+                {syn.trade_plan.entry_zone
+                  ? `${fmt(syn.trade_plan.entry_zone.low)}–${fmt(syn.trade_plan.entry_zone.high)}`
+                  : "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">{t("refinedEntry")}: </span>
+              <span className="font-mono">
+                {syn.trade_plan.entry_refinement
+                  ? `${fmt(syn.trade_plan.entry_refinement.low)}–${fmt(syn.trade_plan.entry_refinement.high)}`
+                  : "—"}
+              </span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">{t("stop")}: </span>
+              <span className="font-mono text-signal-short">{fmt(syn.trade_plan.stop)}</span>
+            </div>
+            <div>
+              <span className="text-muted-foreground">{t("target")}: </span>
+              <span className="font-mono text-signal-long">{fmt(syn.trade_plan.target)}</span>
+            </div>
+          </div>
           {syn.trade_plan.note && (
             <p className="text-[11px] text-muted-foreground mt-1">{syn.trade_plan.note}</p>
+          )}
+        </div>
+      )}
+
+      {/* Manipulation signature + majority flush (course context) */}
+      {(syn.manipulation || syn.majority_flush) && (
+        <div className="space-y-1 mb-3 text-[11px]">
+          {syn.manipulation && (
+            <div className="text-muted-foreground">
+              <span className="text-foreground/70">{t("manipulation")}: </span>
+              {syn.manipulation.type === "spring" ? t("spring") : t("utad")} @{" "}
+              <span className="font-mono">{fmt(syn.manipulation.level)}</span> ({syn.manipulation.date})
+            </div>
+          )}
+          {syn.majority_flush && (
+            <div className="text-muted-foreground">
+              <span className="text-foreground/70">{t("majorityFlush")}: </span>
+              {syn.majority_flush.qualified ? t("mfQualified") : t("mfNotQualified")}
+              {syn.majority_flush.flush_pct != null && (
+                <span className="font-mono"> ({Math.round(syn.majority_flush.flush_pct * 100)}%)</span>
+              )}
+            </div>
           )}
         </div>
       )}

@@ -958,7 +958,24 @@
       "weekly": "Weekly",
       "monthly": "Monthly"
     },
-    "disclaimer": "Pure price action — structure, sweet-spot, and Force Strike Bar trigger. Reward:risk is derived from structural levels only. Not financial advice; no sizing."
+    "disclaimer": "Pure price action — structure, sweet-spot, and Force Strike Bar trigger. Reward:risk is derived from structural levels only. Not financial advice; no sizing.",
+    "gateTitle": "Evidence gate: measured hit rate from the pinned PAM backtest",
+    "gate": {
+      "qualified": "gate ✓",
+      "below_bar": "below bar",
+      "measuring": "measuring"
+    },
+    "tide": "Tide",
+    "rrMin": "min",
+    "refinedEntry": "Refined entry",
+    "stop": "Stop",
+    "target": "Target",
+    "manipulation": "Manipulation",
+    "spring": "Spring — false break below support, reclaimed (bullish)",
+    "utad": "UTAD — false breakout above resistance, rejected (bearish)",
+    "majorityFlush": "Majority flush",
+    "mfQualified": "qualified",
+    "mfNotQualified": "not qualified — reversal setup incomplete"
   },
   "sentiment": {
     "bearish": "Bearish",
