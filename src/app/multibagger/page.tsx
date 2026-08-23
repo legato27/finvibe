@@ -91,6 +91,9 @@ interface ScanResult {
   scored: number;
   candidates: Candidate[];
   method: string;
+  // Set on cache-miss responses: "pending" (scan not yet run), "disabled"
+  // (polygon_universe off) or "history" (served from the persisted last scan).
+  status?: string;
 }
 
 const REGIME_STYLE: Record<string, string> = {
@@ -454,7 +457,11 @@ export default function MultibaggerPage() {
                 rowKey={(c) => c.ticker}
                 rowHref={(c) => `/stock/${c.ticker}`}
                 filters={filterDefs}
-                emptyText="No candidates match. The scanner needs a paid Polygon plan with polygon_universe_enabled."
+                emptyText={
+                  data.status === "pending" || data.status === "disabled"
+                    ? data.method // backend's reason: warming up / polygon_universe off
+                    : "No candidates match the current filters."
+                }
               />
               <p className="text-[10px] text-muted-foreground">{data.method}</p>
             </>
