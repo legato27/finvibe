@@ -4,7 +4,7 @@ import { useParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
-import { verdictToAction, confidenceToConviction } from "@/lib/signals";
+import { verdictToAction, verdictConviction } from "@/lib/signals";
 import { usePortfolios, usePortfolioHoldings, useLLMAnalysis } from "@/lib/supabase/hooks";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
 import { StockEvents } from "@/components/stock/StockEvents";
@@ -118,7 +118,7 @@ export default function PortfolioStockPage() {
         stockInfo={stockInfo}
         currentPrice={currentPrice}
         verdict={unifiedAction ?? thoughts?.verdict}
-        conviction={detail?.verdict?.state ? confidenceToConviction(detail.verdict.confidence) : thoughts?.conviction}
+        conviction={detail?.verdict?.state ? verdictConviction(detail.verdict.state, detail.verdict.confidence) : thoughts?.conviction}
         llm={detail?.llm || supabaseLlm}
       />
 

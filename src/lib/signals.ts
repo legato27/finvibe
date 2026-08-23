@@ -57,9 +57,17 @@ export type VerdictAction = "buy" | "hold" | "avoid";
 
 /**
  * Map the arbitrated 6-state verdict to the 3-state buy/hold/avoid vocabulary
- * the hero pill, options strategy, and portfolio advice speak. NEUTRAL and
- * CONFLICTING (and anything unknown) → hold. This is the single bridge between
- * `VerdictJson.state` and `thoughts.verdict` — there was none before.
+ * the hero pill, options strategy, and portfolio advice speak. This is the
+ * single bridge between `VerdictJson.state` and `thoughts.verdict`.
+ *
+ * U1 — CONFLICTING maps to `avoid`, not `hold`.
+ *
+ * It was surfaced as an absence of a view. It is not: measured over n=811 it
+ * returned −5.22% raw and **−6.82% excess of SPY**, which makes it the most
+ * bearish state in the system — more negative than SHORT at −5.23%. Only 36.0%
+ * of CONFLICTING names beat the market. Low agreement between the models
+ * (0.240) is itself information, and reading it as "no opinion" threw that
+ * information away at exactly the moment it was worth most.
  */
 export function verdictToAction(state: string | null | undefined): VerdictAction {
   switch (state) {
@@ -68,9 +76,49 @@ export function verdictToAction(state: string | null | undefined): VerdictAction
       return "buy";
     case "SHORT":
     case "STRONG_SHORT":
+    case "CONFLICTING":
       return "avoid";
     default:
-      return "hold"; // NEUTRAL, CONFLICTING, null, unknown
+      return "hold"; // NEUTRAL, null, unknown
+  }
+}
+
+/**
+ * Conviction for the hero, derived from the STATE rather than the confidence
+ * number alone.
+ *
+ * U2 — the hero gave plain LONG the same visual weight as STRONG_LONG while
+ * the two carry completely different outcomes:
+ *
+ *     STRONG_LONG   n=646    +5.02% raw   +3.84% excess   57.4% beat SPY
+ *     LONG          n=5,834  +0.07% raw   −1.45% excess   46.4% beat SPY
+ *
+ * Plain LONG is not a weaker buy — on excess return it is mildly negative, and
+ * it is the single largest bucket in the book. So the non-strong directional
+ * states are capped at "medium" and can never present as high conviction,
+ * whatever the confidence scalar says. NEUTRAL is "low" because it is, by
+ * construction, the absence of a call.
+ *
+ * `confidence` still lowers conviction; it can no longer raise it past the cap.
+ */
+export function verdictConviction(
+  state: string | null | undefined,
+  confidence: number | null | undefined,
+): "high" | "medium" | "low" {
+  const fromConfidence = confidenceToConviction(confidence);
+  switch (state) {
+    case "STRONG_LONG":
+    case "STRONG_SHORT":
+      return fromConfidence;
+    case "LONG":
+    case "SHORT":
+    case "CONFLICTING":
+      // Capped: never "high".
+      return fromConfidence === "high" ? "medium" : fromConfidence;
+    case "NEUTRAL":
+      return "low";
+    default:
+      return fromConfidence;
   }
 }
 
