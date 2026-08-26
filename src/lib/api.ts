@@ -2,6 +2,7 @@
  * API client — all backend requests go through here.
  */
 import axios, { AxiosInstance } from "axios";
+import { noteFresh, noteStale } from "@/lib/staleness";
 
 // Use the env var ONLY if it is a well-formed absolute http(s) URL (e.g. a
 // remote server for self-hosted/LAN/Tailscale deploys). A bare host like
@@ -29,6 +30,28 @@ api.interceptors.request.use((config) => {
   config.headers = config.headers || {};
   (config.headers as Record<string, string>)["Accept-Language"] = "en";
   return config;
+});
+
+// Catch responses the proxy answered from the Supabase staging tier. Those
+// carry X-FinVibe-Stale and are otherwise byte-identical to a live response,
+// which is what lets every component keep working through a DGX outage — and
+// also what would let a three-day-old option chain render as if it were live
+// if nobody said so. StaleDataBanner reads this store.
+//
+// Same-origin, so the custom header is readable without an
+// Access-Control-Expose-Headers dance. When NEXT_PUBLIC_API_URL points at a
+// remote backend the requests bypass the proxy entirely and there is no
+// fallback to report — the header is simply absent and nothing marks stale.
+api.interceptors.response.use((response) => {
+  const asOf = response.headers?.["x-finvibe-stale"];
+  const url = response.config?.url ?? "";
+  if (typeof asOf === "string" && asOf) {
+    const family = response.headers?.["x-finvibe-stale-family"];
+    noteStale(url, asOf, typeof family === "string" ? family : "data");
+  } else if (url) {
+    noteFresh(url);
+  }
+  return response;
 });
 
 // ── Watchlist ─────────────────────────────────────────────────
