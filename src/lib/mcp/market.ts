@@ -95,7 +95,7 @@ export const market = {
     dgxJson<unknown>(
       `/api/fx/rates?base=${encodeURIComponent((base ?? "USD").toUpperCase())}`,
     ),
-  // News + sentiment (sentiment_cache ∪ osint_articles on DGX).
+  // News + sentiment (sentiment_cache on DGX).
   newsFeed: (tickers?: string[], limit?: number, sourceKind?: string) => {
     const params = new URLSearchParams();
     if (tickers?.length)
@@ -107,15 +107,6 @@ export const market = {
   },
   tickerSentiment: (ticker: string) =>
     dgxJson<unknown>(`/api/sentiment/${encodeURIComponent(ticker)}`),
-  osintEvents: (ticker: string, sinceHours?: number, limit?: number) => {
-    const params = new URLSearchParams();
-    if (sinceHours) params.set("since_hours", String(sinceHours));
-    if (limit) params.set("limit", String(limit));
-    const qs = params.toString();
-    return dgxJson<unknown>(
-      `/api/osint/events/for-ticker/${encodeURIComponent(ticker)}${qs ? `?${qs}` : ""}`,
-    );
-  },
   generateThoughts: (ticker: string) =>
     dgxJson<unknown>(
       `/api/stocks/${encodeURIComponent(ticker)}/generate-thoughts`,

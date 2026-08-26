@@ -15,7 +15,6 @@ import OptionsChainTab from "@/components/stock/OptionsChainTab";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
 import VerdictCard from "@/components/ui/VerdictCard";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
-import { OsintFeed } from "@/components/shared/OsintFeed";
 import {
   Brain, Loader2,
   ChevronDown, ChevronUp, LineChart, Newspaper, Cpu, DollarSign,
@@ -246,7 +245,6 @@ export default function StockDetailPage() {
             <SentimentPanel ticker={ticker} />
             <RealtimeNewsFeed tickers={[ticker]} />
           </div>
-          <OsintFeed ticker={ticker} />
         </div>
       )}
     </div>

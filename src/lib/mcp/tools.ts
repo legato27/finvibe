@@ -363,20 +363,6 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => ok(await market.tickerSentiment(args.ticker)),
   );
 
-  reg(
-    "get_osint_events",
-    {
-      ...meta("get_osint_events"),
-      inputSchema: {
-        ticker: z.string().min(1),
-        since_hours: z.number().int().min(1).max(720).optional(),
-        limit: z.number().int().positive().max(200).optional(),
-      },
-    },
-    async (args) =>
-      ok(await market.osintEvents(args.ticker, args.since_hours, args.limit)),
-  );
-
   // ── AI ───────────────────────────────────────────────────
   reg(
     "get_multibagger_candidates",

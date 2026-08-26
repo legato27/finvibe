@@ -18,7 +18,6 @@ import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
 import { GexCard } from "@/components/dashboard/GexCard";
 import { BreadthStrip } from "@/components/dashboard/BreadthStrip";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
-import { OsintFeed } from "@/components/shared/OsintFeed";
 
 export function DashboardView() {
   const t = useTranslations("dashboard");
@@ -102,7 +101,6 @@ export function DashboardView() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
           <CryptoIndicators />
           <RealtimeNewsFeed />
-          <OsintFeed />
         </div>
       </Section>
     </div>

@@ -397,13 +397,12 @@ export const TOOL_CATALOG: ToolDoc[] = [
     group: "News & sentiment",
     title: "Get recent news for tickers",
     description:
-      "Recent news items from the unified feed (financial sentiment crawl + " +
-      "OSINT articles), optionally filtered to specific tickers and/or a single " +
-      "source kind (e.g. gdelt, cisa, telegram, bluesky).",
+      "Recent news items from the financial sentiment crawl, optionally " +
+      "filtered to specific tickers and/or a single source kind.",
     params: [
       { name: "tickers", type: "string[]", required: false, description: "Tickers to filter by, e.g. [\"SATS\"]." },
       { name: "limit", type: "integer (≤200)", required: false, description: "Max items. Default 60." },
-      { name: "source_kind", type: "string", required: false, description: "Single source filter; OSINT kinds read osint_articles." },
+      { name: "source_kind", type: "string", required: false, description: "Single source filter." },
     ],
     returns: "Array of news items with headline, source, url, published_at, tickers, sentiment.",
   },
@@ -419,22 +418,6 @@ export const TOOL_CATALOG: ToolDoc[] = [
     ],
     returns: "CompositeSentiment object for the ticker.",
   },
-  {
-    name: "get_osint_events",
-    group: "News & sentiment",
-    title: "Get OSINT events for a ticker",
-    description:
-      "Geopolitical/OSINT events relevant to a ticker via the exposure map " +
-      "(the same table that feeds the forecast layer) — conflicts, sanctions, " +
-      "cyber advisories, and other event-feed hits.",
-    params: [
-      { name: "ticker", type: "string", required: true },
-      { name: "since_hours", type: "integer (1-720)", required: false, description: "Lookback window. Default 48." },
-      { name: "limit", type: "integer (≤200)", required: false, description: "Max events. Default 30." },
-    ],
-    returns: "Array of OSINT event objects ordered newest first.",
-  },
-
   // ── AI ───────────────────────────────────────────────────
   {
     name: "get_multibagger_candidates",
