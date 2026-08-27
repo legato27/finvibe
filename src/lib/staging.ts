@@ -238,7 +238,7 @@ async function readThoughts(ticker: string): Promise<StagedHit | null> {
   const asOf = row.thoughts_generated_at;
   if (!asOf || !withinWindow(asOf, THOUGHTS_MAX_AGE)) return null;
 
-  const { chosen, wasFallback } = resolveThoughtsLocale(row.thoughts_json, "en");
+  const chosen = englishThoughts(row.thoughts_json);
   if (!chosen) return null;
 
   // Same body the DGX route builds in get_stock_thoughts.
@@ -246,7 +246,7 @@ async function readThoughts(ticker: string): Promise<StagedHit | null> {
     body: {
       ticker,
       locale: "en",
-      locale_fallback: wasFallback,
+      locale_fallback: false,
       thoughts: chosen,
       summary: chosen.verdict ?? row.thoughts_summary,
       generated_at: asOf,
@@ -260,42 +260,30 @@ async function readThoughts(ticker: string): Promise<StagedHit | null> {
 }
 
 /**
- * Mirror of resolve_thoughts_for_locale / normalize_bilingual_thoughts in
- * backend/app/services/analytics/llm_stock_analyst.py. thoughts_json is
- * either the bilingual shape {en, zh?} or a legacy flat blob, which that code
- * treats as English.
+ * Pull the English thoughts out of `thoughts_json`.
  *
- * The one behaviour deliberately NOT mirrored is the backfill: the live route
- * queues a task when a locale is missing. This path runs precisely when the
- * box that would run that task is unreachable, so there is nothing to queue.
+ * The column still holds two historical shapes: a legacy flat blob (written
+ * before the app carried a locale at all) and the bilingual `{en, zh?}`
+ * wrapper from the period when it shipped a Chinese locale. Both have to be
+ * read, so the unwrapping stays.
+ *
+ * What does NOT stay is the old "any locale is better than nothing" fallback.
+ * The app has been English-only since the zh locale was dropped, and a name
+ * whose row only ever got a `zh` blob would otherwise render a card of
+ * Chinese prose during a DGX outage — the one moment nobody can regenerate
+ * it. No English copy means no staged answer, and the caller sees the real
+ * upstream failure instead.
  */
-function resolveThoughtsLocale(
-  blob: unknown,
-  locale: string,
-): { chosen: Record<string, unknown> | null; wasFallback: boolean } {
-  if (!blob || typeof blob !== "object") return { chosen: null, wasFallback: false };
+function englishThoughts(blob: unknown): Record<string, unknown> | null {
+  if (!blob || typeof blob !== "object") return null;
   const obj = blob as Record<string, unknown>;
   const keys = Object.keys(obj);
   const isBilingual =
     keys.length > 0 &&
     keys.every((k) => k === "en" || k === "zh") &&
     keys.some((k) => obj[k] && typeof obj[k] === "object");
-  const bilingual = isBilingual ? obj : { en: obj };
-
-  const pick = (k: string) => {
-    const v = bilingual[k];
-    return v && typeof v === "object" ? (v as Record<string, unknown>) : null;
-  };
-
-  const exact = pick(locale);
-  if (exact) return { chosen: exact, wasFallback: false };
-  const en = pick("en");
-  if (en) return { chosen: en, wasFallback: true };
-  for (const k of Object.keys(bilingual)) {
-    const v = pick(k);
-    if (v) return { chosen: v, wasFallback: true };
-  }
-  return { chosen: null, wasFallback: false };
+  const en = isBilingual ? obj.en : obj;
+  return en && typeof en === "object" ? (en as Record<string, unknown>) : null;
 }
 
 function withinWindow(asOf: string, maxAge: number): boolean {
