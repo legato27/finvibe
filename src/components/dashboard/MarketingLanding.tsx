@@ -116,7 +116,6 @@ export function MarketingLanding() {
             { icon: Layers, title: t("featSectorRotationTitle"), bars: [70, 45, 85, 30, 60] },
             { icon: TrendingUp, title: t("featOptionsFlowTitle"), bars: [40, 80, 55, 90, 35] },
             { icon: Brain, title: t("lockedPanelWatchlist"), bars: [65, 50, 75, 40, 88] },
-            { icon: Radio, title: t("featOsintFeedTitle"), bars: [55, 70, 35, 80, 50] },
           ].map(({ icon: Icon, title, bars }) => (
             <div key={title} className="relative rounded-xl border border-border bg-card overflow-hidden group">
               <div className="p-4 blur-[3px] opacity-60 select-none pointer-events-none" aria-hidden>
@@ -200,7 +199,6 @@ export function MarketingLanding() {
             { icon: Shield, title: t("featVixTermTitle"), desc: t("featVixTermDesc") },
             { icon: Radio, title: t("featLiveNewsTitle"), desc: t("featLiveNewsDesc") },
             { icon: Activity, title: t("featCryptoPulseTitle"), desc: t("featCryptoPulseDesc") },
-            { icon: Layers, title: t("featOsintFeedTitle"), desc: t("featOsintFeedDesc") },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="card-3d p-4 rounded-xl border border-border bg-card">
               <Icon className="w-5 h-5 text-primary mb-3" />

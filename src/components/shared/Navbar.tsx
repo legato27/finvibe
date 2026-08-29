@@ -17,7 +17,7 @@ const themeOptions = [
 
 // Active when the path equals the href, sits beneath it, or matches one of the
 // secondary routes that share a top-level entry (e.g. Screeners → ranked /
-// multibagger / options; Intelligence → /osint/*). "/" matches exactly only.
+// multibagger / options). "/" matches exactly only.
 function isActive(pathname: string, href: string, match?: string[]): boolean {
   const targets = match ?? [href];
   return targets.some((t) =>
@@ -64,11 +64,9 @@ export default function Navbar() {
 
   // Primary IA: Market Dashboard · Screeners · Intelligence · Portfolios · Watchlists.
   // Screeners fans out to ranked/multibagger/options via ScreenerTabs;
-  // Intelligence fans out to wire/map/timeline (+ actors/indices) under /osint.
   const navItems: { href: string; label: string; icon: typeof Activity; public: boolean; match?: string[] }[] = [
     { href: "/", label: tNav("dashboard"), icon: Activity, public: true },
     { href: "/ranked", label: tNav("screeners"), icon: ListOrdered, public: true, match: ["/ranked", "/multibagger", "/options"] },
-    { href: "/osint", label: tNav("osint"), icon: Radio, public: true, match: ["/osint"] },
     { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
     { href: "/watchlist", label: tNav("watchlist"), icon: Eye, public: false },
   ];

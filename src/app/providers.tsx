@@ -4,6 +4,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useState } from "react";
 import { ThemeProvider } from "@/components/shared/ThemeProvider";
 import Navbar from "@/components/shared/Navbar";
+import StaleDataBanner from "@/components/common/StaleDataBanner";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -20,6 +21,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <div className="min-h-screen flex flex-col">
           <Navbar />
+          {/* Renders nothing unless the proxy has answered something from
+              the Supabase staging tier. Above the content, below the nav, so
+              it is the first thing read on the page it qualifies. */}
+          <StaleDataBanner />
           <main className="flex-1 container mx-auto px-4 py-6 max-w-[1600px]">
             {children}
           </main>

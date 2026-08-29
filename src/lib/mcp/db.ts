@@ -52,6 +52,49 @@ export async function kickoffEnrichment(
   }
 }
 
+// ── The enrichment queue ───────────────────────────────────
+//
+// Enrichment used to be requested by writing enrichment_status='pending'
+// onto the shared stock_catalog row, which DGX's poller treated as a work
+// queue. Combined with `for insert to authenticated with check (true)`,
+// that made the super-admin gate on /api/enrich decorative: a logged-in
+// user never had to call it — one insert with the browser's anon key
+// enqueued the full GPU/LLM pipeline, unattributed and unbounded.
+//
+// Requests now live in public.enrichment_requests, and the only supported
+// way in is the file_enrichment_request RPC (supabase/018), which caps by
+// the user named in the call regardless of which key made it. That last
+// detail matters here: this module talks to Supabase with the SERVICE-ROLE
+// client, where auth.uid() is null, so an application-side gate would be
+// the only thing standing between an MCP token and an unbounded queue.
+// Putting the cap in the function instead means it holds on both paths.
+
+export type EnrichmentOutcome =
+  | "filed"          // queued; DGX will pick it up
+  | "already_open"   // someone already asked for this ticker
+  | "capped"         // this user is at their limit
+  | "invalid_ticker"
+  | "error";
+
+export async function fileEnrichmentRequest(
+  supabase: ServiceSupabase,
+  ticker: string,
+  userId: string,
+  source: "web" | "mcp" | "admin",
+): Promise<{ ticker: string; outcome: EnrichmentOutcome; error?: string }> {
+  const t = tickerOf(ticker);
+  const { data, error } = await supabase.rpc("file_enrichment_request", {
+    p_ticker: t,
+    p_user: userId,
+    p_source: source,
+  });
+  if (error) {
+    console.error(`[enrich] filing ${t} failed`, error.message);
+    return { ticker: t, outcome: "error", error: error.message.slice(0, 200) };
+  }
+  return { ticker: t, outcome: (data as EnrichmentOutcome) ?? "error" };
+}
+
 // Find tickers across the user's watchlists + portfolio holdings whose
 // stock_catalog rows are still stuck enriching. "Stuck" means:
 //   - enrichment_status = 'pending', OR
@@ -129,22 +172,47 @@ export async function sweepUserEnrichment(
   supabase: ServiceSupabase,
   isSuperAdmin: boolean,
   limit = 25,
-): Promise<{ enriched: string[]; failed: string[] }> {
-  // Only super admins trigger enrichment; non-admin sweeps are a no-op.
-  if (!isSuperAdmin) return { enriched: [], failed: [] };
+): Promise<{ enriched: string[]; queued: string[]; capped: string[]; failed: string[] }> {
   const tickers = await findStaleEnrichmentTickers(userId, supabase, limit);
-  if (!tickers.length) return { enriched: [], failed: [] };
-  // Bounded concurrency so a wide sweep doesn't fan out one request per ticker.
-  const results = await pooledMap(tickers, 5, (t) =>
+  if (!tickers.length) return { enriched: [], queued: [], capped: [], failed: [] };
+
+  // File first, always. Even for a super admin: the request row is what makes
+  // the work attributable and what the poller falls back to if the direct
+  // kick below cannot reach the box. The cap in the RPC is what stops a
+  // sweep from becoming an unbounded fan-out.
+  const filed = await pooledMap(tickers, 5, (t) =>
+    fileEnrichmentRequest(supabase, t, userId, "web"),
+  );
+
+  const queued: string[] = [];
+  const capped: string[] = [];
+  const failed: string[] = [];
+  const kickable: string[] = [];
+  filed.forEach((r, i) => {
+    const t = tickers[i];
+    if (!r) { failed.push(t); return; }
+    if (r.outcome === "filed") { queued.push(t); kickable.push(t); }
+    else if (r.outcome === "already_open") kickable.push(t);
+    else if (r.outcome === "capped") capped.push(t);
+    else failed.push(t);
+  });
+
+  // Super admins additionally get the immediate kick, so an admin sweep does
+  // not wait on the webhook. Everyone else's requests are driven by the
+  // Supabase DB webhook, with the 10-minute poll behind it.
+  if (!isSuperAdmin || !kickable.length) {
+    return { enriched: [], queued, capped, failed };
+  }
+  const results = await pooledMap(kickable, 5, (t) =>
     kickoffEnrichment(supabase, t, isSuperAdmin),
   );
   const enriched: string[] = [];
-  const failed: string[] = [];
   results.forEach((r, i) => {
-    if (r?.kicked) enriched.push(tickers[i]);
-    else failed.push(tickers[i]);
+    // A failed kick is not a failed request — the row stays 'queued' and the
+    // poller retries. Only report what actually started.
+    if (r?.kicked) enriched.push(kickable[i]);
   });
-  return { enriched, failed };
+  return { enriched, queued, capped, failed };
 }
 
 // ── Profile ────────────────────────────────────────────────
@@ -225,6 +293,9 @@ async function getOrCreateStock(supabase: ServiceSupabase, ticker: string) {
     .maybeSingle();
   if (existing.data) return existing.data;
 
+  // A blank row. enrichment_status is a DISPLAY state now, not a work queue —
+  // nothing schedules off it, so this creates a badge, not a GPU hour. The
+  // RLS policy in 018 enforces the same blankness for browser inserts.
   const { data, error } = await supabase
     .from("stock_catalog")
     .insert({ ticker: t, enrichment_status: "pending" })
@@ -247,7 +318,14 @@ export async function addToWatchlist(
     .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
   if (error) throw new Error(error.message);
 
-  const enrichment = await kickoffEnrichment(supabase, stock.ticker, isSuperAdmin);
+  // File the request before kicking. The row is what makes the work
+  // attributable and capped, and what the DGX poller retries from if the
+  // direct kick below cannot reach the box.
+  const request = await fileEnrichmentRequest(supabase, stock.ticker, userId, "mcp");
+  const enrichment =
+    request.outcome === "filed" || request.outcome === "already_open"
+      ? await kickoffEnrichment(supabase, stock.ticker, isSuperAdmin)
+      : { kicked: false, skipped: true as const };
 
   return {
     watchlist_id: args.watchlist_id,
@@ -255,12 +333,15 @@ export async function addToWatchlist(
     stock_id: stock.id,
     enrichment: {
       ...enrichment,
+      request: request.outcome,
       note:
         "Enrichment requested from DGX (the source of truth). Name/sector/price " +
         "mirror to stock_catalog within seconds; moat, Fair Value " +
         "(intrinsic_value), LLM intrinsic value and thoughts follow in 30-90s as " +
         "DGX completes and syncs. enrichment_status flips pending → processing → " +
-        "done; this client no longer writes those fields itself.",
+        "done; this client no longer writes those fields itself. " +
+        "`request` reports whether the ask was queued, already open for this " +
+        "ticker, or declined because the requester is at their per-user cap.",
     },
   };
 }

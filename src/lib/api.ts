@@ -2,6 +2,7 @@
  * API client — all backend requests go through here.
  */
 import axios, { AxiosInstance } from "axios";
+import { noteFresh, noteStale } from "@/lib/staleness";
 
 // Use the env var ONLY if it is a well-formed absolute http(s) URL (e.g. a
 // remote server for self-hosted/LAN/Tailscale deploys). A bare host like
@@ -29,6 +30,28 @@ api.interceptors.request.use((config) => {
   config.headers = config.headers || {};
   (config.headers as Record<string, string>)["Accept-Language"] = "en";
   return config;
+});
+
+// Catch responses the proxy answered from the Supabase staging tier. Those
+// carry X-FinVibe-Stale and are otherwise byte-identical to a live response,
+// which is what lets every component keep working through a DGX outage — and
+// also what would let a three-day-old option chain render as if it were live
+// if nobody said so. StaleDataBanner reads this store.
+//
+// Same-origin, so the custom header is readable without an
+// Access-Control-Expose-Headers dance. When NEXT_PUBLIC_API_URL points at a
+// remote backend the requests bypass the proxy entirely and there is no
+// fallback to report — the header is simply absent and nothing marks stale.
+api.interceptors.response.use((response) => {
+  const asOf = response.headers?.["x-finvibe-stale"];
+  const url = response.config?.url ?? "";
+  if (typeof asOf === "string" && asOf) {
+    const family = response.headers?.["x-finvibe-stale-family"];
+    noteStale(url, asOf, typeof family === "string" ? family : "data");
+  } else if (url) {
+    noteFresh(url);
+  }
+  return response;
 });
 
 // ── Watchlist ─────────────────────────────────────────────────
@@ -247,84 +270,6 @@ export const sentimentApi = {
     api.get(`/api/sentiment/finnhub/${category}`).then((r) => r.data),
 };
 
-// ── OSINT ─────────────────────────────────────────────────────
-
-export type OsintEvent = {
-  id: string;
-  event_type: string;
-  event_code: string | null;
-  urgency: "low" | "medium" | "high" | "critical";
-  verification_level: string;
-  country_code: string | null;
-  location_name: string | null;
-  location: { type: string; coordinates: [number, number] } | null;
-  occurred_at: string | null;
-  summary: string | null;
-  tone: number | null;
-  primary_article_url: string | null;
-  article_count: number;
-  actors: { id: string; kind: string; name: string; role: string }[];
-};
-
-export type OsintArticle = {
-  content_hash: string;
-  source: string;
-  source_kind: string;
-  title: string | null;
-  summary: string | null;
-  url: string | null;
-  published_at: string | null;
-  language: string;
-  event_id: string | null;
-};
-
-export type OsintIndex = {
-  index_name: string;
-  value: number;
-  window_hours: number;
-  as_of: string;
-  components: Record<string, number>;
-};
-
-export const osintApi = {
-  events: (params?: { event_type?: string; urgency?: string; country?: string; since_hours?: number; limit?: number }) => {
-    const p = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
-    return api.get<OsintEvent[]>(`/api/osint/events?${p}`).then((r) => r.data);
-  },
-  event: (id: string) => api.get<OsintEvent>(`/api/osint/events/${id}`).then((r) => r.data),
-  eventsForTicker: (ticker: string, since_hours = 48, limit = 30) =>
-    api.get<OsintEvent[]>(`/api/osint/events/for-ticker/${ticker}?since_hours=${since_hours}&limit=${limit}`)
-      .then((r) => r.data),
-  timeline: (params?: { granularity?: "hour" | "day"; event_type?: string; actor?: string; since_hours?: number }) => {
-    const p = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
-    return api.get<{ ts: string; event_type: string; count: number }[]>(`/api/osint/timeline?${p}`).then((r) => r.data);
-  },
-  map: (params?: { bbox?: string; event_type?: string; since_hours?: number; limit?: number }) => {
-    const p = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
-    return api.get(`/api/osint/map?${p}`).then((r) => r.data);
-  },
-  actors: (params?: { kind?: string; q?: string; limit?: number }) => {
-    const p = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
-    return api.get(`/api/osint/actors?${p}`).then((r) => r.data);
-  },
-  actor: (id: string) => api.get(`/api/osint/actors/${encodeURIComponent(id)}`).then((r) => r.data),
-  indices: (params?: { names?: string; region?: string; window?: number }) => {
-    const p = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
-    return api.get<OsintIndex[]>(`/api/osint/indices?${p}`).then((r) => r.data);
-  },
-  articles: (params?: { source_kind?: string; since_hours?: number; limit?: number }) => {
-    const p = new URLSearchParams();
-    Object.entries(params || {}).forEach(([k, v]) => v != null && p.set(k, String(v)));
-    return api.get<OsintArticle[]>(`/api/osint/articles?${p}`).then((r) => r.data);
-  },
-};
-
-// ── Backtest ──────────────────────────────────────────────────
 
 export const backtestApi = {
   run: (ticker: string, body: { timeframe?: string; strategies?: string[] }) =>
