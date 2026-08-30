@@ -128,9 +128,29 @@ export const optionsApi = {
   // everything else is weighted, and names that fail a gate come back in the
   // `rejected` tier WITH the reason instead of being dropped — an empty screen
   // teaches the trader nothing about why it is empty.
-  desk: (strategy: "csp" | "covered_call" = "csp", limit = 120) =>
+  desk: (
+    strategy: "csp" | "covered_call" = "csp",
+    limit = 120,
+    opts?: { collateral?: number; maxNamePct?: number; maxBucketPct?: number; maxPositions?: number },
+  ) => {
+    const p = new URLSearchParams({ strategy, limit: String(limit) });
+    // Collateral turns the ranking into a sized book. Omitted, the desk is a
+    // ranking only — which is the honest default, since a book depends on cash
+    // the desk cannot know.
+    if (opts?.collateral) p.set("collateral", String(opts.collateral));
+    if (opts?.maxNamePct) p.set("max_name_pct", String(opts.maxNamePct));
+    if (opts?.maxBucketPct) p.set("max_bucket_pct", String(opts.maxBucketPct));
+    if (opts?.maxPositions) p.set("max_positions", String(opts.maxPositions));
+    return api.get(`/api/options/desk?${p.toString()}`).then((r) => r.data);
+  },
+  // Tier-1 assignment backtest — path facts from five years of daily candles.
+  // No option prices, so no P&L: assignment rate, touch rate, how deep it went,
+  // whether the assigned shares recovered.
+  assignmentBacktest: (dte = 30, delta = 0.25, type: "put" | "call" = "put") =>
     api
-      .get(`/api/options/desk?strategy=${strategy}&limit=${limit}`)
+      .get(`/api/options/backtest/assignment?dte=${dte}&delta=${delta}&type=${type}`, {
+        timeout: 120_000,
+      })
       .then((r) => r.data),
   // Timestamped log of the ranked-book strategy for this name — one entry per
   // change. Feeds the "Strategy log" section in the stock-detail Options tab.

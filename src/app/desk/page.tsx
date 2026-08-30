@@ -30,6 +30,8 @@ import { LastUpdated } from "@/components/common/LastUpdated";
 import GuideCard from "@/components/ui/GuideCard";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 import { ShieldAlert, ShieldCheck, TrendingDown, Landmark } from "lucide-react";
+import SizedBook, { type Book } from "@/components/stock/SizedBook";
+import AssignmentBacktest from "@/components/stock/AssignmentBacktest";
 
 type Tier = "qualified" | "watch" | "rejected";
 type Strategy = "csp" | "covered_call";
@@ -55,6 +57,8 @@ interface DeskRow {
   ticker: string;
   name: string | null;
   sector: string | null;
+  sector_raw?: string | null;
+  correlation_bucket?: string;
   last_price: number | null;
   spot: number | null;
   verdict: string | null;
@@ -108,6 +112,7 @@ interface DeskRow {
 interface DeskResponse {
   strategy: Strategy;
   universe_size: number;
+  book: Book | null;
   count: number;
   tiers: Record<Tier, number>;
   gates: { solvency: string; liquidity: string };
@@ -134,10 +139,11 @@ function daysToEarnings(iso: string | null): number | null {
 export default function OptionDeskPage() {
   const [strategy, setStrategy] = useState<Strategy>("csp");
   const [tierFilter, setTierFilter] = useState<Tier | "all">("all");
+  const [collateral, setCollateral] = useState<number | null>(null);
 
   const { data, isLoading, error } = useQuery<DeskResponse>({
-    queryKey: ["option-desk", strategy],
-    queryFn: () => optionsApi.desk(strategy),
+    queryKey: ["option-desk", strategy, collateral],
+    queryFn: () => optionsApi.desk(strategy, 400, { collateral: collateral ?? undefined }),
     staleTime: 15 * 60_000,
     refetchInterval: 30 * 60_000,
   });
@@ -154,6 +160,7 @@ export default function OptionDeskPage() {
   const filters: FilterDef<DeskRow>[] = [
     { key: "ticker", label: "Ticker", kind: "text", value: (r) => r.ticker },
     { key: "sector", label: "Sector", kind: "select", value: (r) => r.sector ?? "" },
+    { key: "bucket", label: "Correlation bucket", kind: "select", value: (r) => r.correlation_bucket ?? "" },
     { key: "tier", label: "Tier", kind: "select", value: (r) => r.tier },
     { key: "score", label: "Score", kind: "number", value: (r) => Math.round(r.score * 100) },
     { key: "ivp", label: "IV percentile", kind: "number", value: (r) => r.iv_percentile },
@@ -609,6 +616,16 @@ export default function OptionDeskPage() {
           filters={filters}
         />
       )}
+
+      {isCsp ? (
+        <SizedBook
+          book={data?.book ?? null}
+          collateral={collateral}
+          onCollateralChange={setCollateral}
+        />
+      ) : null}
+
+      <AssignmentBacktest />
 
       <GuideCard
         title="How to read this desk"
