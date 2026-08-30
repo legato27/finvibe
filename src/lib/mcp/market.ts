@@ -122,10 +122,18 @@ export const market = {
   // thoughts/models) and is the SOLE writer of the Supabase stock_catalog /
   // llm_analysis mirror. The web/MCP clients only request enrichment here; they
   // do not write detail fields or enrichment_status themselves.
-  enrich: (ticker: string) =>
+  // `timeoutMs` matters on the one caller that runs inside a serverless
+  // function with a deadline (the Supabase webhook receiver, which must keep
+  // enough budget to release its claim if this call does not come back).
+  // Everything else leaves it unset and keeps the old unbounded wait.
+  enrich: (ticker: string, timeoutMs?: number) =>
     dgxJson<unknown>(
       `/api/watchlist/enrich`,
-      { method: "POST", body: JSON.stringify({ ticker }) },
+      {
+        method: "POST",
+        body: JSON.stringify({ ticker }),
+        ...(timeoutMs ? { signal: AbortSignal.timeout(timeoutMs) } : {}),
+      },
     ),
 };
 

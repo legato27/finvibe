@@ -43,6 +43,23 @@ import { market } from "@/lib/mcp/market";
 
 export const maxDuration = 30;
 
+/**
+ * How long to wait on the DGX kick before giving up and releasing the claim.
+ *
+ * This has to be comfortably inside maxDuration, and the reason is the whole
+ * point of the route. If the call hangs — a half-open tunnel, which is the
+ * exact failure this queue was built around — the function is killed at 30 s
+ * with the catch below never reached, and the request is left at
+ * 'processing'. The partial unique index then blocks that ticker for
+ * EVERYONE until DGX's 30-minute reaper releases it. Better to abort at 12 s,
+ * hand the row back to 'queued', and let the poller retry in ≤10 minutes.
+ *
+ * The kick only enqueues on DGX; the pipeline itself runs asynchronously
+ * there and reports back through finalize_sync_task, so 12 s is generous for
+ * what this call actually does.
+ */
+const ENRICH_TIMEOUT_MS = 12_000;
+
 type HookPayload = {
   type?: string;
   table?: string;
@@ -123,11 +140,16 @@ export async function POST(request: NextRequest) {
     .eq("ticker", row.ticker);
 
   try {
-    await market.enrich(row.ticker);
+    await market.enrich(row.ticker, ENRICH_TIMEOUT_MS);
   } catch (err) {
     // Release the claim so poll_enrichment_requests retries in ≤10 minutes.
     // Leaving it at 'processing' would strand the request behind the partial
     // unique index and block the ticker from ever being re-requested.
+    //
+    // A timeout lands here too, and may mean DGX did receive the kick and is
+    // working on it. Releasing anyway is the right trade: /watchlist/enrich
+    // is idempotent per ticker, so a duplicate kick from the poller costs
+    // nothing, whereas a stranded row costs that ticker half an hour.
     console.error(`[hook] enrich ${row.ticker} failed, releasing claim`, err);
     await supabase
       .from("enrichment_requests")
