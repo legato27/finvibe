@@ -903,3 +903,195 @@ export function useAddNote() {
     onSuccess: (_data, vars) => qc.invalidateQueries({ queryKey: ["notes", vars.ticker.toUpperCase()] }),
   });
 }
+
+// ── Options trade journal ───────────────────────────────────
+//
+// The bridge between "the engine recommended this" and "I took it, at this
+// fill". Everything else on the desk is either a model's opinion or a paper
+// record kept by DGX; this is the only place a real fill is written down, and
+// therefore the only place the gap between the mid-price estimates the desk
+// quotes and what you actually got will ever become visible.
+
+export type OptionStrategy =
+  | "cash_secured_put"
+  | "covered_call"
+  | "put_credit_spread"
+  | "call_credit_spread";
+
+export type TradeStatus = "open" | "closed" | "expired" | "assigned";
+
+export interface OptionsTrade {
+  id: number;
+  ticker: string;
+  strategy: OptionStrategy;
+  strike_price: number;
+  premium: number;
+  contracts: number;
+  expiry_date: string;
+  entry_date: string;
+  underlying_price_at_entry: number | null;
+  status: TradeStatus;
+  close_date: string | null;
+  close_price: number | null;
+  underlying_price_at_close: number | null;
+  realized_pnl: number | null;
+  return_on_capital: number | null;
+  annualized_return: number | null;
+  outcome_notes: string | null;
+  was_profitable: boolean | null;
+  created_at: string;
+}
+
+export function useOptionsTrades() {
+  return useQuery<OptionsTrade[]>({
+    queryKey: ["options-trades"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("options_trades")
+        .select("*")
+        .order("status", { ascending: true })
+        .order("expiry_date", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as OptionsTrade[];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useAddOptionsTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (t: {
+      ticker: string;
+      strategy: OptionStrategy;
+      strike_price: number;
+      premium: number;
+      contracts: number;
+      expiry_date: string;
+      entry_date?: string;
+      underlying_price_at_entry?: number | null;
+      outcome_notes?: string | null;
+    }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
+      const { data, error } = await supabase
+        .from("options_trades")
+        .insert({
+          ...t,
+          ticker: t.ticker.toUpperCase(),
+          entry_date: t.entry_date || new Date().toISOString().slice(0, 10),
+          status: "open",
+          user_id: user.id,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
+  });
+}
+
+/**
+ * Close a trade and write its outcome.
+ *
+ * The P&L arithmetic is here rather than in a database trigger so it stays
+ * readable next to the rules it encodes, and there are two rules worth being
+ * explicit about.
+ *
+ * A short option that EXPIRES worthless keeps the whole credit. One bought back
+ * early keeps the difference. Both are straightforward.
+ *
+ * ASSIGNMENT IS NOT A WIN, and this is the one that distorts a wheel journal if
+ * you let it. The option leg did technically profit — you keep every cent of
+ * the premium — but you are now holding shares at a strike the market has moved
+ * below. Recording the credit as realised profit would make every assignment
+ * look like a success and quietly inflate the win rate of the exact scenario
+ * the desk's whole quality gate exists to survive. So an assigned trade records
+ * the credit as the option P&L, marks `was_profitable` from the POSITION (spot
+ * against the net basis of strike minus premium), and leaves the share leg to
+ * the portfolio where it belongs.
+ */
+export function useCloseOptionsTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      id: number;
+      status: Exclude<TradeStatus, "open">;
+      close_date?: string;
+      /** Premium paid to buy the contract back. Omit when it expired. */
+      close_price?: number | null;
+      underlying_price_at_close?: number | null;
+      outcome_notes?: string | null;
+    }) => {
+      const { data: trade, error: readErr } = await supabase
+        .from("options_trades")
+        .select("*")
+        .eq("id", args.id)
+        .single();
+      if (readErr) throw readErr;
+
+      const t = trade as OptionsTrade;
+      const shares = t.contracts * 100;
+      const credit = t.premium * shares;
+      const paidBack = (args.close_price ?? 0) * shares;
+
+      // The option leg. Assigned and expired both keep the full credit; a
+      // buy-back keeps the difference.
+      const realized = args.status === "closed" ? credit - paidBack : credit;
+
+      // Capital at risk is the collateral, which is what the return is earned
+      // on — not the premium.
+      const capital = t.strike_price * shares;
+      const closeDate = args.close_date || new Date().toISOString().slice(0, 10);
+      const days = Math.max(
+        1,
+        Math.round(
+          (new Date(closeDate).getTime() - new Date(t.entry_date).getTime()) / 86_400_000,
+        ),
+      );
+      const roc = capital > 0 ? realized / capital : null;
+
+      // Assignment is judged on the position, not on the option leg.
+      const netBasis = t.strike_price - t.premium;
+      const spot = args.underlying_price_at_close ?? null;
+      const profitable =
+        args.status === "assigned"
+          ? spot != null
+            ? spot >= netBasis
+            : null
+          : realized > 0;
+
+      const { data, error } = await supabase
+        .from("options_trades")
+        .update({
+          status: args.status,
+          close_date: closeDate,
+          close_price: args.close_price ?? null,
+          underlying_price_at_close: spot,
+          realized_pnl: realized,
+          return_on_capital: roc,
+          annualized_return: roc != null ? (roc * 365) / days : null,
+          was_profitable: profitable,
+          outcome_notes: args.outcome_notes ?? t.outcome_notes ?? null,
+        })
+        .eq("id", args.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
+  });
+}
+
+export function useDeleteOptionsTrade() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from("options_trades").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
+  });
+}

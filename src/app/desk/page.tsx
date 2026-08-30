@@ -34,6 +34,7 @@ import SizedBook, { type Book } from "@/components/stock/SizedBook";
 import AssignmentBacktest from "@/components/stock/AssignmentBacktest";
 import CoveredCallBook from "@/components/stock/CoveredCallBook";
 import RecoTrackRecord from "@/components/stock/RecoTrackRecord";
+import TradeJournal from "@/components/stock/TradeJournal";
 
 type Tier = "qualified" | "watch" | "rejected";
 type Strategy = "csp" | "covered_call";
@@ -594,6 +595,8 @@ export default function OptionDeskPage() {
       ) : (
         <CoveredCallBook />
       )}
+
+      <TradeJournal />
 
       <AssignmentBacktest />
 
