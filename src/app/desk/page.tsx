@@ -93,6 +93,10 @@ interface DeskRow {
 
   resistance?: Resistance;
 
+  is_etf?: boolean;
+  /** Components that do not apply to this instrument at all (a fund has no F-Score). */
+  score_na?: string[];
+
   gates: Gate[];
   gates_failed: string[];
   tier: Tier;
@@ -168,6 +172,14 @@ export default function OptionDeskPage() {
       cell: (r) => (
         <span>
           <span className="font-mono font-bold">{r.ticker}</span>
+          {r.is_etf ? (
+            <span
+              className="ml-1.5 rounded border border-border px-1 py-px align-middle text-[9px] font-semibold uppercase tracking-wide text-muted-foreground"
+              title="Fund — no issuer solvency to gate on, and no F-Score or DCF to score. Judged on volatility, dislocation and yield only."
+            >
+              ETF
+            </span>
+          ) : null}
           <span className="ml-2 hidden text-xs text-muted-foreground lg:inline">{r.name}</span>
         </span>
       ),
@@ -204,18 +216,35 @@ export default function OptionDeskPage() {
       sortable: true,
       align: "right",
       sortValue: (r) => r.score,
-      cell: (r) => (
-        <span
-          className="nums font-semibold"
-          title={
-            Object.entries(r.score_breakdown)
-              .map(([k, v]) => `${k}: ${v == null ? "no data" : v.toFixed(2)}`)
-              .join("\n") + `\n\ninputs available: ${Math.round(r.score_coverage * 100)}% of weight`
-          }
-        >
-          {Math.round(r.score * 100)}
-        </span>
-      ),
+      cell: (r) => {
+        // A score computed from a third of the weight is not the same claim as
+        // one computed from all of it — AIPO read 100 off a single component.
+        // The number stays, but it stops looking authoritative.
+        const thin = r.score_coverage < 0.6;
+        const na = r.score_na ?? [];
+        return (
+          <span
+            className={`nums font-semibold ${thin ? "text-muted-foreground" : ""}`}
+            title={
+              Object.entries(r.score_breakdown)
+                .map(([k, v]) =>
+                  na.includes(k)
+                    ? `${k}: n/a for a fund`
+                    : `${k}: ${v == null ? "not measured" : v.toFixed(2)}`)
+                .join("\n") +
+              `\n\n${Math.round(r.score_coverage * 100)}% of the applicable weight is informed` +
+              (thin ? " — too thin to qualify on" : "")
+            }
+          >
+            {Math.round(r.score * 100)}
+            {thin ? (
+              <span className="ml-1 text-[10px] font-normal">
+                ({Math.round(r.score_coverage * 100)}%)
+              </span>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       key: "verdict",
@@ -608,6 +637,16 @@ export default function OptionDeskPage() {
               "Annualized return (15%), capped at 40% — uncapped, yield alone ranks a 150%-annualized penny stock above every quality signal.",
               "Margin of safety (10%) — the smallest weight on purpose. The DCF behind it is missing for 37% of the universe and is unreliable on high-growth names.",
               "Where an input is missing the weight is redistributed, not scored zero — a measurement gap should not read as a finding.",
+            ],
+          },
+          {
+            title: "Funds are judged differently",
+            tone: "plain",
+            steps: [
+              "ETFs are in the book now. A fund has no issuer to go bankrupt, so the solvency gate asks a different question: whether the fund's STRUCTURE survives being held.",
+              "Leveraged, inverse and option-overlay funds are rejected outright. A daily-reset 2X fund decays through volatility and a 0DTE covered-call fund has already sold the upside — assignment leaves you holding something engineered to grind down, so \"happy to own it\" can never be true.",
+              "F-Score and margin of safety are marked n/a rather than missing, and dropped from the denominator. A fund is scored on volatility premium, dislocation and yield alone, so it is not penalised for failing to be a company.",
+              "A greyed score with a percentage next to it means only that share of the applicable weight was actually measured — read it as a hint, not a rating.",
             ],
           },
           {
