@@ -582,62 +582,8 @@ export default function OptionDeskPage() {
         })}
       </div>
 
-      {/* Tier counts double as the tier filter. */}
-      {tiers ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setTierFilter("all")}
-            aria-pressed={tierFilter === "all"}
-            className={`rounded border px-2 py-1 font-medium ${
-              tierFilter === "all" ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-card"
-            }`}
-          >
-            All {data?.universe_size ?? 0}
-          </button>
-          {(["qualified", "watch", "rejected"] as Tier[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTierFilter(t)}
-              aria-pressed={tierFilter === t}
-              className={`rounded border px-2 py-1 font-medium ${
-                tierFilter === t ? TIER_STYLE[t].cls : "border-border bg-card text-muted-foreground"
-              }`}
-            >
-              {TIER_STYLE[t].label} {tiers[t] ?? 0}
-            </button>
-          ))}
-          {data ? (
-            <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Gates: {data.gates.solvency} · {data.gates.liquidity}
-            </span>
-          ) : null}
-        </div>
-      ) : null}
-
-      {error ? (
-        <p className="rounded-lg border border-signal-short/40 bg-signal-short-bg p-3 text-sm text-signal-short">
-          Could not load the desk. The upstream analytics box may be unreachable — the screener tab
-          will still work from cached data.
-        </p>
-      ) : null}
-
-      {isLoading ? (
-        <p className="p-6 text-sm text-muted-foreground">Loading the desk…</p>
-      ) : (
-        <DataTable<DeskRow>
-          caption={`Option desk — ${isCsp ? "short put" : "covered call"} candidates`}
-          columns={columns}
-          rows={rows}
-          rowKey={(r) => r.ticker}
-          rowHref={(r) => `/stock/${r.ticker}`}
-          defaultSort={{ key: "score", dir: "desc" }}
-          filters={filters}
-        />
-      )}
-
+      {/* Decision first, then evidence, then the manual — the ranked table
+          below is for exploring, but most visits end at the book. */}
       {isCsp ? (
         <SizedBook
           book={data?.book ?? null}
@@ -706,6 +652,63 @@ export default function OptionDeskPage() {
           "Nothing on this page places an order. It reads persisted daily data — no live chain fetches, no broker connection."
         }
       />
+
+      {/* Tier counts double as the tier filter. */}
+      {tiers ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <button
+            type="button"
+            onClick={() => setTierFilter("all")}
+            aria-pressed={tierFilter === "all"}
+            className={`rounded border px-2 py-1 font-medium ${
+              tierFilter === "all" ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-card"
+            }`}
+          >
+            All {data?.universe_size ?? 0}
+          </button>
+          {(["qualified", "watch", "rejected"] as Tier[]).map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setTierFilter(t)}
+              aria-pressed={tierFilter === t}
+              className={`rounded border px-2 py-1 font-medium ${
+                tierFilter === t ? TIER_STYLE[t].cls : "border-border bg-card text-muted-foreground"
+              }`}
+            >
+              {TIER_STYLE[t].label} {tiers[t] ?? 0}
+            </button>
+          ))}
+          {data ? (
+            <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <ShieldAlert className="h-3.5 w-3.5" />
+              Gates: {data.gates.solvency} · {data.gates.liquidity}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
+
+      {error ? (
+        <p className="rounded-lg border border-signal-short/40 bg-signal-short-bg p-3 text-sm text-signal-short">
+          Could not load the desk. The upstream analytics box may be unreachable — the screener tab
+          will still work from cached data.
+        </p>
+      ) : null}
+
+      {isLoading ? (
+        <p className="p-6 text-sm text-muted-foreground">Loading the desk…</p>
+      ) : (
+        <DataTable<DeskRow>
+          caption={`Option desk — ${isCsp ? "short put" : "covered call"} candidates`}
+          columns={columns}
+          rows={rows}
+          rowKey={(r) => r.ticker}
+          rowHref={(r) => `/stock/${r.ticker}`}
+          defaultSort={{ key: "score", dir: "desc" }}
+          filters={filters}
+        />
+      )}
+
     </div>
   );
 }

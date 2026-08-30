@@ -89,9 +89,10 @@ export default function SizedBook({
             What fits in the book
           </h2>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            Cash-secured puts tie up strike × 100 per contract. Enter the cash you would commit and
-            the desk allocates it breadth-first — every name gets its first contract before any gets
-            a second — under a per-name and per-correlation-bucket cap.
+            A ranked list implies you can take all of it. You cannot — every cash-secured put ties
+            up strike × 100 until expiry, so the real question is which handful fit. Enter your
+            collateral and the desk allocates it breadth-first (every name gets its first contract
+            before any gets a second) under a per-name and per-correlation-bucket cap.
           </p>
         </div>
         <div className="flex items-end gap-2">
@@ -120,10 +121,39 @@ export default function SizedBook({
       </header>
 
       {!book ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          Enter your collateral to see the book. Without it the desk is a ranking only — which is
-          the honest default, since the book depends on cash the desk cannot know.
-        </p>
+        <div className="rounded border border-dashed border-border p-4">
+          <p className="mb-3 text-sm text-muted-foreground">
+            Type the cash you are willing to tie up, then <strong>Size it</strong>. Nothing is
+            ordered and nothing is saved — this is a paper allocation you can re-run with different
+            numbers.
+          </p>
+          <ol className="mb-3 max-w-2xl list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
+            <li>
+              <span className="text-foreground">Enter your collateral.</span> Cash-secured means you
+              set aside strike × 100 per contract until expiry. A $16 strike ties up $1,600; a $700
+              strike ties up $70,000.
+            </li>
+            <li>
+              <span className="text-foreground">Read the four tiles.</span> Deployed is what the
+              book uses, Cash idle is what it could not place, Est. credit is the premium collected
+              across every position.
+            </li>
+            <li>
+              <span className="text-foreground">Check the bucket chips.</span> They show
+              concentration by what moves together, not by sector label — a chip turning amber means
+              you are near the cap for that group.
+            </li>
+            <li>
+              <span className="text-foreground">Then place the trades yourself.</span> The desk
+              never touches a broker.
+            </li>
+          </ol>
+          <p className="max-w-2xl text-xs text-muted-foreground">
+            Without a number the desk stays a ranking. That is the honest default: which names score
+            best is a different question from which ones you can afford, and only you know the
+            second.
+          </p>
+        </div>
       ) : (
         <>
           <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-border bg-border sm:grid-cols-4">
@@ -230,7 +260,14 @@ export default function SizedBook({
             </p>
           ) : null}
 
-          <p className="mt-2 text-[11px] text-muted-foreground">
+          <p className="mt-3 text-[11px] text-muted-foreground">
+            <span className="font-medium text-foreground">Caps in force:</span> no name past{" "}
+            {(book.caps.max_name_pct * 100).toFixed(0)}% ({usd(book.caps.name_cap_usd)}), no
+            correlation bucket past {(book.caps.max_bucket_pct * 100).toFixed(0)}% (
+            {usd(book.caps.bucket_cap_usd)}), at most {book.caps.max_positions} positions. Change
+            your collateral to re-run.
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
             Credit is the engine&apos;s mid-price estimate. The market-data plan returns no bid/ask,
             so treat it as an upper bound. Caps are fixed fractional, not Kelly — half-Kelly on the
             settled sample is about 10% per position, and 284 overlapping trades in one regime is
