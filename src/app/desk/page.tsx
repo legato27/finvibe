@@ -33,6 +33,7 @@ import { ShieldAlert, ShieldCheck, TrendingDown, Landmark } from "lucide-react";
 import SizedBook, { type Book } from "@/components/stock/SizedBook";
 import AssignmentBacktest from "@/components/stock/AssignmentBacktest";
 import CoveredCallBook from "@/components/stock/CoveredCallBook";
+import RecoTrackRecord from "@/components/stock/RecoTrackRecord";
 
 type Tier = "qualified" | "watch" | "rejected";
 type Strategy = "csp" | "covered_call";
@@ -595,6 +596,8 @@ export default function OptionDeskPage() {
       )}
 
       <AssignmentBacktest />
+
+      <RecoTrackRecord />
 
       <GuideCard
         title="How to read this desk"
