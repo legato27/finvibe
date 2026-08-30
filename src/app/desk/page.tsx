@@ -32,6 +32,7 @@ import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 import { ShieldAlert, ShieldCheck, TrendingDown, Landmark } from "lucide-react";
 import SizedBook, { type Book } from "@/components/stock/SizedBook";
 import AssignmentBacktest from "@/components/stock/AssignmentBacktest";
+import CoveredCallBook from "@/components/stock/CoveredCallBook";
 
 type Tier = "qualified" | "watch" | "rejected";
 type Strategy = "csp" | "covered_call";
@@ -50,6 +51,14 @@ interface Resistance {
   gamma_wall_call_oi: number | null;
   gamma_wall_vs_spot_pct: number | null;
   max_pain: number | null;
+  hvn: number | null;
+  hvn_vs_spot_pct: number | null;
+  hvn_note?: string | null;
+  poc: number | null;
+  /** Lowest of the available reads — the first level a rally actually meets. */
+  resistance: number | null;
+  resistance_source: string | null;
+  resistance_vs_spot_pct?: number | null;
   note: string | null;
 }
 
@@ -397,26 +406,38 @@ export default function OptionDeskPage() {
       : ([
           {
             key: "wall",
-            header: "Gamma wall",
-            ariaLabel: "Nearest call open-interest wall above spot",
+            header: "Resistance",
+            ariaLabel: "Lowest resistance level above spot",
             sortable: true,
             align: "right",
-            sortValue: (r: DeskRow) => r.resistance?.gamma_wall ?? null,
+            sortValue: (r: DeskRow) => r.resistance?.resistance ?? null,
             cell: (r: DeskRow) => {
               const res = r.resistance;
-              if (!res?.gamma_wall) {
-                return <span className="text-muted-foreground" title={res?.note ?? undefined}>—</span>;
+              if (!res?.resistance) {
+                return (
+                  <span
+                    className="text-muted-foreground"
+                    title={res?.hvn_note ?? res?.note ?? "no level above spot in the stored data"}
+                  >
+                    —
+                  </span>
+                );
               }
+              const src =
+                res.resistance_source === "hvn" ? "volume shelf"
+                : res.resistance_source === "gamma_wall" ? "call OI wall"
+                : "max pain";
               return (
                 <span
                   className="nums"
-                  title={`${res.gamma_wall_call_oi?.toLocaleString()} call OI · ${fmt(
-                    res.gamma_wall_vs_spot_pct, 1, "%")} above spot. Sell ABOVE your cost basis, not just above this.`}
+                  title={
+                    `Lowest of: volume shelf ${res.hvn ?? "—"} · call OI wall ${res.gamma_wall ?? "—"}` +
+                    ` · max pain ${res.max_pain ?? "—"} (90-day POC ${res.poc ?? "—"}).` +
+                    ` Sell ABOVE your cost basis, not just above this.`
+                  }
                 >
-                  ${res.gamma_wall}
-                  <span className="ml-1 text-[10px] text-muted-foreground">
-                    {fmt(res.gamma_wall_vs_spot_pct, 1, "%")}
-                  </span>
+                  ${res.resistance}
+                  <span className="ml-1 text-[10px] text-muted-foreground">{src}</span>
                 </span>
               );
             },
@@ -623,7 +644,9 @@ export default function OptionDeskPage() {
           collateral={collateral}
           onCollateralChange={setCollateral}
         />
-      ) : null}
+      ) : (
+        <CoveredCallBook />
+      )}
 
       <AssignmentBacktest />
 
@@ -671,7 +694,9 @@ export default function OptionDeskPage() {
             tone: "short",
             steps: [
               "Check the Earnings column. A print inside the contract's life is flagged red — that is the most reliable way to turn a premium grind into a gap loss.",
-              "For covered calls, the gamma wall is where dealer hedging creates resistance. Your strike should be above BOTH that level and your own cost basis; the desk cannot see your basis.",
+              "For covered calls, resistance is the LOWEST of three independent reads: the nearest volume shelf above spot (where holders have basis and supply appears), the heaviest call open-interest strike (where dealer hedging pushes back), and max pain. Lowest, because a covered call is capped upside — being early is cheap and being late is what costs.",
+              "A dash in the Resistance column means the price has cleared all three. That is information, not a gap: there is no overhead supply, so a rally has nothing structural to get through. Sell further out, or do not sell the call at all.",
+              "Your strike must be above BOTH resistance and your own cost basis. The Covered calls panel joins your portfolio to these levels in your browser — your basis is never sent upstream.",
               "Annualized figures assume a mid fill. The current market-data plan returns no bid/ask, so treat every return here as an upper bound rather than an expectation.",
               "IV percentile is shown instead of IV rank throughout. Rank is a min/max statistic that one bad print flattens for a year.",
             ],
