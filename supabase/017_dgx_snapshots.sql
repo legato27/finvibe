@@ -67,6 +67,13 @@
 -- its serving window stays here as evidence; it just stops being served.
 -- HARD_TTL_DAYS in the prune task is the outer bound for rows nothing has
 -- refreshed in half a year — dead keys, not stale ones.
+--
+-- ── Re-running this file ───────────────────────────────────────────────
+--
+-- Idempotent end to end: tables and indexes are `if not exists`, functions
+-- are `create or replace`, and every policy and trigger is dropped first.
+-- Re-running is how a drifted environment is brought back into line, so it
+-- must not abort half way — `create policy` alone would.
 -- ============================================================
 
 -- ── 1. Verdict ─────────────────────────────────────────────────────────
@@ -184,26 +191,34 @@ alter table public.stock_price_action_snapshot  enable row level security;
 alter table public.stock_option_summary_snapshot enable row level security;
 alter table public.stock_model_results_snapshot enable row level security;
 
+drop policy if exists "Anyone can read verdict snapshots" on public.stock_verdict_snapshot;
 create policy "Anyone can read verdict snapshots"
   on public.stock_verdict_snapshot for select using (true);
+drop policy if exists "Service role can manage verdict snapshots" on public.stock_verdict_snapshot;
 create policy "Service role can manage verdict snapshots"
   on public.stock_verdict_snapshot for all
   using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
+drop policy if exists "Anyone can read price action snapshots" on public.stock_price_action_snapshot;
 create policy "Anyone can read price action snapshots"
   on public.stock_price_action_snapshot for select using (true);
+drop policy if exists "Service role can manage price action snapshots" on public.stock_price_action_snapshot;
 create policy "Service role can manage price action snapshots"
   on public.stock_price_action_snapshot for all
   using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
+drop policy if exists "Anyone can read option summary snapshots" on public.stock_option_summary_snapshot;
 create policy "Anyone can read option summary snapshots"
   on public.stock_option_summary_snapshot for select using (true);
+drop policy if exists "Service role can manage option summary snapshots" on public.stock_option_summary_snapshot;
 create policy "Service role can manage option summary snapshots"
   on public.stock_option_summary_snapshot for all
   using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
+drop policy if exists "Anyone can read model results snapshots" on public.stock_model_results_snapshot;
 create policy "Anyone can read model results snapshots"
   on public.stock_model_results_snapshot for select using (true);
+drop policy if exists "Service role can manage model results snapshots" on public.stock_model_results_snapshot;
 create policy "Service role can manage model results snapshots"
   on public.stock_model_results_snapshot for all
   using (auth.role() = 'service_role') with check (auth.role() = 'service_role');

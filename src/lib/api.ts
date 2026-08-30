@@ -123,6 +123,15 @@ export const optionsApi = {
   summary: (ticker: string) =>
     api.get(`/api/options/${ticker}/summary`).then((r) => r.data),
   screener: () => api.get("/api/options/screener").then((r) => r.data),
+  // The option desk: short-put / covered-call candidates that have been scored
+  // rather than hard-filtered. Two hard gates only (solvency, liquidity);
+  // everything else is weighted, and names that fail a gate come back in the
+  // `rejected` tier WITH the reason instead of being dropped — an empty screen
+  // teaches the trader nothing about why it is empty.
+  desk: (strategy: "csp" | "covered_call" = "csp", limit = 120) =>
+    api
+      .get(`/api/options/desk?strategy=${strategy}&limit=${limit}`)
+      .then((r) => r.data),
   // Timestamped log of the ranked-book strategy for this name — one entry per
   // change. Feeds the "Strategy log" section in the stock-detail Options tab.
   strategyLog: (ticker: string, limit = 30) =>

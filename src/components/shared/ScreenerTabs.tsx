@@ -10,13 +10,14 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListOrdered, Rocket, Coins } from "lucide-react";
+import { ListOrdered, Rocket, Coins, Landmark } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const TABS = [
   { href: "/ranked", label: "Rank my watchlist", caption: "Score the names you follow", icon: ListOrdered },
   { href: "/multibagger", label: "Find multibaggers", caption: "Hunt the whole market", icon: Rocket },
   { href: "/options", label: "Sell options", caption: "Premium-income setups", icon: Coins },
+  { href: "/desk", label: "Option desk", caption: "Graded put & call candidates", icon: Landmark },
 ];
 
 export function ScreenerTabs() {
@@ -26,7 +27,7 @@ export function ScreenerTabs() {
   return (
     <nav
       aria-label={tNav("screeners")}
-      className="grid grid-cols-1 sm:grid-cols-3 gap-2"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"
     >
       {TABS.map(({ href, label, caption, icon: Icon }) => {
         const active = pathname === href;

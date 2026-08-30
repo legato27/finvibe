@@ -47,6 +47,13 @@
 -- INBOUND stayed healthy on every day the OUTBOUND polls failed with
 -- Errno -3, so the push direction is the one that has actually been
 -- reliable here.
+--
+-- ── Re-running this file ───────────────────────────────────────────────
+--
+-- Idempotent end to end: tables and indexes are `if not exists`, functions
+-- are `create or replace`, and every policy and trigger is dropped first.
+-- Re-running is how a drifted environment is brought back into line, so it
+-- must not abort half way — `create policy` alone would.
 -- ============================================================
 
 -- ── 1. The queue ───────────────────────────────────────────────────────
@@ -89,6 +96,7 @@ create index if not exists ix_enrichment_requests_queued
 create index if not exists ix_enrichment_requests_user
   on public.enrichment_requests(requested_by, created_at desc);
 
+drop trigger if exists set_updated_at on public.enrichment_requests;
 create trigger set_updated_at before update on public.enrichment_requests
   for each row execute function public.update_updated_at();
 
@@ -185,6 +193,7 @@ begin
 end;
 $$;
 
+drop trigger if exists enforce_enrichment_request_cap on public.enrichment_requests;
 create trigger enforce_enrichment_request_cap
   before insert on public.enrichment_requests
   for each row execute function public.enforce_enrichment_request_cap();
@@ -195,12 +204,14 @@ alter table public.enrichment_requests enable row level security;
 
 -- Read your own requests — enough to show "queued / processing / failed"
 -- next to the ticker you asked for, and nothing about anyone else's.
+drop policy if exists "Users read own enrichment requests" on public.enrichment_requests;
 create policy "Users read own enrichment requests"
   on public.enrichment_requests for select to authenticated
   using (requested_by = auth.uid());
 
 -- File a request in your own name, in the initial state, for a plausible
 -- symbol. status/reason/timestamps are DGX's to write, not the client's.
+drop policy if exists "Users file own enrichment requests" on public.enrichment_requests;
 create policy "Users file own enrichment requests"
   on public.enrichment_requests for insert to authenticated
   with check (
@@ -218,6 +229,7 @@ create policy "Users file own enrichment requests"
 -- cannot mark their own request done, retry it by flipping it back to
 -- 'queued', or delete it to escape the 24 h counter.
 
+drop policy if exists "Service role manages enrichment requests" on public.enrichment_requests;
 create policy "Service role manages enrichment requests"
   on public.enrichment_requests for all
   using (auth.role() = 'service_role')
@@ -234,6 +246,7 @@ create policy "Service role manages enrichment requests"
 
 drop policy if exists "Users can insert new stocks" on public.stock_catalog;
 
+drop policy if exists "Users can register a blank ticker" on public.stock_catalog;
 create policy "Users can register a blank ticker"
   on public.stock_catalog for insert to authenticated
   with check (

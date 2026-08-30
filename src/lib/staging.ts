@@ -155,9 +155,17 @@ export async function readStaged(path: string): Promise<StagedHit | null> {
   for (const route of ROUTES) {
     const m = clean.match(route.pattern);
     if (!m) continue;
-    const ticker = decodeURIComponent(m[1] ?? "").toUpperCase();
-    if (!TICKER_RE.test(ticker)) return null;
     try {
+      // Already decoded, and deliberately not decoded again. The only caller
+      // is src/app/api/[...path]/route.ts, which builds this path by joining
+      // Next's `params.path` — and Next hands those segments over decoded. A
+      // second decodeURIComponent would corrupt a symbol containing a literal
+      // '%' and throws outright on a malformed escape ("/api/stocks/%zz/…"),
+      // out of a function the proxy calls on its failure path. It also put
+      // this in disagreement with hasStagedFallback above, which tests the
+      // raw segment: the two could answer differently about the same path.
+      const ticker = (m[1] ?? "").toUpperCase();
+      if (!TICKER_RE.test(ticker)) return null;
       return await route.resolve(ticker);
     } catch (err) {
       console.error(`[staging] read failed for ${clean}:`, err);
