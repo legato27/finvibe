@@ -23,8 +23,8 @@
  *
  * ── Nothing schedules this yet ────────────────────────────────────────
  *
- * A `vercel.json` with `crons: [{schedule: "*/5 * * * *"}]` was the obvious
- * home for it and Vercel refused the deploy: sub-daily cron schedules are a
+ * A `vercel.json` crons entry on a five-minute schedule was the obvious home
+ * for it, and Vercel refused the deploy: sub-daily cron schedules are a
  * paid-plan feature, and a once-a-day heartbeat is not a heartbeat. The
  * route is therefore callable but unscheduled — anything that can make an
  * HTTPS request on a timer will drive it:
