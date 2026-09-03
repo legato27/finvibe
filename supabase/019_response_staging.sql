@@ -127,6 +127,13 @@ create or replace function public.stage_dgx_response(
 ) returns boolean
 language plpgsql
 security invoker
+-- Empty search_path so every name resolves explicitly. These functions are
+-- SECURITY INVOKER and only service_role may execute them, so the classic
+-- definer-hijack is not available here — but Supabase's linter flags an
+-- unset search_path on any function, and leaving a fresh warning behind on
+-- new code is how the pre-existing ones accumulated. Everything below is
+-- either schema-qualified or a pg_catalog builtin, which is always in scope.
+set search_path = ''
 as $$
 declare
   v_written boolean;
@@ -169,6 +176,7 @@ create or replace function public.prune_response_snapshots(
 ) returns integer
 language plpgsql
 security invoker
+set search_path = ''
 as $$
 declare
   v_deleted integer;
