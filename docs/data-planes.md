@@ -116,6 +116,27 @@ is worse than no fallback. Anything not staged still waits unbounded (to the
 route's `maxDuration` of 60s); there is nothing to fall back to, so cutting
 it short would only break working requests.
 
+### The MCP server takes the same path
+
+`src/lib/mcp/market.ts` re-used the proxy's Cloudflare Access plumbing and
+none of its resilience: 17 tools calling DGX directly, reading the very
+endpoints whose staged copies were already sitting in Supabase, and all of
+them dying with the box. `dgxJson` now captures and falls back exactly as
+`proxyToDgx` does.
+
+One difference, and it is deliberate. The browser fallback is byte-identical
+to a live response — transparency is the point, because `StaleDataBanner`
+says the rest. An MCP client has no banner and the reader is a model, so on
+the degraded path only, the payload is wrapped:
+
+```json
+{ "_stale": { "as_of": "…", "family": "option chain", "notice": "…" },
+  "data": { … } }
+```
+
+A shape change is the lesser evil against an agent reading a three-day-old
+chain as live and acting on it. Live responses are untouched.
+
 ### What is NOT covered
 
 - **User-scoped routes** — `/api/watchlist`, `/api/portfolio`,
@@ -157,6 +178,23 @@ side can strand one and there is no cross-store pointer to keep in step. It
 needs only the ordinary "nothing has asked for this in a month" sweep:
 `select public.prune_response_snapshots();` — safe to run from the same
 cross-store section, or from anywhere, or not at all for a while.
+
+Nothing schedules it, on purpose. Steady state is roughly one row per
+allowlisted path per name — a few thousand rows, tens of MB against
+Supabase Pro's 8 GB — so the sweep is hygiene, not pressure. What actually
+accumulates is churn: `/api/options/desk` is keyed per collateral value and
+`/price-history` per period/interval pair. If that ever matters, `pg_cron`
+is available on the project (not installed) and one statement covers it:
+
+```sql
+create extension if not exists pg_cron with schema pg_cron;
+select cron.schedule('prune-response-snapshots', '0 4 * * 0',
+                     $$select public.prune_response_snapshots()$$);
+```
+
+Enabling an extension to tidy a few thousand rows is a worse trade than
+running the select by hand twice a year, which is why it is written down
+here rather than added to a migration.
 
 ## The enrichment queue
 
@@ -229,8 +267,11 @@ tables and say so explicitly in `job_runs` rather than failing obscurely.
    screener and a couple of stock pages, or hit the allowlisted paths with
    curl.
 7. Verify, in this order:
-   - `select family, count(*), min(as_of), max(as_of) from dgx_response_snapshot group by 1;`
-     — rows appearing means capture works.
+   - **Settings → Job runs → Outage coverage.** The card reads Supabase
+     alone, so unlike the job table above it, it still answers during the
+     failure it describes. "Servable" is the number that matters: rows
+     inside their serving window. Equivalent by hand:
+     `select family, count(*), min(as_of), max(as_of) from dgx_response_snapshot group by 1;`
    - `curl -sI https://fin.vibelife.sg/api/macro/gex | grep -i 'cache-control\|x-vercel-cache'`
      — expect `public, s-maxage=300, stale-while-revalidate=86400` and, on
      the second call, `x-vercel-cache: HIT`. A `MISS` on every call means the

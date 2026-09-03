@@ -2,8 +2,39 @@
 // Mirrors a slice of src/lib/api.ts but runs from server routes
 // (and re-uses the same Cloudflare Access service-token plumbing
 // that src/lib/proxy.ts uses).
+//
+// ── Why this file also carries the staging tier ────────────────────────
+//
+// It re-used the proxy's AUTH plumbing and none of its resilience. The
+// browser goes through src/lib/proxy.ts and gets the edge cache, the
+// write-through capture and the Supabase fallback; the MCP server called
+// DGX directly from here and got none of it. Same repo, same deployment,
+// same 17 tools reading the very endpoints whose staged copies were
+// sitting in Supabase — and all of them died with the box.
+//
+// So dgxJson now does what proxyToDgx does: capture reads on the way past,
+// serve the staged copy when the box cannot answer.
+//
+// ── One difference, and it matters ─────────────────────────────────────
+//
+// The browser has StaleDataBanner. An MCP client has nothing — the caller
+// is a model, and a staged option chain rendered as a plain result is one
+// it will read as live and may act on. So on the degraded path ONLY, the
+// payload is wrapped: `{_stale: {...}, data: ...}`, with a notice written
+// to be read by the thing that will read it. Live responses keep their
+// exact shape.
 
 import { pooledMap } from "@/lib/util/pool";
+import { after } from "next/server";
+import {
+  hasStagedBatchFallback,
+  hasStagedFallback,
+  readStaged,
+  readStagedBatch,
+  type StagedHit,
+} from "@/lib/staging";
+import { capturePathResponse, captureBatchResponse } from "@/lib/stagingCapture";
+import { matchPathFamily, stagedTimeoutMs } from "@/lib/stagingPaths";
 
 const DGX_API_URL = process.env.DGX_API_URL;
 const CF_ACCESS_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID;
@@ -19,17 +50,100 @@ function dgxHeaders(extra?: Record<string, string>): HeadersInit {
   return h;
 }
 
+/**
+ * Wrap a staged body so the caller cannot mistake it for live data.
+ *
+ * Deliberately a shape change, unlike the browser fallback which is
+ * byte-identical on purpose. There the transparency is the point, because a
+ * banner says the rest; here there is no banner and the reader is a model,
+ * so the notice has to travel inside the payload it is about.
+ */
+function stale<T>(hit: StagedHit): T {
+  return {
+    _stale: {
+      as_of: hit.asOf,
+      source: "supabase-snapshot",
+      family: hit.label,
+      notice:
+        `FinVibe's analysis backend is unreachable. This is a STORED COPY of the ` +
+        `${hit.label} from ${hit.asOf}, not live market data. Say so before using ` +
+        `it, and do not act on it as a current quote, chain or signal.`,
+    },
+    data: hit.body,
+  } as T;
+}
+
+/** Fire-and-forget, whether or not a request scope is available. */
+function inBackground(work: () => Promise<void>): void {
+  try {
+    after(work);
+  } catch {
+    // `after` throws outside a request context (a script, a test). The work
+    // is optional either way, so run it detached rather than losing it.
+    void work().catch(() => {});
+  }
+}
+
 async function dgxJson<T>(path: string, init?: RequestInit): Promise<T> {
-  if (!DGX_API_URL) throw new Error("DGX_API_URL is not set");
-  const res = await fetch(`${DGX_API_URL}${path}`, {
-    ...init,
-    headers: dgxHeaders(init?.headers as Record<string, string> | undefined),
-  });
+  const method = (init?.method ?? "GET").toUpperCase();
+  // Writes are excluded exactly as they are in the proxy: generate-thoughts,
+  // run/all and enrich are requests to change something on the box, and
+  // there is no honest stale version of that. They simply throw.
+  const batchKind = method === "POST" ? hasStagedBatchFallback(path) : null;
+  const canFallBack = (method === "GET" && hasStagedFallback(path)) || batchKind !== null;
+  const requestBody = typeof init?.body === "string" ? init.body : "";
+
+  const staged = async (): Promise<StagedHit | null> => {
+    if (batchKind) return readStagedBatch(batchKind, requestBody);
+    return canFallBack ? readStaged(path) : null;
+  };
+
+  if (!DGX_API_URL) {
+    const hit = await staged();
+    if (hit) return stale<T>(hit);
+    throw new Error("DGX_API_URL is not set");
+  }
+
+  let res: Response;
+  try {
+    res = await fetch(`${DGX_API_URL}${path}`, {
+      ...init,
+      headers: dgxHeaders(init?.headers as Record<string, string> | undefined),
+      // Only where there is something to fall back to, and never over a
+      // signal the caller set itself — the webhook receiver passes its own
+      // deadline so it keeps enough budget to release its claim.
+      ...(canFallBack && !init?.signal
+        ? { signal: AbortSignal.timeout(stagedTimeoutMs(path)) }
+        : {}),
+    });
+  } catch (err) {
+    const hit = await staged();
+    if (hit) return stale<T>(hit);
+    throw err;
+  }
+
   if (!res.ok) {
+    // 5xx only — a 404 is DGX answering "no such name", and papering over it
+    // with a snapshot would resurrect data the backend stopped serving.
+    if (res.status >= 500 && canFallBack) {
+      const hit = await staged();
+      if (hit) return stale<T>(hit);
+    }
     const body = await res.text().catch(() => "");
     throw new Error(`DGX ${path} failed: ${res.status} ${body.slice(0, 200)}`);
   }
-  return (await res.json()) as T;
+
+  const raw = await res.text();
+
+  // Warm the same cache the browser fills. An MCP session that reads a name
+  // is as good a reason to hold a copy of it as a page view.
+  if (method === "GET" && matchPathFamily(path)) {
+    inBackground(() => capturePathResponse(path, raw));
+  } else if (batchKind && batchKind !== "prices") {
+    inBackground(() => captureBatchResponse(batchKind, raw));
+  }
+
+  return JSON.parse(raw) as T;
 }
 
 export const market = {

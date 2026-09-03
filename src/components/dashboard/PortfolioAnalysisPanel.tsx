@@ -112,9 +112,19 @@ export function PortfolioAnalysisPanel({
       });
       setExpandedId(saved.id);
     } catch (e: any) {
+      // Gemma runs ON the DGX box, so an outage takes it away entirely —
+      // there is no stored version of a model. Claude does not: it runs on
+      // Anthropic's API from a local route, and since the risk-context call
+      // stopped being fatal it degrades to a structural read instead of
+      // failing. Worth saying which is which, because "Request failed with
+      // status code 502" does not tell you the other button still works.
+      const status = e?.response?.status;
+      const unreachable = !status || status === 502 || status === 503 || status === 504;
       const msg =
         e?.response?.data?.error ||
-        e?.message ||
+        (unreachable && provider === "gemma"
+          ? "Gemma runs on the analysis backend, which is unreachable right now. Claude still works — it runs off-box, without the statistics block."
+          : e?.message) ||
         t("analysisFailed");
       setError(msg);
     } finally {
