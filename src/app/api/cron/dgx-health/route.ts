@@ -20,6 +20,25 @@
  * It also goes straight to DGX rather than through proxyToDgx, for the same
  * reason: the fallback exists to hide an outage from users, and this is not
  * a user.
+ *
+ * ── Nothing schedules this yet ────────────────────────────────────────
+ *
+ * A `vercel.json` with `crons: [{schedule: "*/5 * * * *"}]` was the obvious
+ * home for it and Vercel refused the deploy: sub-daily cron schedules are a
+ * paid-plan feature, and a once-a-day heartbeat is not a heartbeat. The
+ * route is therefore callable but unscheduled — anything that can make an
+ * HTTPS request on a timer will drive it:
+ *
+ *   * Vercel Cron, if the project moves to Pro (add vercel.json back);
+ *   * any free uptime monitor pointed at this URL, which doubles as a
+ *     check that Vercel itself is up — something a Vercel cron cannot tell
+ *     you;
+ *   * Supabase pg_cron + pg_net, which is off-box and already available on
+ *     the project (both extensions present, neither installed).
+ *
+ * Until one of those is wired, the traffic-driven half in src/lib/proxy.ts
+ * still covers every outage that actually affects someone using the app.
+ * What is missing is the 3am outage nobody is awake for.
  */
 
 import { NextRequest, NextResponse } from "next/server";
