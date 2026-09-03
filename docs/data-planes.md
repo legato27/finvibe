@@ -153,6 +153,77 @@ chain as live and acting on it. Live responses are untouched.
 - **A name FinVibe has never seen.** Search falls back to the catalog, so an
   outage means you cannot look up a symbol that has never been enriched.
 
+## Knowing the box is down
+
+The staging tier's success created this problem. Before it, an outage
+announced itself — every page broke. Now the app keeps serving stored copies
+behind an amber banner, which is the entire point and also means an outage
+can run for hours unnoticed. The 7h19m one on 2026-08-25 was found by a
+person opening the app.
+
+**It runs on Vercel, never on the box.** The DGX host also runs n8n and the
+whole compose stack, so anything hosted there is unavailable in exactly the
+failure it would be reporting.
+
+### Two triggers
+
+- **Traffic** — `src/lib/proxy.ts` already knows: every fallback it serves,
+  and every 5xx, is evidence. Instant, free, and driven by actual impact.
+  Blind to the quiet hours.
+- **Heartbeat** — `/api/cron/dgx-health` every 5 minutes (`vercel.json`).
+  It probes `/api/jobs/status`, the one endpoint excluded from both the
+  staging tier and the edge cache, and goes straight to DGX rather than
+  through the proxy. A heartbeat that can be answered from a stored copy is
+  not a heartbeat.
+
+The heartbeat is also the reliable half of *recovery*: the proxy can only
+close an incident from an instance that happened to see the failure, and
+serverless instances do not live that long.
+
+### Alerting exactly once
+
+A dead box produces a flood of evidence — the dashboard alone fires ten
+requests a minute per open tab, each a separate invocation with no memory of
+the others. A pager storm is functionally the same as no alert at all, so
+"is this a new outage" is decided in the database (`supabase/020`):
+
+- a partial unique index on `((true)) where resolved_at is null` allows **at
+  most one open incident**, so the first failing request opens it and the
+  rest lose the race harmlessly;
+- the right to send is **claimed** by an update that only succeeds once
+  (`where notified_at is null`).
+
+If the send then fails, `release_dgx_notification()` gives the claim back and
+the next failure retries. Claiming before sending risks silence; sending
+before claiming risks a storm; claiming with a release on failure risks
+neither. Verified against 50 concurrent callers: exactly one alert.
+
+### Channels
+
+Whichever is configured fires, both may be, neither is an error:
+
+| Env | Goes to |
+|---|---|
+| `ALERT_WEBHOOK_URL` | Slack, Discord, n8n, PagerDuty — anything taking a JSON POST |
+| `TELEGRAM_BOT_TOKEN` + `TELEGRAM_CHAT_ID` | a phone |
+
+The webhook body carries `text` **and** `content` with the same string,
+because Slack reads the first and Discord the second — one payload, no
+per-vendor branch. With no channel configured the incident is still recorded
+and visible in the app; only the push is missing.
+
+`CRON_SECRET` should be set: Vercel sends it as a bearer token, and without
+it the heartbeat route is publicly callable. It also gates the test:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  "https://fin.vibelife.sg/api/cron/dgx-health?test=1"
+```
+
+That sends a real message through the real channels without touching the
+incident table — because otherwise the first test of the alerting path is
+the outage itself.
+
 ## Retention — four stores, one purge
 
 `reconcile_*` only ever upserts. Everything staged therefore needs its removal

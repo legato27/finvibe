@@ -30,6 +30,7 @@ import {
 } from "@/lib/staging";
 import { capturePathResponse, captureBatchResponse } from "@/lib/stagingCapture";
 import { matchPathFamily, stagedTimeoutMs } from "@/lib/stagingPaths";
+import { alertDgxDown, alertDgxRecovered } from "@/lib/alerts";
 
 const CF_ACCESS_CLIENT_ID = process.env.CF_ACCESS_CLIENT_ID;
 const CF_ACCESS_CLIENT_SECRET = process.env.CF_ACCESS_CLIENT_SECRET;
@@ -47,6 +48,54 @@ function resolveDgxBase(): string {
   const raw = (process.env.DGX_API_URL || "").trim().replace(/\/+$/, "");
   if (!raw) return "";
   return /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+}
+
+/**
+ * Whether THIS instance has seen the box fail.
+ *
+ * Recovery has to be noticed by someone, and checking for an open incident
+ * on every successful request would be a Supabase round trip per request
+ * for a question whose answer is almost always "no". So a instance that saw
+ * a failure remembers it, and the next success it serves is the one that
+ * closes the incident.
+ *
+ * Per-instance, therefore incomplete: the instance that saw the failure may
+ * be gone by the time the box returns. The heartbeat closes those — this is
+ * the fast path, not the reliable one.
+ */
+let sawFailure = false;
+
+/** Record an outage observation without ever disturbing the response. */
+function observeFailure(path: string, detail: string): void {
+  sawFailure = true;
+  try {
+    after(async () => {
+      try {
+        await alertDgxDown(detail, path, "traffic");
+      } catch (err) {
+        console.error("[proxy] alert failed:", err);
+      }
+    });
+  } catch {
+    // Outside a request scope — the alert is best-effort by design.
+  }
+}
+
+/** Note that the box answered, closing an incident this instance opened. */
+function observeSuccess(): void {
+  if (!sawFailure) return;
+  sawFailure = false;
+  try {
+    after(async () => {
+      try {
+        await alertDgxRecovered();
+      } catch (err) {
+        console.error("[proxy] recovery alert failed:", err);
+      }
+    });
+  } catch {
+    /* best effort */
+  }
 }
 
 export async function proxyToDgx(
@@ -115,6 +164,10 @@ export async function proxyToDgx(
     response = await fetch(url, init);
   } catch (err) {
     // Tunnel down, DNS gone, connection refused, or our own timeout above.
+    // This is the strongest evidence there is that the box is unreachable,
+    // and it is the same signal whether or not a staged copy exists to
+    // cover it — a covered outage is still an outage.
+    observeFailure(path, (err as Error)?.message ?? "fetch failed");
     const staged = await fallback();
     if (staged) {
       console.warn(`[proxy] ${path} unreachable — serving staged copy from ${staged.asOf}`);
@@ -128,6 +181,13 @@ export async function proxyToDgx(
   // deliberately stopped serving, which is how a delisted or suspended symbol
   // keeps showing a trade setup. A 4xx is likewise a real answer about the
   // request, not a failure of the box.
+  if (response.status >= 500) {
+    // A 5xx is the box answering badly rather than not at all — worth an
+    // alert on the same terms, and NOT gated on canFallBack: an endpoint
+    // with nothing staged is the one you most want to hear about.
+    observeFailure(path, `upstream ${response.status}`);
+  }
+
   if (response.status >= 500 && canFallBack) {
     const staged = await fallback();
     if (staged) {
@@ -138,6 +198,7 @@ export async function proxyToDgx(
     }
   }
 
+  observeSuccess();
   return liveResponse(path, method, response, batchKind);
 }
 
