@@ -73,16 +73,21 @@ export async function POST(request: NextRequest) {
     `[portfolio/analyze/claude] start model=${CLAUDE_MODEL} holdings=${body.holdings.length} total_value=${body.total_value} portfolio=${body.portfolio_name ?? "-"}`,
   );
 
-  let riskContext: unknown;
+  // The statistics block is the one thing here that needs DGX; the model
+  // itself runs on Anthropic's API and the holdings came from Supabase. A
+  // failed risk-context used to 502 the whole request, which meant an
+  // outage on the box took down an analysis that was otherwise entirely
+  // independent of it. Now it degrades: the prompt is told the context is
+  // unavailable and is barred from inventing the numbers it would have
+  // held, and the response says so too.
+  let riskContext: unknown = null;
+  let riskContextError: string | null = null;
   try {
     riskContext = body.risk_context ?? (await fetchRiskContext(body.holdings));
   } catch (e: any) {
+    riskContextError = e?.message ?? "unknown";
     console.error(
-      `[portfolio/analyze/claude] risk-context failed after ${elapsed()}ms: ${e?.name ?? "Error"}: ${e?.message ?? "unknown"}`,
-    );
-    return NextResponse.json(
-      { error: `Could not compute risk context: ${e?.message ?? "unknown"}` },
-      { status: 502 },
+      `[portfolio/analyze/claude] risk-context failed after ${elapsed()}ms: ${e?.name ?? "Error"}: ${riskContextError} — continuing without it`,
     );
   }
 
@@ -146,6 +151,9 @@ export async function POST(request: NextRequest) {
       analysis,
       structured,
       risk_context: riskContext,
+      // Present and non-null only on the degraded path, so a saved analysis
+      // carries the reason its statistics are all n/a.
+      risk_context_error: riskContextError,
       model: data?.model || CLAUDE_MODEL,
       prompt,
     });

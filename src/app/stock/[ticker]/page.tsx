@@ -4,7 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi, sentimentApi } from "@/lib/api";
 import { verdictToAction, verdictConviction } from "@/lib/signals";
-import { useLLMAnalysis } from "@/lib/supabase/hooks";
+import { useCatalogStock, useLLMAnalysis } from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { PriceActionAnalysis } from "@/components/stock/PriceActionAnalysis";
 import { SentimentPanel } from "@/components/stock/SentimentPanel";
@@ -35,12 +35,21 @@ export default function StockDetailPage() {
   const [activeTab, setActiveTab] = useState<Tab>(initialTab);
 
   // ── Data fetching ──────────────────────────────────────
-  const { data: detail, isLoading: detailLoading } = useQuery({
+  const {
+    data: liveDetail,
+    isLoading: detailLoading,
+    isError: detailFailed,
+  } = useQuery({
     queryKey: ["stock-detail", ticker],
     queryFn: () => stocksApi.detail(ticker),
     enabled: !!ticker,
     staleTime: 60_000,
   });
+
+  // Supabase-native, always available. Only consulted when the detail call
+  // fails outright — the proxy stages /detail, so this is the second line:
+  // a name nobody has opened since the last outage has no captured copy.
+  const { data: catalog } = useCatalogStock(ticker);
 
   const { data: stockInfo } = useQuery({
     queryKey: ["stock-info", ticker],
@@ -61,6 +70,18 @@ export default function StockDetailPage() {
   });
 
   const { data: supabaseLlm } = useLLMAnalysis(ticker);
+
+  // The unified verdict normally arrives inside `detail`. When detail is the
+  // catalog shim it does not, so it is fetched from its own endpoint — which
+  // is staged, and which nothing in the app called before this. Conditional
+  // so a healthy page still makes one request for it, not two.
+  const { data: standaloneVerdict } = useQuery({
+    queryKey: ["stock-verdict", ticker],
+    queryFn: () => stocksApi.verdict(ticker),
+    enabled: !!ticker && detailFailed,
+    staleTime: 5 * 60_000,
+    retry: 1,
+  });
 
   // Price Action (PAM) — shared by the chart overlays and the analysis panel
   // (same queryKey → react-query dedupes to a single request)
@@ -96,14 +117,59 @@ export default function StockDetailPage() {
     );
   }
 
+  /**
+   * The detail call is the page's gate, and it used to be an absolute one:
+   * anything that made it undefined — including a 502 from a box that was
+   * simply down — rendered "not found in watchlist" over a name whose
+   * verdict, thoughts, price action and model results were all present in
+   * Supabase and ready to serve.
+   *
+   * So the gate now distinguishes the two answers it was conflating. A
+   * genuinely absent name still gets the original card. A FAILED call falls
+   * through to the catalog row, which is enough to render the page and let
+   * every staged tab answer for itself.
+   */
+  const detail =
+    liveDetail ??
+    (detailFailed && catalog
+      ? {
+          ticker,
+          name: catalog.name,
+          sector: catalog.sector,
+          industry: catalog.industry,
+          last_price: catalog.last_price,
+          intrinsic_value: catalog.intrinsic_value,
+          margin_of_safety: catalog.margin_of_safety,
+          moat_rating: catalog.moat_rating,
+          verdict: standaloneVerdict ?? null,
+          // Neither is mirrored in Supabase; the cards that read them handle
+          // absence already and render their own empty state.
+          description: null,
+          dcf_detail: null,
+          llm: null,
+        }
+      : null);
+
   if (!detail) {
     return (
       <div className="card p-12 text-center text-muted-foreground max-w-[800px] mx-auto">
         <Brain className="w-12 h-12 mx-auto mb-3 opacity-30" />
-        <p className="text-sm">Stock {ticker} not found in watchlist.</p>
-        <p className="text-xs text-muted-foreground/60 mt-1">
-          Add it to a watchlist first to see detailed analysis.
-        </p>
+        {detailFailed ? (
+          <>
+            <p className="text-sm">Live data for {ticker} is unavailable right now.</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              The analysis backend is not reachable and FinVibe has no stored
+              copy of this name. Names already in the catalog still open.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-sm">Stock {ticker} not found in watchlist.</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
+              Add it to a watchlist first to see detailed analysis.
+            </p>
+          </>
+        )}
       </div>
     );
   }

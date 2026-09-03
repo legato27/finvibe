@@ -409,6 +409,53 @@ export function useLLMAnalysisBatch(tickers: string[]) {
   });
 }
 
+/**
+ * The catalog row for one ticker — name, sector, last synced price, DCF
+ * numbers. Supabase-native, so it answers while DGX is unreachable.
+ *
+ * This exists for the stock page's degraded path: /api/stocks/{t}/detail is
+ * what that page gates on, and until the proxy started staging it, a failed
+ * detail meant the page rendered "not found in watchlist" over a name whose
+ * verdict, thoughts and models were all sitting in Supabase. A capture only
+ * covers names someone has already opened; this covers the rest of the
+ * catalog, at the cost of a thinner header.
+ */
+export interface CatalogStock {
+  ticker: string;
+  name: string | null;
+  sector: string | null;
+  industry: string | null;
+  asset_type: string | null;
+  last_price: number | null;
+  last_price_updated_at: string | null;
+  intrinsic_value: number | null;
+  margin_of_safety: number | null;
+  moat_rating: string | null;
+  moat_confidence: number | null;
+}
+
+export function useCatalogStock(ticker: string) {
+  return useQuery<CatalogStock | null>({
+    queryKey: ["catalog-stock", ticker],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("stock_catalog")
+        .select(
+          "ticker, name, sector, industry, asset_type, last_price, last_price_updated_at, " +
+            "intrinsic_value, margin_of_safety, moat_rating, moat_confidence",
+        )
+        .eq("ticker", ticker.toUpperCase())
+        .maybeSingle();
+      if (error) throw error;
+      // Cast through unknown: the select list is a concatenated string, so
+      // postgrest-js cannot infer the row shape from it.
+      return (data as unknown as CatalogStock) ?? null;
+    },
+    enabled: !!ticker,
+    staleTime: 5 * 60_000,
+  });
+}
+
 export function useLLMAnalysis(ticker: string) {
   return useQuery({
     queryKey: ["llm-analysis", ticker],

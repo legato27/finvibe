@@ -160,11 +160,19 @@ export default function PortfolioPage() {
   const addHolding = useAddHolding();
   const deleteHolding = useDeleteHolding();
 
-  // Convert a native-currency amount to the user's default currency.
-  // Falls back to the raw amount if rates aren't loaded yet.
-  function toDefault(amount: number, native: Currency): number {
-    const converted = convert(amount, native, defaultCurrency, fxRates as FxRates | undefined);
-    return converted ?? amount;
+  /**
+   * Convert a native-currency amount to the user's default currency.
+   *
+   * Returns null when the rate table cannot do it. It used to return the
+   * RAW amount instead, which meant that with /api/fx/rates unavailable an
+   * HKD lot was added to an SGD total one-for-one — a confidently wrong
+   * number, on the page where the number is the point, with nothing on
+   * screen to say so. FX is staged now (a week-old major is off by well
+   * under a percent), so this path is rare; when it is hit, the totals say
+   * what they had to leave out rather than quietly absorbing it.
+   */
+  function toDefault(amount: number, native: Currency): number | null {
+    return convert(amount, native, defaultCurrency, fxRates as FxRates | undefined);
   }
 
   // Pre-fill the add-investment form's currency with the user's default.
@@ -239,16 +247,25 @@ export default function PortfolioPage() {
   }, [holdings]);
 
   // ── Aggregate stats (converted to user's default currency) ─
-  const { totalCost, totalValue } = useMemo(() => {
+  const { totalCost, totalValue, unconverted } = useMemo(() => {
     let cost = 0;
     let value = 0;
+    let skipped = 0;
     for (const h of holdings || []) {
       const ccy = ((h.currency as Currency) || inferCurrency(h.ticker));
       const price = h.current_price || h.cost_basis;
-      cost += toDefault(h.shares * h.cost_basis, ccy);
-      value += toDefault(h.shares * price, ccy);
+      const c = toDefault(h.shares * h.cost_basis, ccy);
+      const v = toDefault(h.shares * price, ccy);
+      // Both or neither: a lot counted in the value but not the cost would
+      // show as pure gain.
+      if (c === null || v === null) {
+        skipped += 1;
+        continue;
+      }
+      cost += c;
+      value += v;
     }
-    return { totalCost: cost, totalValue: value };
+    return { totalCost: cost, totalValue: value, unconverted: skipped };
   }, [holdings, defaultCurrency, fxRates]);
   const totalGainLoss = totalValue - totalCost;
   const totalReturnPct = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
@@ -386,6 +403,17 @@ export default function PortfolioPage() {
               <div className="stat-value text-lg">
                 {mask(formatCurrency(totalValue, defaultCurrency, { decimals: 0 }))}
               </div>
+              {/* Says which holdings the total is NOT counting. Without this
+                  the same figure appears whether every lot converted or
+                  half of them silently dropped out. */}
+              {unconverted > 0 && (
+                <div
+                  className="text-[10px] text-signal-caution mt-0.5"
+                  title="FX rates are unavailable, so holdings in another currency cannot be converted and are left out of the totals."
+                >
+                  excludes {unconverted} holding{unconverted === 1 ? "" : "s"} — no FX rate
+                </div>
+              )}
             </div>
             <div className="card p-3">
               <div className="stat-label">{t("totalCost")}</div>
@@ -516,15 +544,26 @@ export default function PortfolioPage() {
             <PortfolioAnalysisPanel
               portfolioId={activePortfolio.id}
               portfolioName={activePortfolio.name}
-              positions={positions.map((p) => ({
-                ticker: p.ticker,
-                name: p.name,
-                sector: p.sector,
-                totalShares: p.totalShares,
-                avgCostBasis: toDefault(p.avgCostBasis, p.currency),
-                current_price:
-                  p.current_price != null ? toDefault(p.current_price, p.currency) : undefined,
-              }))}
+              /* Every figure the model sees is in one currency. A position
+                 that cannot be converted is dropped rather than passed
+                 through at its native number — the analysis reasons about
+                 weights, and an unconverted HKD line would read as a
+                 position several times its real size. */
+              positions={positions.flatMap((p) => {
+                const avgCostBasis = toDefault(p.avgCostBasis, p.currency);
+                if (avgCostBasis == null) return [];
+                return [{
+                  ticker: p.ticker,
+                  name: p.name,
+                  sector: p.sector,
+                  totalShares: p.totalShares,
+                  avgCostBasis,
+                  current_price:
+                    p.current_price != null
+                      ? toDefault(p.current_price, p.currency) ?? undefined
+                      : undefined,
+                }];
+              })}
               totalValue={totalValue}
               totalCost={totalCost}
             />
@@ -637,7 +676,9 @@ export default function PortfolioPage() {
                                 <span>
                                   {hideBalances
                                     ? "••••"
-                                    : `${gainLoss >= 0 ? "+" : ""}${formatCurrency(Math.abs(gainLossDefault), defaultCurrency, { decimals: 0 })}`}
+                                    : gainLossDefault == null
+                                      ? "—"
+                                      : `${gainLoss >= 0 ? "+" : ""}${formatCurrency(Math.abs(gainLossDefault), defaultCurrency, { decimals: 0 })}`}
                                 </span>
                                 <span className="text-[10px] sm:hidden">{returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%</span>
                               </div>

@@ -138,11 +138,32 @@ export function buildPortfolioAnalysisPrompt(
 ): string {
   const holdingsBlock = formatHoldingsForPrompt(holdings, totalValue);
   const header = portfolioName ? `Portfolio: ${portfolioName}\n\n` : "";
+
+  // risk_context is computed on DGX. When that box is unreachable the
+  // analysis used to fail outright — even though the model runs on
+  // Anthropic's API and the holdings table comes from Supabase, so the only
+  // thing actually missing was the statistics block.
+  //
+  // The degraded prompt is explicit rather than merely empty: the system
+  // prompt's "use ONLY the numbers in risk_context" has no numbers to point
+  // at, and a model handed an absent authority will fill it in. Naming the
+  // absence and the allowed shape of an answer is what keeps a structural
+  // read from turning into invented betas.
+  const contextBlock =
+    riskContext == null
+      ? `risk_context: UNAVAILABLE — the quant database could not be reached for this run.\n` +
+        `Work ONLY from the holdings table above: concentration, position sizing, sector mix,\n` +
+        `and what is knowable from weights alone. Every quantitative field you cannot compute\n` +
+        `from that table (beta, vol, drawdown, correlation, stress replay) MUST be "n/a" —\n` +
+        `do not estimate, recall, or infer them. Say in summary_headline that the statistical\n` +
+        `context was unavailable and this is a structural read only.\n\n`
+      : `risk_context (authoritative — use these numbers, do not invent):\n` +
+        `\`\`\`json\n${JSON.stringify(riskContext, null, 2)}\n\`\`\`\n\n`;
+
   return (
     `${PORTFOLIO_ANALYSIS_SYSTEM}\n\n` +
     `${header}${holdingsBlock}\n\n` +
-    `risk_context (authoritative — use these numbers, do not invent):\n` +
-    `\`\`\`json\n${JSON.stringify(riskContext, null, 2)}\n\`\`\`\n\n` +
+    contextBlock +
     `Now return the JSON object per the schema. JSON only, no prose.`
   );
 }
