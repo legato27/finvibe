@@ -50,7 +50,13 @@ const usd = (v: number | null | undefined, d = 0) =>
 const daysTo = (iso: string) =>
   Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
 
-export default function TradeJournal() {
+export default function TradeJournal({
+  defaultStrategy = "cash_secured_put",
+}: {
+  /** What the new-trade form opens on. The desk passes its own strategy so a
+   *  covered-call desk does not hand you a cash-secured-put form. */
+  defaultStrategy?: OptionStrategy;
+} = {}) {
   const { data: user } = useUser();
   const { data: trades, isLoading } = useOptionsTrades();
   const addTrade = useAddOptionsTrade();
@@ -124,6 +130,7 @@ export default function TradeJournal() {
 
       {adding ? (
         <AddForm
+          defaultStrategy={defaultStrategy}
           pending={addTrade.isPending}
           error={addTrade.error ? String(addTrade.error) : null}
           onSubmit={(v) => addTrade.mutate(v, { onSuccess: () => setAdding(false) })}
@@ -294,8 +301,9 @@ function Field({ label, ...p }: { label: string } & React.InputHTMLAttributes<HT
 }
 
 function AddForm({
-  onSubmit, pending, error,
+  onSubmit, pending, error, defaultStrategy,
 }: {
+  defaultStrategy: OptionStrategy;
   onSubmit: (v: {
     ticker: string; strategy: OptionStrategy; strike_price: number;
     premium: number; contracts: number; expiry_date: string;
@@ -305,7 +313,7 @@ function AddForm({
   error: string | null;
 }) {
   const [f, setF] = useState({
-    ticker: "", strategy: "cash_secured_put" as OptionStrategy,
+    ticker: "", strategy: defaultStrategy,
     strike_price: "", premium: "", contracts: "1", expiry_date: "", spot: "",
   });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>

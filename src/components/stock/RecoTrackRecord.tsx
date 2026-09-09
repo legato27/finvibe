@@ -96,14 +96,28 @@ function Row({ label, b, hint }: { label: string; b: Block; hint?: string }) {
   );
 }
 
-export default function RecoTrackRecord() {
+export default function RecoTrackRecord({
+  strategy = "csp",
+}: {
+  /** Which desk this is under, so the callout reads the matching strategy
+   *  block rather than always narrating short puts. */
+  strategy?: "csp" | "covered_call";
+} = {}) {
   const { data, isLoading, error } = useQuery<Scorecard>({
     queryKey: ["options-reco-scorecard", 400],
     queryFn: () => modelsApi.optionsRecoScorecard(400),
     staleTime: 60 * 60_000,
   });
 
-  const puts = data?.by_strategy?.sell_puts;
+  const focusKey = strategy === "covered_call" ? "sell_calls" : "sell_puts";
+  const focus = data?.by_strategy?.[focusKey];
+  const focusNoun = strategy === "covered_call" ? "covered calls" : "short puts";
+  // The gap is predicted minus realised, so its SIGN is the finding: positive
+  // means the engine over-promised, negative that it under-promised. Calling
+  // it "optimistic" unconditionally was only ever right for puts.
+  const gapPts = focus ? Math.abs(focus.calibration_gap * 100) : 0;
+  const gapWord = focus && focus.calibration_gap > 0 ? "optimistic" : "conservative";
+  const calibrated = gapPts < 5;
 
   return (
     <section className="rounded-lg border border-border bg-card p-4">
@@ -152,14 +166,18 @@ export default function RecoTrackRecord() {
             </table>
           </div>
 
-          {puts ? (
+          {focus ? (
             <p className="mt-3 max-w-3xl border-l-2 border-primary pl-3 text-sm text-muted-foreground">
-              On the strategy this desk is built around, the engine is{" "}
-              <span className="text-foreground">well calibrated</span>: it predicted{" "}
-              {pct(puts.mean_pop_pred)} and delivered {pct(puts.win_rate)} across{" "}
-              {puts.n.toLocaleString()} settled short puts — optimistic by{" "}
-              {(puts.calibration_gap * 100).toFixed(1)} points. Close enough that the predicted
-              probability is usable as an input rather than decoration.
+              On the strategy this desk is set to, the engine is{" "}
+              <span className="text-foreground">
+                {calibrated ? "well calibrated" : "poorly calibrated"}
+              </span>
+              : it predicted {pct(focus.mean_pop_pred)} and delivered {pct(focus.win_rate)} across{" "}
+              {focus.n.toLocaleString()} settled {focusNoun} — {gapWord} by {gapPts.toFixed(1)}{" "}
+              points.{" "}
+              {calibrated
+                ? "Close enough that the predicted probability is usable as an input rather than decoration."
+                : "Far enough out that the predicted probability should be read as a ranking hint, not a probability."}
             </p>
           ) : null}
 

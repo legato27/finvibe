@@ -58,6 +58,17 @@ const SOURCE_LABEL: Record<string, string> = {
 const usd = (v: number | null | undefined, d = 2) =>
   v == null ? "—" : `$${v.toFixed(d)}`;
 
+/** How long ago the catalog last wrote this price, for the Spot cell's title. */
+function spotAgeLabel(iso: string | null | undefined): string {
+  if (!iso) return "Live price from your portfolio";
+  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+  if (!Number.isFinite(mins) || mins < 0) return "Live price from your portfolio";
+  if (mins < 60) return `Live price, updated ${mins}m ago`;
+  const hours = Math.round(mins / 60);
+  if (hours < 48) return `Price updated ${hours}h ago`;
+  return `Price updated ${Math.round(hours / 24)}d ago`;
+}
+
 export default function CoveredCallBook() {
   const { data: portfolios } = usePortfolios();
   const [portfolioId, setPortfolioId] = useState<number | null>(null);
@@ -76,7 +87,15 @@ export default function CoveredCallBook() {
     .map((h) => {
       const d = byTicker.get(h.ticker.toUpperCase());
       const res = d?.resistance;
-      const spot = res?.spot ?? d?.spot ?? h.current_price ?? null;
+      // Your holdings carry a live price — usePortfolioHoldings re-fetches it
+      // every 60s — while the desk's spot is a field on a stored daily summary
+      // that can be a session or several behind. Prefer the live one and fall
+      // back to the desk only when the catalog has nothing, which is the
+      // opposite of the order this used to run in.
+      const livePrice = h.current_price ?? null;
+      const deskSpot = res?.spot ?? d?.spot ?? null;
+      const spot = livePrice ?? deskSpot;
+      const spotIsLive = livePrice != null;
       const resistance = res?.resistance ?? null;
       // The rule. Whichever is higher wins; if resistance is below basis the
       // trade is blocked rather than repriced.
@@ -85,6 +104,8 @@ export default function CoveredCallBook() {
       return {
         ...h,
         spot,
+        spotIsLive,
+        deskSpot,
         res,
         resistance,
         target,
@@ -170,7 +191,19 @@ export default function CoveredCallBook() {
                     </td>
                     <td className="nums py-2 pr-3 text-right">{r.shares}</td>
                     <td className="nums py-2 pr-3 text-right">{usd(r.cost_basis)}</td>
-                    <td className="nums py-2 pr-3 text-right text-muted-foreground">{usd(r.spot)}</td>
+                    <td className="nums py-2 pr-3 text-right text-muted-foreground">
+                      {r.spotIsLive ? (
+                        <span title={spotAgeLabel(r.last_price_updated_at)}>{usd(r.spot)}</span>
+                      ) : (
+                        <span
+                          className="text-signal-caution"
+                          title="No live price for this name — this is the desk's stored daily spot, which can be a session or more behind."
+                        >
+                          {usd(r.spot)}
+                          <span className="ml-1 text-[10px]">stored</span>
+                        </span>
+                      )}
+                    </td>
                     <td className="nums py-2 pr-3 text-right">
                       {r.resistance == null ? (
                         <span

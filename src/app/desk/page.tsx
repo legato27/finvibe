@@ -484,14 +484,21 @@ export default function OptionDeskPage() {
     {
       key: "ann",
       header: "Ann. %",
-      ariaLabel: "Annualized return on collateral",
+      ariaLabel: isCsp
+        ? "Annualized return on cash collateral"
+        : "Annualized premium yield on the shares held",
       sortable: true,
       align: "right",
       sortValue: (r) => r.annualized_return_pct,
       cell: (r) => (
         <span
           className="nums"
-          title="Priced off the engine's estimate, which assumes a mid fill. The current market-data plan returns no bid/ask, so this is an upper bound."
+          title={
+            (isCsp
+              ? "Return on the cash you set aside as collateral. "
+              : "Premium yield against the value of the shares you already hold — there is no cash collateral in a covered call. ") +
+            "Priced off the engine's estimate, which assumes a mid fill. The current market-data plan returns no bid/ask, so this is an upper bound."
+          }
         >
           {fmt(r.annualized_return_pct, 1, "%")}
         </span>
@@ -504,7 +511,18 @@ export default function OptionDeskPage() {
       align: "right",
       optional: true,
       sortValue: (r) => r.breakeven,
-      cell: (r) => <span className="nums">{r.breakeven == null ? "—" : `$${r.breakeven.toFixed(2)}`}</span>,
+      cell: (r) => (
+        <span
+          className="nums"
+          title={
+            isCsp
+              ? "Strike minus premium — what you would effectively pay per share if assigned."
+              : "Strike plus premium — the price above which you start giving up upside. Your own breakeven depends on your cost basis, which the desk cannot see; the Covered calls panel joins that in your browser."
+          }
+        >
+          {r.breakeven == null ? "—" : `$${r.breakeven.toFixed(2)}`}
+        </span>
+      ),
     },
     {
       key: "earn",
@@ -596,11 +614,11 @@ export default function OptionDeskPage() {
         <CoveredCallBook />
       )}
 
-      <TradeJournal />
+      <TradeJournal defaultStrategy={isCsp ? "cash_secured_put" : "covered_call"} />
 
-      <AssignmentBacktest />
+      <AssignmentBacktest strategy={strategy} />
 
-      <RecoTrackRecord />
+      <RecoTrackRecord strategy={strategy} />
 
       <GuideCard
         title="How to read this desk"
@@ -614,7 +632,9 @@ export default function OptionDeskPage() {
             title: "The two hard gates",
             tone: "plain",
             steps: [
-              "Solvency — a name is only excluded when Altman classifies it as Distress. Assignment means owning the shares, so the gate asks whether the company survives, not whether it is cheap.",
+              isCsp
+                ? "Solvency — a name is only excluded when Altman classifies it as Distress. Assignment means owning the shares, so the gate asks whether the company survives, not whether it is cheap."
+                : "Solvency — a name is only excluded when Altman classifies it as Distress. You already hold the shares here, so the gate is about whether to keep holding them; a distressed name is a reason to sell stock, not to sell calls against it.",
               "Liquidity — strike open interest of at least 500 and an underlying above $10. Below that the quoted premium is not obtainable: on a $0.25 credit the spread can be 20-40% of the trade.",
               "Altman's grey zone is uncertainty, not insolvency, so grey names stay on the list and are scored down instead.",
             ],
@@ -624,8 +644,12 @@ export default function OptionDeskPage() {
             tone: "long",
             steps: [
               "IV percentile (30%) — how rich this name's implied vol is against its OWN year. Below the 50th percentile earns nothing; you would be selling cheap.",
-              "Piotroski F-Score (25%) — the willing-to-own test.",
-              "OU z-score (20%) — how far below its statistical equilibrium the price sits. Positive z earns nothing: selling puts into strength is what gets run over.",
+              isCsp
+                ? "Piotroski F-Score (25%) — the willing-to-own test."
+                : "Piotroski F-Score (25%) — the willing-to-KEEP-holding test. You already own the shares; this asks whether the name deserves the position at all.",
+              isCsp
+                ? "OU z-score (20%) — how far below its statistical equilibrium the price sits. Positive z earns nothing: selling puts into strength is what gets run over."
+                : "OU z-score (20%) — carried over unchanged from the put desk, and it points the wrong way for a covered call. It rewards names trading BELOW equilibrium, which is where you would rather not cap your upside. Read this term as a warning on this tab, not a recommendation.",
               "Annualized return (15%), capped at 40% — uncapped, yield alone ranks a 150%-annualized penny stock above every quality signal.",
               "Margin of safety (10%) — the smallest weight on purpose. The DCF behind it is missing for 37% of the universe and is unreliable on high-growth names.",
               "Where an input is missing the weight is redistributed, not scored zero — a measurement gap should not read as a finding.",

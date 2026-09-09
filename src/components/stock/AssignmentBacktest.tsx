@@ -15,7 +15,7 @@
  * (+0.2% to +11.1%). That is the desk's entry filter earning its place, and it
  * is not visible without the baseline sitting next to it.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { optionsApi } from "@/lib/api";
 import { FlaskConical, Info } from "lucide-react";
@@ -71,8 +71,25 @@ function Bar({ value, max, tone }: { value: number; max: number; tone: string })
   );
 }
 
-export default function AssignmentBacktest() {
-  const [preset, setPreset] = useState(PRESETS[0]);
+export default function AssignmentBacktest({
+  strategy = "csp",
+}: {
+  /** Which desk this is sitting under. A covered-call desk must not open on
+   *  put assignment stats — that is the other side of the trade. */
+  strategy?: "csp" | "covered_call";
+} = {}) {
+  const [preset, setPreset] = useState(
+    () => PRESETS.find((x) => x.type === (strategy === "covered_call" ? "call" : "put")) ?? PRESETS[0],
+  );
+
+  // The desk's strategy switch is a different control from this panel's preset
+  // buttons, but flipping the desk should still move this off the wrong side.
+  const wantType = strategy === "covered_call" ? "call" : "put";
+  useEffect(() => {
+    setPreset((cur) =>
+      cur.type === wantType ? cur : PRESETS.find((x) => x.type === wantType) ?? cur,
+    );
+  }, [wantType]);
 
   const { data, isLoading, error } = useQuery<BacktestResponse>({
     queryKey: ["assignment-backtest", preset.id],
