@@ -517,7 +517,7 @@ export default function OptionDeskPage() {
           title={
             isCsp
               ? "Strike minus premium — what you would effectively pay per share if assigned."
-              : "Strike plus premium — the price above which you start giving up upside. Your own breakeven depends on your cost basis, which the desk cannot see; the Covered calls panel joins that in your browser."
+              : "Spot minus premium — how far the shares can fall before the credit stops covering it. Measured from today because the desk cannot see your cost basis; the Covered calls panel joins your real basis in your browser."
           }
         >
           {r.breakeven == null ? "—" : `$${r.breakeven.toFixed(2)}`}
@@ -649,7 +649,7 @@ export default function OptionDeskPage() {
                 : "Piotroski F-Score (25%) — the willing-to-KEEP-holding test. You already own the shares; this asks whether the name deserves the position at all.",
               isCsp
                 ? "OU z-score (20%) — how far below its statistical equilibrium the price sits. Positive z earns nothing: selling puts into strength is what gets run over."
-                : "OU z-score (20%) — carried over unchanged from the put desk, and it points the wrong way for a covered call. It rewards names trading BELOW equilibrium, which is where you would rather not cap your upside. Read this term as a warning on this tab, not a recommendation.",
+                : "OU z-score (20%) — signed for this side of the trade: it rewards names extended ABOVE their statistical equilibrium. An extended name pays richer call premium and has mean reversion working for the position, so the call is likelier to expire and leave you holding the shares. Selling calls on a name sitting below its mean caps the recovery you are waiting for, and earns nothing here.",
               "Annualized return (15%), capped at 40% — uncapped, yield alone ranks a 150%-annualized penny stock above every quality signal.",
               "Margin of safety (10%) — the smallest weight on purpose. The DCF behind it is missing for 37% of the universe and is unreliable on high-growth names.",
               "Where an input is missing the weight is redistributed, not scored zero — a measurement gap should not read as a finding.",
