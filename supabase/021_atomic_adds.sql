@@ -183,10 +183,34 @@ comment on function public.add_portfolio_holding is
 -- ── Grants ─────────────────────────────────────────────────────────────
 --
 -- anon gets nothing: acting_user would reject it anyway, but an unauthenticated
--- caller should not reach a SECURITY DEFINER function at all. ensure_stock is
--- not granted separately — it exists to be called by the two above, inside
--- their ownership checks, and on its own it would be a way to plant catalog
--- rows without linking them, which is the very thing being fixed.
+-- caller should not reach a SECURITY DEFINER function at all.
+--
+-- ensure_stock is revoked from public, anon and authenticated. It exists to be
+-- called by the two functions above, inside their ownership checks; on its own
+-- it creates a catalog row with nothing linking it, which is precisely the
+-- orphan this migration exists to prevent.
+--
+-- service_role KEEPS it, and the revoke below does not name that role. Supabase
+-- grants service_role broadly by default, so it retains execute and a direct
+-- call really will create an unlinked row — that is how ZZNOPE got into the
+-- catalog while this migration was being verified, and it had to be deleted by
+-- hand. It is not a privilege escalation: service_role already has full table
+-- access to stock_catalog through PostgREST, so the function offers it nothing
+-- it could not do with a plain insert. It is a footgun, not a hole. Server code
+-- must go through add_watchlist_stock / add_portfolio_holding; nothing in this
+-- repo calls ensure_stock directly.
+--
+-- Closing that is one line, and it is safe to add whenever the divergence stops
+-- being worth tolerating:
+--
+--     revoke all on function public.ensure_stock(text) from service_role;
+--
+-- The two wrappers keep working with it revoked. They are SECURITY DEFINER, so
+-- inside them current_user is the function owner rather than the caller, and
+-- the owner's own execute privilege is what the nested call is checked against.
+-- Verified rather than assumed: with ensure_stock revoked from every role, a
+-- caller holding execute on the wrapper alone still completed an add, while a
+-- direct call raised insufficient_privilege.
 revoke all on function public.acting_user(uuid) from public, anon;
 revoke all on function public.ensure_stock(text) from public, anon, authenticated;
 revoke all on function public.add_watchlist_stock(bigint, text, uuid) from public, anon;
