@@ -26,7 +26,8 @@ function assertValidTicker(t: string): string {
 // Request enrichment from DGX. DGX is the single source of truth for stock
 // details + enrichment_status and the SOLE writer of the Supabase stock_catalog
 // / llm_analysis mirror. The web/MCP clients only ever (1) create the 'pending'
-// request row (getOrCreateStock) and (2) call this to kick the pipeline — they
+// request row (public.ensure_stock, inside the add RPCs) and (2) call this to
+// kick the pipeline — they
 // no longer pull DGX's view and write fields/status themselves. That old
 // dual-writer design (two engines racing on the same rows, with different field
 // sets and different meanings of "done") is what made the two databases
@@ -182,7 +183,7 @@ export async function findStaleEnrichmentTickers(
 // spend real GPU and LLM time — enrichment_status is a display state, but
 // fileEnrichmentRequest queues actual work — on data no user is looking at,
 // and it would have to be billed to a user who never asked for it. Deleting
-// costs nothing: getOrCreateStock recreates the row the moment anyone adds the
+// costs nothing: the add RPCs recreate the row the moment anyone adds the
 // ticker again.
 //
 // Only provably-worthless rows qualify, and all four conditions matter:
@@ -255,82 +256,6 @@ export async function reapOrphanCatalogRows(
     return [];
   }
   return (deleted ?? []).map((r: { ticker: string }) => r.ticker);
-}
-
-// True when supabase/021_atomic_adds.sql has not been applied yet.
-//
-// CAVEAT worth knowing before trusting this: PostgREST resolves a function by
-// name AND parameter names, and answers PGRST202 for both "no such function"
-// and "that function exists but not with those arguments". They are
-// indistinguishable from here — verified against the live project, where
-// calling the real file_enrichment_request with the wrong arguments returned
-// exactly the same code as a function that does not exist.
-//
-// So a renamed parameter would look like a missing migration and silently
-// route every add back through the two-step, forever, with 021 applied and
-// unused. Hence the warning: a fallback is a temporary state and should be
-// audible, not invisible. It never routes around a function that RAN and
-// raised — those carry the PL/pgSQL error code instead.
-//
-// Exists so either deploy order is safe: the app can ship before 021 is
-// applied, or after. Once it is applied everywhere, this and the two-step
-// branches below can go.
-function rpcMissing(error: { code?: string; message?: string } | null): boolean {
-  if (error?.code !== "PGRST202") return false;
-  console.warn(
-    `[add] atomic add RPC unavailable, falling back to the two-step: ${error.message ?? ""}`,
-  );
-  return true;
-}
-
-// Undo a blank catalog row created moments ago by an add that then failed.
-//
-// The reaper below is the backstop for rows nobody can reach; this is the
-// first line, closing the window instead of waiting an hour to clean up after
-// it. Same safety predicates, minus the age gate — the caller knows it created
-// this row seconds ago, so waiting would defeat the point.
-//
-// The unreferenced check is NOT redundant with "I just made it". Between the
-// insert and the failure another user's add can link the same shared row, and
-// a portfolio_holdings row would not stop the delete on its own because that
-// column has no foreign key. Deleting then would take out someone else's
-// holding to tidy up our own failure.
-//
-// Callers must treat this as best-effort and must not let it mask the error
-// that triggered it: the add already failed, and the user needs to see why.
-export async function discardBlankCatalogRow(
-  supabase: ServiceSupabase,
-  ticker: string,
-): Promise<boolean> {
-  const t = tickerOf(ticker);
-
-  const { data: row } = await supabase
-    .from("stock_catalog")
-    .select("id")
-    .eq("ticker", t)
-    .eq("enrichment_status", "pending")
-    .is("name", null)
-    .maybeSingle();
-  if (!row) return false;
-
-  const id = (row as { id: number }).id;
-  const [{ data: linked }, { data: held }] = await Promise.all([
-    supabase.from("watchlist_items").select("stock_id").eq("stock_id", id).limit(1),
-    supabase.from("portfolio_holdings").select("ticker").eq("ticker", t).limit(1),
-  ]);
-  if ((linked ?? []).length || (held ?? []).length) return false;
-
-  // Predicates repeated in the delete: DGX may have started describing the row
-  // between the read above and here, and a row it is filling in is no longer
-  // ours to discard.
-  const { data: deleted } = await supabase
-    .from("stock_catalog")
-    .delete()
-    .eq("id", id)
-    .eq("enrichment_status", "pending")
-    .is("name", null)
-    .select("ticker");
-  return (deleted ?? []).length > 0;
 }
 
 // Re-kick enrichment for the user's stale tickers. Both the web /api/enrich
@@ -464,33 +389,6 @@ async function assertWatchlistOwned(
   if (!data) throw new Error(`Watchlist ${watchlistId} not found`);
 }
 
-// `created` tells the caller whether it owns the cleanup if its own insert
-// fails next. Rolling back a row that was already in the catalog would delete
-// a shared row this add merely read.
-async function getOrCreateStock(
-  supabase: ServiceSupabase,
-  ticker: string,
-): Promise<{ id: number; ticker: string; created: boolean }> {
-  const t = assertValidTicker(ticker);
-  const existing = await supabase
-    .from("stock_catalog")
-    .select("id, ticker")
-    .eq("ticker", t)
-    .maybeSingle();
-  if (existing.data) return { ...(existing.data as { id: number; ticker: string }), created: false };
-
-  // A blank row. enrichment_status is a DISPLAY state now, not a work queue —
-  // nothing schedules off it, so this creates a badge, not a GPU hour. The
-  // RLS policy in 018 enforces the same blankness for browser inserts.
-  const { data, error } = await supabase
-    .from("stock_catalog")
-    .insert({ ticker: t, enrichment_status: "pending" })
-    .select("id, ticker")
-    .single();
-  if (error) throw new Error(error.message);
-  return { ...(data as { id: number; ticker: string }), created: true };
-}
-
 export async function addToWatchlist(
   userId: string,
   supabase: ServiceSupabase,
@@ -503,38 +401,13 @@ export async function addToWatchlist(
   // re-checks ownership itself — it is SECURITY DEFINER and cannot trust its
   // caller — so assertWatchlistOwned above is belt and braces, and the one
   // that produces the friendlier message.
-  //
-  // Both branches below converge on the same `stock`, so the enrichment tail
-  // and the response shape are written once. An RPC branch with its own return
-  // would drift from the fallback's the first time either changed.
-  let stock: { id: number; ticker: string };
-
-  const viaRpc = await supabase.rpc("add_watchlist_stock", {
+  const { data: stockId, error } = await supabase.rpc("add_watchlist_stock", {
     p_watchlist_id: args.watchlist_id,
     p_ticker: args.ticker,
     p_user_id: userId,
   });
-
-  if (!viaRpc.error) {
-    stock = { id: viaRpc.data as number, ticker: assertValidTicker(args.ticker) };
-  } else if (!rpcMissing(viaRpc.error)) {
-    throw new Error(viaRpc.error.message);
-  } else {
-    // ── Fallback: 021 not applied yet.
-    const created = await getOrCreateStock(supabase, args.ticker);
-    const { error } = await supabase
-      .from("watchlist_items")
-      .insert({ watchlist_id: args.watchlist_id, stock_id: created.id });
-    if (error) {
-      // The catalog row exists only because this call was about to link it.
-      // Leaving it behind is what produces an orphan no sweep can reach.
-      if (created.created) {
-        await discardBlankCatalogRow(supabase, created.ticker).catch(() => false);
-      }
-      throw new Error(error.message);
-    }
-    stock = created;
-  }
+  if (error) throw new Error(error.message);
+  const stock = { id: stockId as number, ticker: assertValidTicker(args.ticker) };
 
   // File the request before kicking. The row is what makes the work
   // attributable and capped, and what the DGX poller retries from if the
@@ -747,13 +620,10 @@ export async function addHolding(
 ) {
   await assertPortfolioOwned(userId, supabase, args.portfolio_id);
 
-  // As in addToWatchlist: one statement when 021 is present, the old two-step
-  // plus rollback when it is not, and both leave `data` holding the inserted
-  // row so everything downstream is written once.
+  // One statement: the catalog row and the holding commit together.
   const ticker = assertValidTicker(args.ticker);
-  let data: unknown;
 
-  const viaRpc = await supabase.rpc("add_portfolio_holding", {
+  const { data, error } = await supabase.rpc("add_portfolio_holding", {
     p_portfolio_id: args.portfolio_id,
     p_ticker: ticker,
     p_shares: args.shares,
@@ -765,41 +635,8 @@ export async function addHolding(
     p_user_id: userId,
   });
 
-  if (!viaRpc.error) {
-    data = viaRpc.data;
-  } else if (!rpcMissing(viaRpc.error)) {
-    throw new Error(viaRpc.error.message);
-  } else {
-    // ── Fallback: 021 not applied yet.
-    const stock = await getOrCreateStock(supabase, args.ticker);
-    const inserted = await supabase
-      .from("portfolio_holdings")
-      .insert({
-        user_id: userId,
-        portfolio_id: args.portfolio_id,
-        ticker: stock.ticker,
-        shares: args.shares,
-        cost_basis: args.cost_basis,
-        acquired_date: args.acquired_date ?? null,
-        broker: args.broker ?? null,
-        notes: args.notes ?? null,
-        currency: (args.currency ?? "USD").toUpperCase(),
-      })
-      .select()
-      .single();
-    if (inserted.error) {
-      // Same contract as addToWatchlist: the blank row was created for this
-      // holding, so this call owns discarding it.
-      if (stock.created) {
-        await discardBlankCatalogRow(supabase, stock.ticker).catch(() => false);
-      }
-      throw new Error(inserted.error.message);
-    }
-    data = inserted.data;
-  }
+  if (error) throw new Error(error.message);
 
-  // `ticker` rather than the row's: both branches normalised it the same way,
-  // and it is in scope regardless of which one ran.
   await kickoffEnrichment(supabase, ticker, isSuperAdmin);
 
   return data;

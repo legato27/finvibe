@@ -9,45 +9,6 @@ const supabase = createClient();
 // add and portfolio add use this; the sweep variant is used by the
 // background queries inside useWatchlists / usePortfolioHoldings to
 // auto-requeue any rows still stuck in pending.
-// True when supabase/021_atomic_adds.sql has not been applied yet.
-//
-// CAVEAT worth knowing before trusting this: PostgREST resolves a function by
-// name AND parameter names, and answers PGRST202 for both "no such function"
-// and "that function exists but not with those arguments". They are
-// indistinguishable from here — verified against the live project, where
-// calling the real file_enrichment_request with the wrong arguments returned
-// exactly the same code as a function that does not exist.
-//
-// So a renamed parameter would look like a missing migration and silently
-// route every add back through the two-step, forever, with 021 applied and
-// unused. Hence the warning: a fallback is a temporary state and should be
-// audible, not invisible. It never routes around a function that RAN and
-// raised — those carry the PL/pgSQL error code instead.
-//
-// Exists so either deploy order is safe: the app can ship before 021 is
-// applied, or after. Once it is applied everywhere, this and the two-step
-// branches below can go.
-function rpcMissing(error: { code?: string; message?: string } | null): boolean {
-  if (error?.code !== "PGRST202") return false;
-  console.warn(
-    `[add] atomic add RPC unavailable, falling back to the two-step: ${error.message ?? ""}`,
-  );
-  return true;
-}
-
-// Discard a blank catalog row this client created and then failed to link.
-// Routed through the server because RLS gives the browser no delete on
-// stock_catalog — see the rollback path in /api/enrich. Best-effort by design:
-// the add already failed and the caller must surface that error, not this one.
-// If it does not land, reapOrphanCatalogRows collects the row within the hour.
-function discardBlankStock(ticker: string) {
-  return fetch("/api/enrich", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ rollback: [ticker] }),
-  }).catch(() => null);
-}
-
 function kickEnrich(body: { tickers?: string[]; sweep?: boolean }) {
   return fetch("/api/enrich", {
     method: "POST",
@@ -302,44 +263,11 @@ export function useAddStock() {
 
       // One statement: the catalog row and the link commit together, so a
       // failure cannot leave the first behind. See supabase/021_atomic_adds.sql.
-      const viaRpc = await supabase.rpc("add_watchlist_stock", {
+      const { error } = await supabase.rpc("add_watchlist_stock", {
         p_watchlist_id: watchlistId,
         p_ticker: upper,
       });
-      if (!viaRpc.error) return upper;
-      if (!rpcMissing(viaRpc.error)) throw viaRpc.error;
-
-      // ── Fallback: 021 not applied yet. Two round trips, and the rollback
-      // below is what keeps a failure from orphaning the catalog row.
-      // Upsert into stock_catalog (shared)
-      let { data: stock } = await supabase
-        .from("stock_catalog")
-        .select("id")
-        .eq("ticker", upper)
-        .single();
-
-      // Tracks whether THIS call created the shared row. Rolling back a row
-      // that was already in the catalog would delete something we only read.
-      let createdStock = false;
-      if (!stock) {
-        const { data: newStock, error: insertErr } = await supabase
-          .from("stock_catalog")
-          .insert({ ticker: upper, enrichment_status: "pending" })
-          .select("id")
-          .single();
-        if (insertErr) throw insertErr;
-        stock = newStock;
-        createdStock = true;
-      }
-
-      // Link to watchlist
-      const { error } = await supabase
-        .from("watchlist_items")
-        .insert({ watchlist_id: watchlistId, stock_id: stock!.id });
-      if (error) {
-        if (createdStock) await discardBlankStock(upper);
-        throw error;
-      }
+      if (error) throw error;
       return upper;
     },
     onSuccess: (upper) => {
@@ -403,34 +331,11 @@ export function useToggleWatchlistTicker() {
         listId = created.id;
       }
 
-      const viaRpc = await supabase.rpc("add_watchlist_stock", {
+      const { error } = await supabase.rpc("add_watchlist_stock", {
         p_watchlist_id: listId,
         p_ticker: upper,
       });
-      if (!viaRpc.error) return { ticker: upper, added: true };
-      if (!rpcMissing(viaRpc.error)) throw viaRpc.error;
-
-      // ── Fallback: 021 not applied yet.
-      let stockId = stock?.id as number | undefined;
-      let createdStock = false;
-      if (!stockId) {
-        const { data: newStock, error } = await supabase
-          .from("stock_catalog")
-          .insert({ ticker: upper, enrichment_status: "pending" })
-          .select("id")
-          .single();
-        if (error) throw error;
-        stockId = newStock.id;
-        createdStock = true;
-      }
-
-      const { error } = await supabase
-        .from("watchlist_items")
-        .insert({ watchlist_id: listId, stock_id: stockId });
-      if (error) {
-        if (createdStock) await discardBlankStock(upper);
-        throw error;
-      }
+      if (error) throw error;
       return { ticker: upper, added: true };
     },
     onSuccess: ({ ticker, added }) => {
@@ -727,7 +632,7 @@ export function useAddHolding() {
 
       const upperTicker = holding.ticker.toUpperCase();
 
-      const viaRpc = await supabase.rpc("add_portfolio_holding", {
+      const { data, error } = await supabase.rpc("add_portfolio_holding", {
         p_portfolio_id: holding.portfolio_id,
         p_ticker: upperTicker,
         p_shares: holding.shares,
@@ -737,48 +642,7 @@ export function useAddHolding() {
         p_notes: holding.notes || null,
         p_currency: (holding.currency || "USD").toUpperCase(),
       });
-      if (!viaRpc.error) return { data: viaRpc.data, ticker: upperTicker };
-      if (!rpcMissing(viaRpc.error)) throw viaRpc.error;
-
-      // ── Fallback: 021 not applied yet.
-      // Ensure ticker exists in stock_catalog
-      const { data: existing } = await supabase
-        .from("stock_catalog")
-        .select("id")
-        .eq("ticker", upperTicker)
-        .single();
-
-      // The insert error was previously discarded along with the result. A
-      // failure here means the holding insert below will fail too — on the
-      // foreign key or on nothing at all, since portfolio_holdings.ticker has
-      // no constraint — so it is worth knowing whether the row is ours.
-      let createdStock = false;
-      if (!existing) {
-        const { error: insertErr } = await supabase
-          .from("stock_catalog")
-          .insert({ ticker: upperTicker, enrichment_status: "pending" });
-        createdStock = !insertErr;
-      }
-
-      const { data, error } = await supabase
-        .from("portfolio_holdings")
-        .insert({
-          ticker: upperTicker,
-          shares: holding.shares,
-          cost_basis: holding.cost_basis,
-          portfolio_id: holding.portfolio_id,
-          acquired_date: holding.acquired_date || null,
-          notes: holding.notes || null,
-          broker: holding.broker || null,
-          currency: (holding.currency || "USD").toUpperCase(),
-          user_id: user.id,
-        })
-        .select()
-        .single();
-      if (error) {
-        if (createdStock) await discardBlankStock(upperTicker);
-        throw error;
-      }
+      if (error) throw error;
       return { data, ticker: upperTicker };
     },
     onSuccess: ({ ticker }) => {
