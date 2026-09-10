@@ -9,6 +9,19 @@ const supabase = createClient();
 // add and portfolio add use this; the sweep variant is used by the
 // background queries inside useWatchlists / usePortfolioHoldings to
 // auto-requeue any rows still stuck in pending.
+// Discard a blank catalog row this client created and then failed to link.
+// Routed through the server because RLS gives the browser no delete on
+// stock_catalog — see the rollback path in /api/enrich. Best-effort by design:
+// the add already failed and the caller must surface that error, not this one.
+// If it does not land, reapOrphanCatalogRows collects the row within the hour.
+function discardBlankStock(ticker: string) {
+  return fetch("/api/enrich", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rollback: [ticker] }),
+  }).catch(() => null);
+}
+
 function kickEnrich(body: { tickers?: string[]; sweep?: boolean }) {
   return fetch("/api/enrich", {
     method: "POST",
@@ -267,6 +280,9 @@ export function useAddStock() {
         .eq("ticker", upper)
         .single();
 
+      // Tracks whether THIS call created the shared row. Rolling back a row
+      // that was already in the catalog would delete something we only read.
+      let createdStock = false;
       if (!stock) {
         const { data: newStock, error: insertErr } = await supabase
           .from("stock_catalog")
@@ -275,13 +291,17 @@ export function useAddStock() {
           .single();
         if (insertErr) throw insertErr;
         stock = newStock;
+        createdStock = true;
       }
 
       // Link to watchlist
       const { error } = await supabase
         .from("watchlist_items")
         .insert({ watchlist_id: watchlistId, stock_id: stock!.id });
-      if (error) throw error;
+      if (error) {
+        if (createdStock) await discardBlankStock(upper);
+        throw error;
+      }
       return upper;
     },
     onSuccess: (upper) => {
@@ -346,6 +366,7 @@ export function useToggleWatchlistTicker() {
       }
 
       let stockId = stock?.id as number | undefined;
+      let createdStock = false;
       if (!stockId) {
         const { data: newStock, error } = await supabase
           .from("stock_catalog")
@@ -354,12 +375,16 @@ export function useToggleWatchlistTicker() {
           .single();
         if (error) throw error;
         stockId = newStock.id;
+        createdStock = true;
       }
 
       const { error } = await supabase
         .from("watchlist_items")
         .insert({ watchlist_id: listId, stock_id: stockId });
-      if (error) throw error;
+      if (error) {
+        if (createdStock) await discardBlankStock(upper);
+        throw error;
+      }
       return { ticker: upper, added: true };
     },
     onSuccess: ({ ticker, added }) => {
@@ -662,10 +687,16 @@ export function useAddHolding() {
         .eq("ticker", upperTicker)
         .single();
 
+      // The insert error was previously discarded along with the result. A
+      // failure here means the holding insert below will fail too — on the
+      // foreign key or on nothing at all, since portfolio_holdings.ticker has
+      // no constraint — so it is worth knowing whether the row is ours.
+      let createdStock = false;
       if (!existing) {
-        await supabase
+        const { error: insertErr } = await supabase
           .from("stock_catalog")
           .insert({ ticker: upperTicker, enrichment_status: "pending" });
+        createdStock = !insertErr;
       }
 
       const { data, error } = await supabase
@@ -683,7 +714,10 @@ export function useAddHolding() {
         })
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        if (createdStock) await discardBlankStock(upperTicker);
+        throw error;
+      }
       return { data, ticker: upperTicker };
     },
     onSuccess: ({ ticker }) => {

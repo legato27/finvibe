@@ -257,6 +257,56 @@ export async function reapOrphanCatalogRows(
   return (deleted ?? []).map((r: { ticker: string }) => r.ticker);
 }
 
+// Undo a blank catalog row created moments ago by an add that then failed.
+//
+// The reaper below is the backstop for rows nobody can reach; this is the
+// first line, closing the window instead of waiting an hour to clean up after
+// it. Same safety predicates, minus the age gate — the caller knows it created
+// this row seconds ago, so waiting would defeat the point.
+//
+// The unreferenced check is NOT redundant with "I just made it". Between the
+// insert and the failure another user's add can link the same shared row, and
+// a portfolio_holdings row would not stop the delete on its own because that
+// column has no foreign key. Deleting then would take out someone else's
+// holding to tidy up our own failure.
+//
+// Callers must treat this as best-effort and must not let it mask the error
+// that triggered it: the add already failed, and the user needs to see why.
+export async function discardBlankCatalogRow(
+  supabase: ServiceSupabase,
+  ticker: string,
+): Promise<boolean> {
+  const t = tickerOf(ticker);
+
+  const { data: row } = await supabase
+    .from("stock_catalog")
+    .select("id")
+    .eq("ticker", t)
+    .eq("enrichment_status", "pending")
+    .is("name", null)
+    .maybeSingle();
+  if (!row) return false;
+
+  const id = (row as { id: number }).id;
+  const [{ data: linked }, { data: held }] = await Promise.all([
+    supabase.from("watchlist_items").select("stock_id").eq("stock_id", id).limit(1),
+    supabase.from("portfolio_holdings").select("ticker").eq("ticker", t).limit(1),
+  ]);
+  if ((linked ?? []).length || (held ?? []).length) return false;
+
+  // Predicates repeated in the delete: DGX may have started describing the row
+  // between the read above and here, and a row it is filling in is no longer
+  // ours to discard.
+  const { data: deleted } = await supabase
+    .from("stock_catalog")
+    .delete()
+    .eq("id", id)
+    .eq("enrichment_status", "pending")
+    .is("name", null)
+    .select("ticker");
+  return (deleted ?? []).length > 0;
+}
+
 // Re-kick enrichment for the user's stale tickers. Both the web /api/enrich
 // route and the MCP list_watchlists path delegate here so they agree on
 // what "stale" means and how it gets recovered.
@@ -388,14 +438,20 @@ async function assertWatchlistOwned(
   if (!data) throw new Error(`Watchlist ${watchlistId} not found`);
 }
 
-async function getOrCreateStock(supabase: ServiceSupabase, ticker: string) {
+// `created` tells the caller whether it owns the cleanup if its own insert
+// fails next. Rolling back a row that was already in the catalog would delete
+// a shared row this add merely read.
+async function getOrCreateStock(
+  supabase: ServiceSupabase,
+  ticker: string,
+): Promise<{ id: number; ticker: string; created: boolean }> {
   const t = assertValidTicker(ticker);
   const existing = await supabase
     .from("stock_catalog")
     .select("id, ticker")
     .eq("ticker", t)
     .maybeSingle();
-  if (existing.data) return existing.data;
+  if (existing.data) return { ...(existing.data as { id: number; ticker: string }), created: false };
 
   // A blank row. enrichment_status is a DISPLAY state now, not a work queue —
   // nothing schedules off it, so this creates a badge, not a GPU hour. The
@@ -406,7 +462,7 @@ async function getOrCreateStock(supabase: ServiceSupabase, ticker: string) {
     .select("id, ticker")
     .single();
   if (error) throw new Error(error.message);
-  return data;
+  return { ...(data as { id: number; ticker: string }), created: true };
 }
 
 export async function addToWatchlist(
@@ -420,7 +476,14 @@ export async function addToWatchlist(
   const { error } = await supabase
     .from("watchlist_items")
     .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
-  if (error) throw new Error(error.message);
+  if (error) {
+    // The catalog row exists only because this call was about to link it.
+    // Leaving it behind is what produces an orphan no sweep can reach.
+    if (stock.created) {
+      await discardBlankCatalogRow(supabase, stock.ticker).catch(() => false);
+    }
+    throw new Error(error.message);
+  }
 
   // File the request before kicking. The row is what makes the work
   // attributable and capped, and what the DGX poller retries from if the
@@ -648,7 +711,14 @@ export async function addHolding(
     })
     .select()
     .single();
-  if (error) throw new Error(error.message);
+  if (error) {
+    // Same contract as addToWatchlist: the blank row was created for this
+    // holding, so this call owns discarding it.
+    if (stock.created) {
+      await discardBlankCatalogRow(supabase, stock.ticker).catch(() => false);
+    }
+    throw new Error(error.message);
+  }
 
   await kickoffEnrichment(supabase, stock.ticker, isSuperAdmin);
 

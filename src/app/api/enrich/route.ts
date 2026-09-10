@@ -33,6 +33,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase/server";
 import { createServiceSupabase } from "@/lib/supabase/service";
 import {
+  discardBlankCatalogRow,
   fileEnrichmentRequest,
   kickoffEnrichment,
   sweepUserEnrichment,
@@ -46,6 +47,8 @@ export const maxDuration = 60;
 type Body = {
   tickers?: string[];
   sweep?: boolean;
+  /** Blank catalog rows to discard after a browser add failed to link them. */
+  rollback?: string[];
 };
 
 export async function POST(request: NextRequest) {
@@ -68,6 +71,35 @@ export async function POST(request: NextRequest) {
 
   const supabase = createServiceSupabase();
 
+  // Rollback path — a browser add created the shared catalog row and then
+  // failed to insert its watchlist_items or portfolio_holdings row, leaving
+  // an orphan that no user-scoped sweep can ever reach.
+  //
+  // It has to come back through the server because it cannot happen in the
+  // browser at all: 002 grants `authenticated` only select and insert on
+  // stock_catalog and 018 narrowed the insert further, so with no delete
+  // policy RLS denies it. Adding one would hand every signed-in user a delete
+  // on a shared table to fix a case the service role can handle here.
+  //
+  // No ownership check, deliberately. The row is blank and unlinked by
+  // definition — discardBlankCatalogRow re-verifies both — so there is nothing
+  // to own yet, and requiring ownership would refuse exactly the rows that
+  // need discarding. Authentication alone is the gate, and the worst a caller
+  // can do is delete a blank row someone else is mid-add on, which the add
+  // recreates.
+  if (body.rollback?.length) {
+    const tickers = body.rollback
+      .map((t) => (typeof t === "string" ? t.trim().toUpperCase() : ""))
+      .filter(Boolean)
+      .slice(0, 25);
+    const results = await pooledMap(tickers, 5, (t) =>
+      discardBlankCatalogRow(supabase, t).catch(() => false),
+    );
+    return NextResponse.json({
+      discarded: tickers.filter((_, i) => results[i]),
+    });
+  }
+
   // Sweep path — auto-requeue any of this user's stale rows.
   if (body.sweep) {
     const result = await sweepUserEnrichment(user.id, supabase, isSuperAdmin);
@@ -80,7 +112,7 @@ export async function POST(request: NextRequest) {
     .filter(Boolean);
   if (!requested.length) {
     return NextResponse.json(
-      { error: "tickers[] or sweep=true is required" },
+      { error: "tickers[], sweep=true or rollback[] is required" },
       { status: 400 },
     );
   }
