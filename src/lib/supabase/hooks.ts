@@ -9,6 +9,32 @@ const supabase = createClient();
 // add and portfolio add use this; the sweep variant is used by the
 // background queries inside useWatchlists / usePortfolioHoldings to
 // auto-requeue any rows still stuck in pending.
+// True when supabase/021_atomic_adds.sql has not been applied yet.
+//
+// CAVEAT worth knowing before trusting this: PostgREST resolves a function by
+// name AND parameter names, and answers PGRST202 for both "no such function"
+// and "that function exists but not with those arguments". They are
+// indistinguishable from here — verified against the live project, where
+// calling the real file_enrichment_request with the wrong arguments returned
+// exactly the same code as a function that does not exist.
+//
+// So a renamed parameter would look like a missing migration and silently
+// route every add back through the two-step, forever, with 021 applied and
+// unused. Hence the warning: a fallback is a temporary state and should be
+// audible, not invisible. It never routes around a function that RAN and
+// raised — those carry the PL/pgSQL error code instead.
+//
+// Exists so either deploy order is safe: the app can ship before 021 is
+// applied, or after. Once it is applied everywhere, this and the two-step
+// branches below can go.
+function rpcMissing(error: { code?: string; message?: string } | null): boolean {
+  if (error?.code !== "PGRST202") return false;
+  console.warn(
+    `[add] atomic add RPC unavailable, falling back to the two-step: ${error.message ?? ""}`,
+  );
+  return true;
+}
+
 // Discard a blank catalog row this client created and then failed to link.
 // Routed through the server because RLS gives the browser no delete on
 // stock_catalog — see the rollback path in /api/enrich. Best-effort by design:
@@ -273,6 +299,18 @@ export function useAddStock() {
   return useMutation({
     mutationFn: async ({ watchlistId, ticker }: { watchlistId: number; ticker: string }) => {
       const upper = ticker.toUpperCase();
+
+      // One statement: the catalog row and the link commit together, so a
+      // failure cannot leave the first behind. See supabase/021_atomic_adds.sql.
+      const viaRpc = await supabase.rpc("add_watchlist_stock", {
+        p_watchlist_id: watchlistId,
+        p_ticker: upper,
+      });
+      if (!viaRpc.error) return upper;
+      if (!rpcMissing(viaRpc.error)) throw viaRpc.error;
+
+      // ── Fallback: 021 not applied yet. Two round trips, and the rollback
+      // below is what keeps a failure from orphaning the catalog row.
       // Upsert into stock_catalog (shared)
       let { data: stock } = await supabase
         .from("stock_catalog")
@@ -365,6 +403,14 @@ export function useToggleWatchlistTicker() {
         listId = created.id;
       }
 
+      const viaRpc = await supabase.rpc("add_watchlist_stock", {
+        p_watchlist_id: listId,
+        p_ticker: upper,
+      });
+      if (!viaRpc.error) return { ticker: upper, added: true };
+      if (!rpcMissing(viaRpc.error)) throw viaRpc.error;
+
+      // ── Fallback: 021 not applied yet.
       let stockId = stock?.id as number | undefined;
       let createdStock = false;
       if (!stockId) {
@@ -679,8 +725,23 @@ export function useAddHolding() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Ensure ticker exists in stock_catalog
       const upperTicker = holding.ticker.toUpperCase();
+
+      const viaRpc = await supabase.rpc("add_portfolio_holding", {
+        p_portfolio_id: holding.portfolio_id,
+        p_ticker: upperTicker,
+        p_shares: holding.shares,
+        p_cost_basis: holding.cost_basis,
+        p_acquired_date: holding.acquired_date || null,
+        p_broker: holding.broker || null,
+        p_notes: holding.notes || null,
+        p_currency: (holding.currency || "USD").toUpperCase(),
+      });
+      if (!viaRpc.error) return { data: viaRpc.data, ticker: upperTicker };
+      if (!rpcMissing(viaRpc.error)) throw viaRpc.error;
+
+      // ── Fallback: 021 not applied yet.
+      // Ensure ticker exists in stock_catalog
       const { data: existing } = await supabase
         .from("stock_catalog")
         .select("id")

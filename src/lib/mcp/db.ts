@@ -257,6 +257,32 @@ export async function reapOrphanCatalogRows(
   return (deleted ?? []).map((r: { ticker: string }) => r.ticker);
 }
 
+// True when supabase/021_atomic_adds.sql has not been applied yet.
+//
+// CAVEAT worth knowing before trusting this: PostgREST resolves a function by
+// name AND parameter names, and answers PGRST202 for both "no such function"
+// and "that function exists but not with those arguments". They are
+// indistinguishable from here — verified against the live project, where
+// calling the real file_enrichment_request with the wrong arguments returned
+// exactly the same code as a function that does not exist.
+//
+// So a renamed parameter would look like a missing migration and silently
+// route every add back through the two-step, forever, with 021 applied and
+// unused. Hence the warning: a fallback is a temporary state and should be
+// audible, not invisible. It never routes around a function that RAN and
+// raised — those carry the PL/pgSQL error code instead.
+//
+// Exists so either deploy order is safe: the app can ship before 021 is
+// applied, or after. Once it is applied everywhere, this and the two-step
+// branches below can go.
+function rpcMissing(error: { code?: string; message?: string } | null): boolean {
+  if (error?.code !== "PGRST202") return false;
+  console.warn(
+    `[add] atomic add RPC unavailable, falling back to the two-step: ${error.message ?? ""}`,
+  );
+  return true;
+}
+
 // Undo a blank catalog row created moments ago by an add that then failed.
 //
 // The reaper below is the backstop for rows nobody can reach; this is the
@@ -472,17 +498,42 @@ export async function addToWatchlist(
   isSuperAdmin: boolean,
 ) {
   await assertWatchlistOwned(userId, supabase, args.watchlist_id);
-  const stock = await getOrCreateStock(supabase, args.ticker);
-  const { error } = await supabase
-    .from("watchlist_items")
-    .insert({ watchlist_id: args.watchlist_id, stock_id: stock.id });
-  if (error) {
-    // The catalog row exists only because this call was about to link it.
-    // Leaving it behind is what produces an orphan no sweep can reach.
-    if (stock.created) {
-      await discardBlankCatalogRow(supabase, stock.ticker).catch(() => false);
+
+  // One statement, so the catalog row and the link commit together. The RPC
+  // re-checks ownership itself — it is SECURITY DEFINER and cannot trust its
+  // caller — so assertWatchlistOwned above is belt and braces, and the one
+  // that produces the friendlier message.
+  //
+  // Both branches below converge on the same `stock`, so the enrichment tail
+  // and the response shape are written once. An RPC branch with its own return
+  // would drift from the fallback's the first time either changed.
+  let stock: { id: number; ticker: string };
+
+  const viaRpc = await supabase.rpc("add_watchlist_stock", {
+    p_watchlist_id: args.watchlist_id,
+    p_ticker: args.ticker,
+    p_user_id: userId,
+  });
+
+  if (!viaRpc.error) {
+    stock = { id: viaRpc.data as number, ticker: assertValidTicker(args.ticker) };
+  } else if (!rpcMissing(viaRpc.error)) {
+    throw new Error(viaRpc.error.message);
+  } else {
+    // ── Fallback: 021 not applied yet.
+    const created = await getOrCreateStock(supabase, args.ticker);
+    const { error } = await supabase
+      .from("watchlist_items")
+      .insert({ watchlist_id: args.watchlist_id, stock_id: created.id });
+    if (error) {
+      // The catalog row exists only because this call was about to link it.
+      // Leaving it behind is what produces an orphan no sweep can reach.
+      if (created.created) {
+        await discardBlankCatalogRow(supabase, created.ticker).catch(() => false);
+      }
+      throw new Error(error.message);
     }
-    throw new Error(error.message);
+    stock = created;
   }
 
   // File the request before kicking. The row is what makes the work
@@ -695,32 +746,61 @@ export async function addHolding(
   isSuperAdmin: boolean,
 ) {
   await assertPortfolioOwned(userId, supabase, args.portfolio_id);
-  const stock = await getOrCreateStock(supabase, args.ticker);
-  const { data, error } = await supabase
-    .from("portfolio_holdings")
-    .insert({
-      user_id: userId,
-      portfolio_id: args.portfolio_id,
-      ticker: stock.ticker,
-      shares: args.shares,
-      cost_basis: args.cost_basis,
-      acquired_date: args.acquired_date ?? null,
-      broker: args.broker ?? null,
-      notes: args.notes ?? null,
-      currency: (args.currency ?? "USD").toUpperCase(),
-    })
-    .select()
-    .single();
-  if (error) {
-    // Same contract as addToWatchlist: the blank row was created for this
-    // holding, so this call owns discarding it.
-    if (stock.created) {
-      await discardBlankCatalogRow(supabase, stock.ticker).catch(() => false);
+
+  // As in addToWatchlist: one statement when 021 is present, the old two-step
+  // plus rollback when it is not, and both leave `data` holding the inserted
+  // row so everything downstream is written once.
+  const ticker = assertValidTicker(args.ticker);
+  let data: unknown;
+
+  const viaRpc = await supabase.rpc("add_portfolio_holding", {
+    p_portfolio_id: args.portfolio_id,
+    p_ticker: ticker,
+    p_shares: args.shares,
+    p_cost_basis: args.cost_basis,
+    p_acquired_date: args.acquired_date ?? null,
+    p_broker: args.broker ?? null,
+    p_notes: args.notes ?? null,
+    p_currency: (args.currency ?? "USD").toUpperCase(),
+    p_user_id: userId,
+  });
+
+  if (!viaRpc.error) {
+    data = viaRpc.data;
+  } else if (!rpcMissing(viaRpc.error)) {
+    throw new Error(viaRpc.error.message);
+  } else {
+    // ── Fallback: 021 not applied yet.
+    const stock = await getOrCreateStock(supabase, args.ticker);
+    const inserted = await supabase
+      .from("portfolio_holdings")
+      .insert({
+        user_id: userId,
+        portfolio_id: args.portfolio_id,
+        ticker: stock.ticker,
+        shares: args.shares,
+        cost_basis: args.cost_basis,
+        acquired_date: args.acquired_date ?? null,
+        broker: args.broker ?? null,
+        notes: args.notes ?? null,
+        currency: (args.currency ?? "USD").toUpperCase(),
+      })
+      .select()
+      .single();
+    if (inserted.error) {
+      // Same contract as addToWatchlist: the blank row was created for this
+      // holding, so this call owns discarding it.
+      if (stock.created) {
+        await discardBlankCatalogRow(supabase, stock.ticker).catch(() => false);
+      }
+      throw new Error(inserted.error.message);
     }
-    throw new Error(error.message);
+    data = inserted.data;
   }
 
-  await kickoffEnrichment(supabase, stock.ticker, isSuperAdmin);
+  // `ticker` rather than the row's: both branches normalised it the same way,
+  // and it is in scope regardless of which one ran.
+  await kickoffEnrichment(supabase, ticker, isSuperAdmin);
 
   return data;
 }
