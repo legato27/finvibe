@@ -497,7 +497,10 @@ export default function OptionDeskPage() {
             (isCsp
               ? "Return on the cash you set aside as collateral. "
               : "Premium yield against the value of the shares you already hold — there is no cash collateral in a covered call. ") +
-            "Priced off the engine's estimate, which assumes a mid fill. The current market-data plan returns no bid/ask, so this is an upper bound."
+            "Priced off the recorded quote — the mid where a two-sided market was captured, the last close otherwise — so treat it as an upper bound rather than an expectation." +
+            (r.strike_source === "reco_log"
+              ? " This row's premium is inherited from an older recommendation and is annualized over the days that are LEFT, not the days it was written over."
+              : "")
           }
         >
           {fmt(r.annualized_return_pct, 1, "%")}
