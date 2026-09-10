@@ -164,6 +164,99 @@ export async function findStaleEnrichmentTickers(
   return [...out].slice(0, limit);
 }
 
+// ── Orphan catalog rows ────────────────────────────────────
+//
+// Every add is a non-atomic two-step: insert the shared stock_catalog row,
+// then insert the link (watchlist_items, or a portfolio_holdings row keyed by
+// ticker text). If the second step never happens — the request dies, the tab
+// closes, the process is killed — the catalog row survives referenced by
+// nobody.
+//
+// That row is then invisible to every sweep on this file, because both
+// findStaleEnrichmentTickers and ownedTickers reach rows THROUGH a user's
+// watchlists and holdings. An unreferenced row has no user, so no sweep can
+// ever see it and it stays 'pending' forever. MVRL sat that way for 8 days
+// with created_at still equal to updated_at.
+//
+// The fix is to reap, not to enrich. Enriching a row nobody references would
+// spend real GPU and LLM time — enrichment_status is a display state, but
+// fileEnrichmentRequest queues actual work — on data no user is looking at,
+// and it would have to be billed to a user who never asked for it. Deleting
+// costs nothing: getOrCreateStock recreates the row the moment anyone adds the
+// ticker again.
+//
+// Only provably-worthless rows qualify, and all four conditions matter:
+//   - enrichment_status 'pending' and name IS NULL — never enriched, so it
+//     holds nothing worth keeping and has no snapshot rows to cascade into.
+//     Orphans that reached 'done' are LEFT ALONE: 76 of the 77 orphans in the
+//     catalog are exactly that, tickers someone watchlisted and later removed,
+//     and their data is a warm cache for the next person who adds them.
+//   - older than ORPHAN_MIN_AGE_MIN — an add completes in seconds, so an hour
+//     is far outside any in-flight window.
+//   - absent from watchlist_items AND from portfolio_holdings. Both checks are
+//     load-bearing: watchlist_items.stock_id has a foreign key that would
+//     refuse the delete, but portfolio_holdings.ticker is plain text with no
+//     constraint at all, so nothing in the database would stop us orphaning a
+//     live holding.
+const ORPHAN_MIN_AGE_MIN = 60;
+
+export async function reapOrphanCatalogRows(
+  supabase: ServiceSupabase,
+  limit = 25,
+): Promise<string[]> {
+  const cutoff = new Date(Date.now() - ORPHAN_MIN_AGE_MIN * 60_000).toISOString();
+
+  const { data: blank } = await supabase
+    .from("stock_catalog")
+    .select("id, ticker")
+    .eq("enrichment_status", "pending")
+    .is("name", null)
+    .lt("created_at", cutoff)
+    .limit(limit);
+
+  const rows = (blank ?? []) as Array<{ id: number; ticker: string }>;
+  if (!rows.length) return [];
+
+  const ids = rows.map((r) => r.id);
+  const tickers = rows.map((r) => r.ticker);
+
+  const [{ data: linked }, { data: held }] = await Promise.all([
+    supabase.from("watchlist_items").select("stock_id").in("stock_id", ids),
+    supabase.from("portfolio_holdings").select("ticker").in("ticker", tickers),
+  ]);
+
+  const linkedIds = new Set((linked ?? []).map((r: { stock_id: number }) => r.stock_id));
+  const heldTickers = new Set(
+    (held ?? []).map((r: { ticker: string }) => (r.ticker ?? "").toUpperCase()),
+  );
+
+  const doomed = rows.filter(
+    (r) => !linkedIds.has(r.id) && !heldTickers.has((r.ticker ?? "").toUpperCase()),
+  );
+  if (!doomed.length) return [];
+
+  // Re-assert the qualifying conditions in the delete itself. Between the
+  // select above and this statement someone could have added the ticker, and
+  // DGX could have started enriching it — the status/name predicates mean such
+  // a row no longer matches and is left alone rather than deleted from under
+  // them.
+  const { data: deleted, error } = await supabase
+    .from("stock_catalog")
+    .delete()
+    .in("id", doomed.map((r) => r.id))
+    .eq("enrichment_status", "pending")
+    .is("name", null)
+    .select("ticker");
+  if (error) {
+    // A foreign-key refusal here is the watchlist_items constraint doing its
+    // job on a row that got linked mid-flight. Nothing to recover: the row is
+    // now owned, which is the outcome we wanted anyway.
+    console.warn("[enrich] orphan reap failed", error.message);
+    return [];
+  }
+  return (deleted ?? []).map((r: { ticker: string }) => r.ticker);
+}
+
 // Re-kick enrichment for the user's stale tickers. Both the web /api/enrich
 // route and the MCP list_watchlists path delegate here so they agree on
 // what "stale" means and how it gets recovered.
@@ -172,9 +265,20 @@ export async function sweepUserEnrichment(
   supabase: ServiceSupabase,
   isSuperAdmin: boolean,
   limit = 25,
-): Promise<{ enriched: string[]; queued: string[]; capped: string[]; failed: string[] }> {
+): Promise<{
+  enriched: string[]; queued: string[]; capped: string[]; failed: string[];
+  reaped: string[];
+}> {
+  // Orphans belong to no user, so there is no per-user sweep that could pick
+  // them up and no cron on this project to hang them off — vercel.json carries
+  // no schedule and the last one was deliberately removed. This sweep is the
+  // only thing that both holds a service-role client and runs periodically, so
+  // the reap rides along here. It is bounded, idempotent, and touches nothing
+  // any user can see.
+  const reaped = await reapOrphanCatalogRows(supabase);
+
   const tickers = await findStaleEnrichmentTickers(userId, supabase, limit);
-  if (!tickers.length) return { enriched: [], queued: [], capped: [], failed: [] };
+  if (!tickers.length) return { enriched: [], queued: [], capped: [], failed: [], reaped };
 
   // File first, always. Even for a super admin: the request row is what makes
   // the work attributable and what the poller falls back to if the direct
@@ -201,7 +305,7 @@ export async function sweepUserEnrichment(
   // not wait on the webhook. Everyone else's requests are driven by the
   // Supabase DB webhook, with the 10-minute poll behind it.
   if (!isSuperAdmin || !kickable.length) {
-    return { enriched: [], queued, capped, failed };
+    return { enriched: [], queued, capped, failed, reaped };
   }
   const results = await pooledMap(kickable, 5, (t) =>
     kickoffEnrichment(supabase, t, isSuperAdmin),
@@ -212,7 +316,7 @@ export async function sweepUserEnrichment(
     // poller retries. Only report what actually started.
     if (r?.kicked) enriched.push(kickable[i]);
   });
-  return { enriched, queued, capped, failed };
+  return { enriched, queued, capped, failed, reaped };
 }
 
 // ── Profile ────────────────────────────────────────────────
