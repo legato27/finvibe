@@ -6,6 +6,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import {
   usePortfolios,
+  usePortfolioHoldingCounts,
   useCreatePortfolio,
   useDeletePortfolio,
   usePortfolioHoldings,
@@ -133,6 +134,7 @@ export default function PortfolioPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: portfolios, isLoading: portfoliosLoading } = usePortfolios();
+  const { data: counts } = usePortfolioHoldingCounts();
   const createPortfolio = useCreatePortfolio();
   const deletePortfolio = useDeletePortfolio();
   const { data: profile } = useProfile();
@@ -155,7 +157,29 @@ export default function PortfolioPage() {
     currency: "USD" as Currency,
   });
 
-  const activePortfolio = portfolios?.find((p: any) => p.id === activeId) || portfolios?.[0];
+  // Which portfolio to land on before the user picks one. This used to be
+  // portfolios[0] — the default, which every account is created with and which
+  // is empty until something is put in it. A holder whose positions sit in any
+  // other portfolio arrived to TOTAL VALUE $0, POSITIONS 0 and "No investments
+  // yet": three statements that the account owns nothing, on the page where
+  // that number is the entire point.
+  //
+  // The sidebar always lists every portfolio, so this was one click from
+  // correct rather than a dead end — but a confident zero is worse than an
+  // awkward one, and the click only helps someone who already doubts the page.
+  //
+  // Any holding qualifies here. The covered-call panel additionally requires a
+  // 100+ share lot because it cannot write a contract against less; this page
+  // is for looking at what you own, and 40 shares is something to look at.
+  const preferredPortfolio = useMemo(() => {
+    const list = portfolios ?? [];
+    if (!list.length) return undefined;
+    if (!counts) return list[0];
+    return list.find((p: any) => (counts.get(p.id)?.total ?? 0) > 0) ?? list[0];
+  }, [portfolios, counts]);
+
+  const activePortfolio =
+    portfolios?.find((p: any) => p.id === activeId) || preferredPortfolio;
   const { data: holdings, isLoading: holdingsLoading } = usePortfolioHoldings(activePortfolio?.id ?? null);
   const addHolding = useAddHolding();
   const deleteHolding = useDeleteHolding();
