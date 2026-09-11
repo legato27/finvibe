@@ -518,6 +518,40 @@ export interface HoldingWithPrice {
   sector?: string;
 }
 
+/** How much each of the user's portfolios actually holds.
+ *
+ *  One cheap query across every portfolio, so a panel can open on one that has
+ *  something in it rather than on whichever sorts first. `writable` counts lots
+ *  of 100+ shares, which is the only kind a covered call can be written
+ *  against — a portfolio holding 40 shares of one name is not empty, but it is
+ *  empty for that purpose.
+ *
+ *  No user_id filter, deliberately: this runs with the browser's key, and the
+ *  portfolio_holdings RLS policy is `auth.uid() = user_id`, so the database
+ *  scopes it. Adding a filter here would suggest the scoping is this function's
+ *  job, which is the assumption that makes a service-role copy of it unsafe.
+ */
+export function usePortfolioHoldingCounts() {
+  return useQuery({
+    queryKey: ["portfolio-holding-counts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("portfolio_holdings")
+        .select("portfolio_id, shares");
+      if (error) throw error;
+      const counts = new Map<number, { total: number; writable: number }>();
+      for (const h of (data ?? []) as { portfolio_id: number; shares: number }[]) {
+        const c = counts.get(h.portfolio_id) ?? { total: 0, writable: 0 };
+        c.total += 1;
+        if ((h.shares ?? 0) >= 100) c.writable += 1;
+        counts.set(h.portfolio_id, c);
+      }
+      return counts;
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function usePortfolioHoldings(portfolioId: number | null) {
   const qc = useQueryClient();
 

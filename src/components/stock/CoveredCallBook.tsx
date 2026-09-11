@@ -21,10 +21,14 @@
  * never engineer, so a name whose resistance sits under your basis is shown as
  * blocked rather than quietly listed with a lower strike.
  */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { optionsApi } from "@/lib/api";
-import { usePortfolios, usePortfolioHoldings } from "@/lib/supabase/hooks";
+import {
+  usePortfolios,
+  usePortfolioHoldings,
+  usePortfolioHoldingCounts,
+} from "@/lib/supabase/hooks";
 import { Layers, TriangleAlert } from "lucide-react";
 
 interface Resistance {
@@ -71,9 +75,37 @@ function spotAgeLabel(iso: string | null | undefined): string {
 
 export default function CoveredCallBook() {
   const { data: portfolios } = usePortfolios();
+  const { data: counts } = usePortfolioHoldingCounts();
   const [portfolioId, setPortfolioId] = useState<number | null>(null);
-  const activeId = portfolioId ?? portfolios?.[0]?.id ?? null;
+
+  // Which portfolio to open on. This used to be portfolios[0], which is the
+  // default one — and every account is created with an empty default, so a
+  // holder whose shares sit anywhere else was told "No holdings in this
+  // portfolio" and had to find the dropdown to disagree.
+  //
+  // Preference order, within the list's own default-first ordering: a
+  // portfolio with a lot this panel could actually write against, then one
+  // holding anything at all, then the first. So the default still wins
+  // whenever it qualifies, and only loses when it has nothing to offer.
+  const preferredId = useMemo(() => {
+    const list = portfolios ?? [];
+    if (!list.length) return null;
+    if (!counts) return list[0].id;
+    return (
+      list.find((p: { id: number }) => (counts.get(p.id)?.writable ?? 0) > 0)?.id ??
+      list.find((p: { id: number }) => (counts.get(p.id)?.total ?? 0) > 0)?.id ??
+      list[0].id
+    );
+  }, [portfolios, counts]);
+
+  const activeId = portfolioId ?? preferredId;
   const { data: holdings } = usePortfolioHoldings(activeId);
+
+  // Only meaningful once an explicit choice has been made: landing here on the
+  // preferred portfolio means nothing anywhere qualifies.
+  const elsewhere = (portfolios ?? []).filter(
+    (p: { id: number }) => p.id !== activeId && (counts?.get(p.id)?.total ?? 0) > 0,
+  );
 
   const { data: desk } = useQuery<{ rows: DeskRow[] }>({
     queryKey: ["option-desk", "covered_call", 400],
@@ -152,6 +184,14 @@ export default function CoveredCallBook() {
       {!holdings?.length ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
           No holdings in this portfolio. Covered calls need shares you already own.
+          {elsewhere.length > 0 ? (
+            <>
+              {" "}
+              Your shares are in{" "}
+              {elsewhere.map((p: { name: string }) => p.name).join(", ")} — switch
+              with the selector above.
+            </>
+          ) : null}
         </p>
       ) : rows.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
