@@ -267,6 +267,57 @@ Enabling an extension to tidy a few thousand rows is a worse trade than
 running the select by hand twice a year, which is why it is written down
 here rather than added to a migration.
 
+## Adding a stock
+
+Adding a stock is two writes: the shared `stock_catalog` row, and the row that
+links it to a user — `watchlist_items`, or `portfolio_holdings` keyed by ticker
+text. Done from the client in two round trips, the second can fail after the
+first has committed, and the catalog row survives referenced by nobody.
+
+Nothing could then reach it. Both sweeps in `src/lib/mcp/db.ts` find rows
+*through* a user's watchlists and holdings, so a row with no user has no sweep
+that can see it. MVRL sat `pending` for eight days with `created_at` still
+equal to `updated_at`, and would have sat there indefinitely.
+
+`supabase/021` moves both writes into one function body, which is one
+transaction:
+
+- `add_watchlist_stock(p_watchlist_id, p_ticker, p_user_id)`
+- `add_portfolio_holding(p_portfolio_id, p_ticker, p_shares, p_cost_basis, …)`
+
+Both are `SECURITY DEFINER`, so they bypass RLS and **their ownership checks
+are the only thing between a caller and someone else's watchlist or
+portfolio**. `auth.uid()` is NULL for `service_role`, which is how the MCP
+server calls in, so both take `p_user_id` and resolve
+`coalesce(auth.uid(), p_user_id)` — `auth.uid()` wins when present, so an
+authenticated caller cannot act as anyone else, and `anon` holds no execute
+grant.
+
+`supabase/022` then drops the `Users can register a blank ticker` policy from
+018. With the RPC doing both writes, no client needs INSERT on `stock_catalog`,
+and leaving it would have left one way to create exactly the orphan 021
+prevents. SELECT is untouched.
+
+Two things worth knowing before changing any of this:
+
+- **`ensure_stock` uses `ON CONFLICT DO NOTHING` then `SELECT`**, not the usual
+  `DO UPDATE … RETURNING`. `stock_catalog` carries a `set_updated_at BEFORE
+  UPDATE` trigger from 001, and `updated_at` is what the sweep reads to decide
+  a `processing` row was abandoned. The upsert idiom would reset that clock on
+  every add.
+- **The functions work without an insert policy only because owner bypasses
+  RLS.** `SECURITY DEFINER` does not bypass RLS by itself; it makes
+  `current_user` the function owner, and an owner bypasses RLS *unless the
+  table has `FORCE ROW LEVEL SECURITY`*. The functions and `stock_catalog`
+  share an owner and `relforcerowsecurity` is false. Force RLS on that table,
+  or recreate the functions under a different owner, and every add starts
+  failing on a policy 022 removed.
+
+There is no application-side compensation behind this any more. An earlier
+rollback path and an hourly orphan reaper both existed to clean up after the
+two-step; with the two-step gone they were deleted, because a transaction has
+nothing to compensate for.
+
 ## The enrichment queue
 
 Enrichment used to be requested by writing `enrichment_status='pending'` onto
@@ -318,6 +369,13 @@ tables and say so explicitly in `job_runs` rather than failing obscurely.
    request is dropped. 019 is additive — a table, two functions, no data
    migration — and until it is applied the capture logs a warning per
    request and the app behaves exactly as it did before.
+
+   Then `supabase/021_atomic_adds.sql` and `supabase/022_catalog_insert_only_via_rpc.sql`,
+   in that order and **before** deploying the app that calls them: the code no
+   longer carries a fallback, so an add against a database without 021 fails
+   rather than degrading. 022 must not go first — it removes the insert policy
+   the old two-step relies on, so on its own it breaks every add. 021 can be
+   exercised without Supabase credentials; see `supabase/tests`.
 2. **Vercel env** — `SUPABASE_WEBHOOK_SECRET` (without it the hook route
    answers 503 rather than defaulting to open) and
    `SUPABASE_SERVICE_ROLE_KEY`, which the capture and every staged read use.
