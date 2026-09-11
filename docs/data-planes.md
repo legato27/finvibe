@@ -298,6 +298,11 @@ grant.
 and leaving it would have left one way to create exactly the orphan 021
 prevents. SELECT is untouched.
 
+`supabase/023` revokes `ensure_stock` from `service_role`, which 021 had left
+holding it. After it, **no role can execute `ensure_stock`** — the wrappers
+reach it as the function owner — so the two add RPCs are the only way a
+`stock_catalog` row can come into existence, from any key.
+
 Two things worth knowing before changing any of this:
 
 - **`ensure_stock` uses `ON CONFLICT DO NOTHING` then `SELECT`**, not the usual
@@ -370,12 +375,14 @@ tables and say so explicitly in `job_runs` rather than failing obscurely.
    migration — and until it is applied the capture logs a warning per
    request and the app behaves exactly as it did before.
 
-   Then `supabase/021_atomic_adds.sql` and `supabase/022_catalog_insert_only_via_rpc.sql`,
-   in that order and **before** deploying the app that calls them: the code no
-   longer carries a fallback, so an add against a database without 021 fails
-   rather than degrading. 022 must not go first — it removes the insert policy
-   the old two-step relies on, so on its own it breaks every add. 021 can be
-   exercised without Supabase credentials; see `supabase/tests`.
+   Then `supabase/021_atomic_adds.sql`, `supabase/022_catalog_insert_only_via_rpc.sql`
+   and `supabase/023_ensure_stock_not_callable.sql`, in that order and **before**
+   deploying the app that calls them: the code no longer carries a fallback, so
+   an add against a database without 021 fails rather than degrading. 022 must
+   not go first — it removes the insert policy the old two-step relies on, so on
+   its own it breaks every add. 023 is independent of the app and can follow at
+   any time. 021 can be exercised without Supabase credentials; see
+   `supabase/tests`.
 2. **Vercel env** — `SUPABASE_WEBHOOK_SECRET` (without it the hook route
    answers 503 rather than defaulting to open) and
    `SUPABASE_SERVICE_ROLE_KEY`, which the capture and every staged read use.

@@ -190,27 +190,20 @@ comment on function public.add_portfolio_holding is
 -- it creates a catalog row with nothing linking it, which is precisely the
 -- orphan this migration exists to prevent.
 --
--- service_role KEEPS it, and the revoke below does not name that role. Supabase
--- grants service_role broadly by default, so it retains execute and a direct
--- call really will create an unlinked row — that is how ZZNOPE got into the
--- catalog while this migration was being verified, and it had to be deleted by
--- hand. It is not a privilege escalation: service_role already has full table
--- access to stock_catalog through PostgREST, so the function offers it nothing
--- it could not do with a plain insert. It is a footgun, not a hole. Server code
--- must go through add_watchlist_stock / add_portfolio_holding; nothing in this
--- repo calls ensure_stock directly.
+-- service_role kept it when this migration first ran: the revoke below does not
+-- name that role, and Supabase grants it broadly by default. The first probe of
+-- this migration called ensure_stock directly and created ZZNOPE, an unlinked
+-- catalog row — the orphan this migration exists to prevent — which had to be
+-- deleted by hand. Never a privilege escalation, since service_role has full
+-- table access to stock_catalog anyway; a footgun on the one path that still
+-- had rights to write it.
 --
--- Closing that is one line, and it is safe to add whenever the divergence stops
--- being worth tolerating:
---
---     revoke all on function public.ensure_stock(text) from service_role;
---
--- The two wrappers keep working with it revoked. They are SECURITY DEFINER, so
--- inside them current_user is the function owner rather than the caller, and
--- the owner's own execute privilege is what the nested call is checked against.
--- Verified rather than assumed: with ensure_stock revoked from every role, a
--- caller holding execute on the wrapper alone still completed an add, while a
--- direct call raised insufficient_privilege.
+-- supabase/023 closes that with one more line. After 023 no role holds execute
+-- on ensure_stock at all, and the two wrappers still work: they are SECURITY
+-- DEFINER, so inside them current_user is the function owner rather than the
+-- caller, and the owner's own execute privilege is what the nested call is
+-- checked against. Server code goes through add_watchlist_stock /
+-- add_portfolio_holding; nothing in this repo calls ensure_stock directly.
 revoke all on function public.acting_user(uuid) from public, anon;
 revoke all on function public.ensure_stock(text) from public, anon, authenticated;
 revoke all on function public.add_watchlist_stock(bigint, text, uuid) from public, anon;
