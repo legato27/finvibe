@@ -107,7 +107,7 @@ export default function AssignmentBacktest({
       <header className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <FlaskConical className="h-4 w-4 text-primary" />
+            <FlaskConical className="h-4 w-4 text-signal" />
             If I get assigned, can I live with it?
           </h2>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
@@ -126,8 +126,8 @@ export default function AssignmentBacktest({
               aria-pressed={preset.id === p.id}
               className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
                 preset.id === p.id
-                  ? "border-primary/40 bg-primary/10 text-primary"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/30"
+                  ? "border-signal/40 bg-signal/10 text-signal"
+                  : "border-border bg-background text-muted-foreground hover:border-signal/30"
               }`}
             >
               {p.label}
@@ -225,7 +225,7 @@ export default function AssignmentBacktest({
           {/* The finding, stated — a table of four rows should not require the
               reader to derive the conclusion themselves. */}
           {isPut && baseline && data?.cohorts?.["ou_z_below_-2"] ? (
-            <p className="mt-3 max-w-3xl border-l-2 border-primary pl-3 text-sm text-muted-foreground">
+            <p className="mt-3 max-w-3xl border-l-2 border-signal pl-3 text-sm text-muted-foreground">
               Entering after weakness barely changes how often you are assigned —{" "}
               <span className="text-foreground">
                 {pct(baseline.assignment_rate)} to{" "}

@@ -6,9 +6,10 @@
  *     safety, IV rank) maps to a color, so the same number/string can't render
  *     differently across screens.
  *  2. Always use the contrast-checked `signal-*` design tokens (correct in
- *     BOTH light and dark mode) rather than raw Tailwind colors like
- *     `text-green-400`, which are only tuned for dark mode.
+ *     BOTH light and dark mode) rather than raw Tailwind palette colors,
+ *     which are only tuned for one theme. scripts/check-colors.mjs enforces it.
  */
+import type { Palette } from "@/components/heatmap/palette";
 
 // ── Directional signals ────────────────────────────────────────────────────
 export type Direction = "long" | "short" | "neutral";
@@ -187,14 +188,27 @@ export function ivRankTone(v: number | null | undefined): "caution" | "neutral" 
   return "long";
 }
 
-/**
- * Fear & Greed value (0–100) → gauge hex color. High = greed = green.
- * Returns a raw hex (chart/gauge fill, not a Tailwind class).
- */
-export function fngColor(v: number): string {
-  if (v <= 25) return "#ef4444"; // extreme fear
-  if (v <= 40) return "#f97316"; // fear
-  if (v <= 60) return "#fbbf24"; // neutral
-  if (v <= 75) return "#86efac"; // greed
-  return "#22c55e"; // extreme greed
+/** Fear & Greed value (0–100) → tone. Fear stands aside (break/short), greed goes long. */
+export type FngTone = "break" | "short" | "caution" | "long-strong" | "long";
+export function fngTone(v: number): FngTone {
+  if (v <= 25) return "break"; // extreme fear
+  if (v <= 40) return "short"; // fear
+  if (v <= 60) return "caution"; // neutral
+  if (v <= 75) return "long-strong"; // greed
+  return "long"; // extreme greed
+}
+
+/** Text / fill classes for a Fear & Greed tone — the usual way to paint it. */
+export const FNG_TONE_CLASS: Record<FngTone, { text: string; bg: string }> = {
+  break: { text: "text-signal-break", bg: "bg-signal-break" },
+  short: { text: "text-signal-short", bg: "bg-signal-short" },
+  caution: { text: "text-signal-caution", bg: "bg-signal-caution" },
+  "long-strong": { text: "text-signal-long-strong", bg: "bg-signal-long-strong" },
+  long: { text: "text-signal-long", bg: "bg-signal-long" },
+};
+
+/** Fear & Greed value → resolved colour string, for chart/canvas fills that
+ *  cannot take a class. `pal` comes from `usePalette()`. */
+export function fngColor(v: number, pal: Palette): string {
+  return pal[fngTone(v)];
 }

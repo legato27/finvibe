@@ -6,23 +6,23 @@ import { InfoTip } from "@/components/shared/InfoTip";
 import { Shield, TrendingUp, TrendingDown, Minus, AlertTriangle, Zap } from "lucide-react";
 
 const REGIME_STYLE: Record<string, { color: string; bg: string; border: string }> = {
-  green:  { color: "text-success", bg: "bg-success/10", border: "border-success/30" },
-  yellow: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30" },
-  orange: { color: "text-warning", bg: "bg-warning/10", border: "border-warning/30" },
-  red:    { color: "text-danger", bg: "bg-danger/10", border: "border-danger/30" },
+  green:  { color: "text-signal-long", bg: "bg-signal-long/10", border: "border-signal-long/30" },
+  yellow: { color: "text-signal-caution", bg: "bg-signal-caution/10", border: "border-signal-caution/30" },
+  orange: { color: "text-signal-caution", bg: "bg-signal-caution/10", border: "border-signal-caution/30" },
+  red:    { color: "text-signal-short", bg: "bg-signal-short/10", border: "border-signal-short/30" },
 };
 
 const STANCE_STYLE: Record<string, { color: string; icon: typeof TrendingUp }> = {
-  overweight:        { color: "text-success", icon: TrendingUp },
-  "slight overweight": { color: "text-success", icon: TrendingUp },
+  overweight:        { color: "text-signal-long", icon: TrendingUp },
+  "slight overweight": { color: "text-signal-long", icon: TrendingUp },
   neutral:           { color: "text-muted-foreground", icon: Minus },
-  "slight underweight": { color: "text-warning", icon: TrendingDown },
-  underweight:       { color: "text-danger", icon: TrendingDown },
+  "slight underweight": { color: "text-signal-caution", icon: TrendingDown },
+  underweight:       { color: "text-signal-short", icon: TrendingDown },
 };
 
 const IMPACT_COLOR: Record<string, string> = {
-  positive: "text-success",
-  negative: "text-danger",
+  positive: "text-signal-long",
+  negative: "text-signal-short",
   neutral: "text-muted-foreground",
 };
 
@@ -61,7 +61,7 @@ export function TodayPanel() {
   const missingInputs: string[] = Array.isArray(today.inputs_missing) ? today.inputs_missing : [];
 
   return (
-    <div className={`rounded-xl border ${rs.border} ${rs.bg} p-4 sm:p-5 space-y-4`}>
+    <div className={`rounded-panel border ${rs.border} ${rs.bg} p-4 sm:p-5 space-y-4`}>
       {/* ── Header: Regime + Score ── */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -88,9 +88,9 @@ export function TodayPanel() {
       {/* Score bar */}
       <div className="relative h-2.5 bg-muted rounded-full overflow-hidden">
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted-foreground/30 z-10" />
-        <div className="absolute top-0 bottom-0 bg-gradient-to-r from-danger via-warning to-success opacity-20 w-full" />
+        <div className="absolute top-0 bottom-0 bg-gradient-to-r from-signal-short via-signal-caution to-signal-long opacity-20 w-full" />
         <div
-          className="absolute top-0 h-full w-3 rounded-full bg-white shadow-lg shadow-white/30 transition-all duration-700"
+          className="absolute top-0 h-full w-3 rounded-full bg-foreground shadow-lg transition-all duration-700"
           style={{ left: `calc(${normalized}% - 6px)` }}
         />
       </div>
@@ -108,8 +108,8 @@ export function TodayPanel() {
             <span
               key={key}
               className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${
-                v > 5 ? "text-success border-success/30 bg-success/5" :
-                v < -5 ? "text-danger border-danger/30 bg-danger/5" :
+                v > 5 ? "text-signal-long border-signal-long/30 bg-signal-long/5" :
+                v < -5 ? "text-signal-short border-signal-short/30 bg-signal-short/5" :
                 "text-muted-foreground border-border bg-muted/30"
               }`}
             >
@@ -120,14 +120,14 @@ export function TodayPanel() {
         {missingInputs.map((key) => (
           <span
             key={key}
-            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-warning/40 bg-warning/5 text-warning font-mono"
+            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-signal-caution/40 bg-signal-caution/5 text-signal-caution font-mono"
           >
             {componentLabel(key)} {t("inputMissing")}
           </span>
         ))}
       </div>
       {missingInputs.length > 0 && (
-        <div className="flex items-start gap-1.5 -mt-2 text-[10px] text-warning/90">
+        <div className="flex items-start gap-1.5 -mt-2 text-[10px] text-signal-caution/90">
           <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-px" />
           <span>{t("inputsMissingNote", { count: missingInputs.length })}</span>
         </div>
@@ -168,15 +168,15 @@ export function TodayPanel() {
             {(today.signals || []).map((s: any, i: number) => (
               <div key={i} className="flex items-start gap-2">
                 <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${
-                  s.impact === "positive" ? "bg-success" :
-                  s.impact === "negative" ? "bg-danger" : "bg-muted"
+                  s.impact === "positive" ? "bg-signal-long" :
+                  s.impact === "negative" ? "bg-signal-short" : "bg-muted"
                 }`} />
                 <div className="flex-1">
                   <span className={`text-xs ${IMPACT_COLOR[s.impact] || "text-muted-foreground"}`}>
                     {s.signal}
                   </span>
                   {s.weight === "high" && (
-                    <span className="text-[9px] ml-1 text-warning">{t("high")}</span>
+                    <span className="text-[9px] ml-1 text-signal-caution">{t("high")}</span>
                   )}
                 </div>
               </div>

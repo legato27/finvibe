@@ -5,33 +5,49 @@ import { InfoTip } from "@/components/shared/InfoTip";
 
 type SignalKey = "Black" | "Gray" | "White" | "Neutral";
 
+/** A tone as a pair of semantic classes: `text` for figures, `bar` for fills. */
+interface Tone { text: string; bar: string }
+
+const TONE: Record<"long" | "short" | "caution" | "break" | "neutral" | "protocol", Tone> = {
+  long: { text: "text-signal-long", bar: "bg-signal-long" },
+  short: { text: "text-signal-short", bar: "bg-signal-short" },
+  caution: { text: "text-signal-caution", bar: "bg-signal-caution" },
+  break: { text: "text-signal-break", bar: "bg-signal-break" },
+  neutral: { text: "text-signal-neutral", bar: "bg-signal-neutral" },
+  protocol: { text: "text-protocol", bar: "bg-protocol" },
+};
+
 const SIGNAL_VISUAL: Record<SignalKey, {
-  color: string; accent: string; glow: string; badge: string;
+  tone: Tone; badge: string; chip: string;
   labelKey: string; actionKey: string;
 }> = {
   Black: {
-    color: "#ef4444", accent: "#991b1b", glow: "shadow-red-500/20",
-    badge: "bg-danger/15 text-danger border-danger/30",
+    tone: TONE.short,
+    badge: "bg-signal-short/15 text-signal-short border-signal-short/30",
+    chip: "border-signal-short/25 bg-signal-short/5",
     labelKey: "swarmRiskOff", actionKey: "swarmActionBlack",
   },
   Gray: {
-    color: "#f59e0b", accent: "#92400e", glow: "shadow-amber-500/20",
-    badge: "bg-warning/15 text-warning border-warning/30",
+    tone: TONE.caution,
+    badge: "bg-signal-caution/15 text-signal-caution border-signal-caution/30",
+    chip: "border-signal-caution/25 bg-signal-caution/5",
     labelKey: "swarmCaution", actionKey: "swarmActionGray",
   },
   White: {
-    color: "#22c55e", accent: "#166534", glow: "shadow-green-500/20",
-    badge: "bg-success/15 text-success border-success/30",
+    tone: TONE.long,
+    badge: "bg-signal-long/15 text-signal-long border-signal-long/30",
+    chip: "border-signal-long/25 bg-signal-long/5",
     labelKey: "swarmRiskOn", actionKey: "swarmActionWhite",
   },
   Neutral: {
-    color: "#64748b", accent: "#1e293b", glow: "shadow-slate-500/10",
+    tone: TONE.neutral,
     badge: "bg-muted/15 text-muted-foreground border-border/30",
+    chip: "border-signal-neutral/25 bg-signal-neutral/5",
     labelKey: "swarmTransitional", actionKey: "swarmActionNeutral",
   },
 };
 
-function ScoreGauge({ score, color }: { score: number; color: string }) {
+function ScoreGauge({ score, tone }: { score: number; tone: Tone }) {
   // Score ranges -100 to +100, map to 0-100 for gauge fill
   const normalized = Math.max(0, Math.min(100, (score + 100) / 2));
   const isPositive = score >= 0;
@@ -44,23 +60,13 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
         {/* Fill from center */}
         {isPositive ? (
           <div
-            className="absolute top-0 bottom-0 rounded-r-full transition-all duration-700"
-            style={{
-              left: "50%",
-              width: `${(normalized - 50)}%`,
-              backgroundColor: color,
-              opacity: 0.8,
-            }}
+            className={`absolute top-0 bottom-0 rounded-r-full opacity-80 transition-all duration-700 ${tone.bar}`}
+            style={{ left: "50%", width: `${(normalized - 50)}%` }}
           />
         ) : (
           <div
-            className="absolute top-0 bottom-0 rounded-l-full transition-all duration-700"
-            style={{
-              right: "50%",
-              width: `${(50 - normalized)}%`,
-              backgroundColor: color,
-              opacity: 0.8,
-            }}
+            className={`absolute top-0 bottom-0 rounded-l-full opacity-80 transition-all duration-700 ${tone.bar}`}
+            style={{ right: "50%", width: `${(50 - normalized)}%` }}
           />
         )}
       </div>
@@ -73,8 +79,8 @@ function ScoreGauge({ score, color }: { score: number; color: string }) {
   );
 }
 
-function MetricBar({ label, value, max, color, tip }: {
-  label: string; value: number; max: number; color: string; tip: string;
+function MetricBar({ label, value, max, tone, tip }: {
+  label: string; value: number; max: number; tone: Tone; tip: string;
 }) {
   const pct = Math.min((value / max) * 100, 100);
   return (
@@ -83,14 +89,14 @@ function MetricBar({ label, value, max, color, tip }: {
         <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
           {label} <InfoTip size={9} tip={tip} />
         </span>
-        <span className="text-[11px] font-mono font-bold" style={{ color }}>
+        <span className={`text-[11px] font-mono font-bold ${tone.text}`}>
           {typeof value === "number" && value < 1 ? `${(value * 100).toFixed(0)}%` : value}
         </span>
       </div>
       <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
         <div
-          className="h-full rounded-full transition-all duration-500"
-          style={{ width: `${pct}%`, backgroundColor: color }}
+          className={`h-full rounded-full transition-all duration-500 ${tone.bar}`}
+          style={{ width: `${pct}%` }}
         />
       </div>
     </div>
@@ -120,7 +126,7 @@ export function SwarmIndicator() {
   const conviction = Math.round((1 - noise) * 100);
 
   return (
-    <div className={`card h-full flex flex-col ${cfg.glow}`}>
+    <div className="card h-full flex flex-col">
       {/* Header */}
       <div className="card-header flex-shrink-0">
         <span className="card-title flex items-center gap-1">
@@ -135,22 +141,19 @@ export function SwarmIndicator() {
       <div className="flex-1 flex flex-col gap-3">
         {/* Score */}
         <div className="flex items-end gap-3">
-          <div
-            className="text-4xl font-black font-mono leading-none"
-            style={{ color: cfg.color }}
-          >
+          <div className={`text-4xl font-black font-mono leading-none ${cfg.tone.text}`}>
             {score > 0 ? "+" : ""}{score.toFixed(0)}
           </div>
           <div className="flex flex-col mb-0.5">
             <span className="text-[10px] text-muted-foreground">/ 100</span>
-            <span className="text-[10px] font-medium" style={{ color: cfg.color }}>
+            <span className={`text-[10px] font-medium ${cfg.tone.text}`}>
               {t("swarmConviction", { pct: conviction })}
             </span>
           </div>
         </div>
 
         {/* Score gauge */}
-        <ScoreGauge score={score} color={cfg.color} />
+        <ScoreGauge score={score} tone={cfg.tone} />
 
         {/* Key metrics with bars */}
         <div className="space-y-2">
@@ -158,21 +161,21 @@ export function SwarmIndicator() {
             label={t("swarmHerding")}
             value={herding}
             max={1}
-            color={herding > 0.5 ? "#f59e0b" : "#22c55e"}
+            tone={herding > 0.5 ? TONE.caution : TONE.long}
             tip={t("swarmHerdingTip")}
           />
           <MetricBar
             label={t("swarmNoise")}
             value={noise}
             max={1}
-            color={noise > 0.4 ? "#ef4444" : noise > 0.2 ? "#f59e0b" : "#22c55e"}
+            tone={noise > 0.4 ? TONE.break : noise > 0.2 ? TONE.caution : TONE.long}
             tip={t("swarmNoiseTip")}
           />
           <MetricBar
             label={t("swarmClusters")}
             value={clusters}
             max={10}
-            color="#3b82f6"
+            tone={TONE.protocol}
             tip={t("swarmClustersTip")}
           />
         </div>
@@ -189,8 +192,8 @@ export function SwarmIndicator() {
               <InfoTip size={9} tip={t("swarmDensityDeltaTip")} />
             </div>
             <div className={`text-sm font-mono font-bold ${
-              (swarm.density_delta ?? 0) > 0 ? "text-success" :
-              (swarm.density_delta ?? 0) < -0.1 ? "text-danger" : "text-muted-foreground"
+              (swarm.density_delta ?? 0) > 0 ? "text-signal-long" :
+              (swarm.density_delta ?? 0) < -0.1 ? "text-signal-short" : "text-muted-foreground"
             }`}>
               {swarm.density_delta != null
                 ? `${swarm.density_delta > 0 ? "+" : ""}${(swarm.density_delta * 100).toFixed(1)}%`
@@ -210,12 +213,7 @@ export function SwarmIndicator() {
               {swarm.top_factors.slice(0, 3).map((f, i) => (
                 <span
                   key={f}
-                  className="text-[10px] px-2 py-1 rounded border font-mono"
-                  style={{
-                    borderColor: `${cfg.color}33`,
-                    backgroundColor: `${cfg.color}08`,
-                    color: i === 0 ? cfg.color : "#94a3b8",
-                  }}
+                  className={`text-[10px] px-2 py-1 rounded border font-mono ${cfg.chip} ${i === 0 ? cfg.tone.text : "text-muted-foreground"}`}
                 >
                   {f.replace(/_/g, " ")}
                 </span>
@@ -226,7 +224,7 @@ export function SwarmIndicator() {
 
         {/* Action line */}
         <div className="mt-auto pt-1 border-t border-border/30">
-          <p className="text-[11px] leading-relaxed" style={{ color: cfg.color }}>
+          <p className={`text-[11px] leading-relaxed ${cfg.tone.text}`}>
             {t(cfg.actionKey)}
           </p>
         </div>

@@ -130,14 +130,14 @@ export default function DataTable<Row>({
           type="button"
           onClick={() => setShowOptional((v) => !v)}
           aria-expanded={showOptional}
-          className="text-xs text-primary hover:underline"
+          className="text-xs text-signal hover:underline"
         >
           {showOptional ? "Show fewer columns" : `+ ${optionalCount} more column${optionalCount > 1 ? "s" : ""}`}
         </button>
       )}
 
       {/* ── Desktop: real table ─────────────────────────────── */}
-      <div className="hidden sm:block overflow-x-auto rounded-xl border border-border">
+      <div className="hidden sm:block overflow-x-auto rounded-panel border border-border">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{caption}</caption>
           <thead>
@@ -150,7 +150,7 @@ export default function DataTable<Row>({
                     scope="col"
                     aria-sort={sortedHere ? (sort!.dir === "asc" ? "ascending" : "descending") : undefined}
                     className={`px-3 py-2 text-xs font-mono font-semibold uppercase tracking-wider ${
-                      sortedHere ? "text-primary" : "text-muted-foreground"
+                      sortedHere ? "text-signal" : "text-muted-foreground"
                     } ${c.align === "right" ? "text-right" : "text-left"} ${c.hideBelow ? HIDE[c.hideBelow] : ""}`}
                   >
                     {c.sortable ? (
@@ -161,7 +161,7 @@ export default function DataTable<Row>({
                         className="inline-flex items-center gap-1 hover:text-foreground"
                       >
                         {c.header}
-                        <span aria-hidden="true" className={`text-[11px] ${sortedHere ? "text-primary" : "text-muted-foreground/60"}`}>
+                        <span aria-hidden="true" className={`text-[11px] ${sortedHere ? "text-signal" : "text-muted-foreground/60"}`}>
                           {sortedHere ? (sort!.dir === "asc" ? "▲" : "▼") : "↕"}
                         </span>
                       </button>

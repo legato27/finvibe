@@ -23,9 +23,9 @@ export function BreadthStrip() {
     return null; // silent fail — strip just doesn't show
   }
 
-  const signalColor = breadth.signal === "broad_strength" ? "text-success bg-success/10"
-    : breadth.signal === "broad_weakness" ? "text-danger bg-danger/10"
-    : breadth.signal === "narrowing" ? "text-warning bg-warning/10"
+  const signalColor = breadth.signal === "broad_strength" ? "text-signal-long bg-signal-long/10"
+    : breadth.signal === "broad_weakness" ? "text-signal-short bg-signal-short/10"
+    : breadth.signal === "narrowing" ? "text-signal-caution bg-signal-caution/10"
     : "text-muted-foreground bg-muted";
 
   const signalLabel = breadth.signal && SIGNAL_KEY_MAP[breadth.signal]
@@ -51,11 +51,11 @@ export function BreadthStrip() {
           <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
             {t("breadthPctAbove50")} <InfoTip size={10} tip={t("breadthPctAbove50Tip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${breadth.pct_above_50dma == null ? "text-muted-foreground" : breadth.pct_above_50dma > 60 ? "text-success" : breadth.pct_above_50dma > 40 ? "text-warning" : "text-danger"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.pct_above_50dma == null ? "text-muted-foreground" : breadth.pct_above_50dma > 60 ? "text-signal-long" : breadth.pct_above_50dma > 40 ? "text-signal-caution" : "text-signal-short"}`}>
             {breadth.pct_above_50dma != null ? `${breadth.pct_above_50dma}%` : "—"}
           </div>
           {breadth.pct_above_50dma_chg != null && (
-            <div className={`text-[10px] font-mono ${breadth.pct_above_50dma_chg >= 0 ? "text-success" : "text-danger"}`}>
+            <div className={`text-[10px] font-mono ${breadth.pct_above_50dma_chg >= 0 ? "text-signal-long" : "text-signal-short"}`}>
               {breadth.pct_above_50dma_chg >= 0 ? "+" : ""}{breadth.pct_above_50dma_chg}%
             </div>
           )}
@@ -64,11 +64,11 @@ export function BreadthStrip() {
           <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
             {t("breadthPctAbove200")} <InfoTip size={10} tip={t("breadthPctAbove200Tip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${breadth.pct_above_200dma == null ? "text-muted-foreground" : breadth.pct_above_200dma > 60 ? "text-success" : breadth.pct_above_200dma > 40 ? "text-warning" : "text-danger"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.pct_above_200dma == null ? "text-muted-foreground" : breadth.pct_above_200dma > 60 ? "text-signal-long" : breadth.pct_above_200dma > 40 ? "text-signal-caution" : "text-signal-short"}`}>
             {breadth.pct_above_200dma != null ? `${breadth.pct_above_200dma}%` : "—"}
           </div>
           {breadth.pct_above_200dma_chg != null && (
-            <div className={`text-[10px] font-mono ${breadth.pct_above_200dma_chg >= 0 ? "text-success" : "text-danger"}`}>
+            <div className={`text-[10px] font-mono ${breadth.pct_above_200dma_chg >= 0 ? "text-signal-long" : "text-signal-short"}`}>
               {breadth.pct_above_200dma_chg >= 0 ? "+" : ""}{breadth.pct_above_200dma_chg}%
             </div>
           )}
@@ -77,7 +77,7 @@ export function BreadthStrip() {
           <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
             {t("breadthAdRatio")} <InfoTip size={10} tip={t("breadthAdRatioTip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${breadth.adv_dec_ratio == null ? "text-muted-foreground" : breadth.adv_dec_ratio > 1.2 ? "text-success" : breadth.adv_dec_ratio > 0.8 ? "text-warning" : "text-danger"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.adv_dec_ratio == null ? "text-muted-foreground" : breadth.adv_dec_ratio > 1.2 ? "text-signal-long" : breadth.adv_dec_ratio > 0.8 ? "text-signal-caution" : "text-signal-short"}`}>
             {breadth.adv_dec_ratio ?? "—"}
           </div>
         </div>
@@ -85,7 +85,7 @@ export function BreadthStrip() {
           <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
             {t("breadthNhNl")} <InfoTip size={10} tip={t("breadthNhNlTip")} />
           </div>
-          <div className={`text-lg font-bold font-mono ${breadth.new_highs_lows == null ? "text-muted-foreground" : breadth.new_highs_lows > 0 ? "text-success" : breadth.new_highs_lows < 0 ? "text-danger" : "text-warning"}`}>
+          <div className={`text-lg font-bold font-mono ${breadth.new_highs_lows == null ? "text-muted-foreground" : breadth.new_highs_lows > 0 ? "text-signal-long" : breadth.new_highs_lows < 0 ? "text-signal-short" : "text-signal-caution"}`}>
             {breadth.new_highs_lows ?? "—"}
           </div>
         </div>

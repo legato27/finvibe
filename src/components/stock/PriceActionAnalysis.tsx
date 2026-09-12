@@ -75,9 +75,9 @@ interface PriceActionData {
 
 /* ── Helpers ── */
 function dirColor(direction: string | null) {
-  if (direction === "long") return { text: "text-signal-long", bg: "bg-success/10", border: "border-success/30" };
-  if (direction === "short") return { text: "text-signal-short", bg: "bg-danger/10", border: "border-danger/30" };
-  return { text: "text-signal-caution", bg: "bg-warning/10", border: "border-warning/30" };
+  if (direction === "long") return { text: "text-signal-long", bg: "bg-signal-long/10", border: "border-signal-long/30" };
+  if (direction === "short") return { text: "text-signal-short", bg: "bg-signal-short/10", border: "border-signal-short/30" };
+  return { text: "text-signal-caution", bg: "bg-signal-caution/10", border: "border-signal-caution/30" };
 }
 function structDir(type: string): "long" | "short" | null {
   if (type === "UC" || type.startsWith("UR")) return "long";
@@ -122,16 +122,16 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
     <div className="card">
       <div className="card-header">
         <span className="card-title flex items-center gap-2">
-          <Zap className="w-4 h-4 text-primary" /> {t("title")}
+          <Zap className="w-4 h-4 text-signal" /> {t("title")}
         </span>
         <span className="flex items-center gap-1.5">
           {data.gate && (
             <span
               className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                 data.gate.status === "qualified"
-                  ? "bg-success/10 text-signal-long border-success/30"
+                  ? "bg-signal-long/10 text-signal-long border-signal-long/30"
                   : data.gate.status === "below_bar"
-                  ? "bg-danger/10 text-signal-short border-danger/30"
+                  ? "bg-signal-short/10 text-signal-short border-signal-short/30"
                   : "bg-accent/30 text-muted-foreground border-border/40"
               }`}
               title={t("gateTitle")}
@@ -179,7 +179,7 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
 
       {/* Course-rule warnings (divergence, flush, tide, earnings, zone lost) */}
       {!!syn.warnings?.length && (
-        <div className="rounded-lg border border-warning/30 bg-warning/5 p-2.5 mb-3 space-y-1">
+        <div className="rounded-lg border border-signal-caution/30 bg-signal-caution/5 p-2.5 mb-3 space-y-1">
           {syn.warnings.map((w, i) => (
             <div key={i} className="flex items-start gap-1.5 text-[11px] text-foreground/80">
               <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-signal-caution" />
@@ -216,9 +216,9 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
         <div
           className={`rounded-lg border p-3 mb-3 ${
             syn.trade_plan.action.startsWith("enter")
-              ? "border-success/30 bg-success/5"
+              ? "border-signal-long/30 bg-signal-long/5"
               : syn.trade_plan.action.startsWith("wait")
-              ? "border-warning/30 bg-warning/5"
+              ? "border-signal-caution/30 bg-signal-caution/5"
               : "border-border/40 bg-accent/20"
           }`}
         >
@@ -335,7 +335,7 @@ export function PriceActionAnalysis({ ticker }: { ticker: string }) {
                 <span className={`font-mono ${fc.text}`}>{f.structure.type}</span>
                 <span className="text-[10px] text-muted-foreground">({f.structure.clarity})</span>
                 {f.in_sweet_spot && (
-                  <span className="text-[9px] px-1 rounded bg-primary/15 text-primary">{t("inZone")}</span>
+                  <span className="text-[9px] px-1 rounded bg-signal/15 text-signal">{t("inZone")}</span>
                 )}
               </div>
               <div className="col-span-3 font-mono text-foreground/80">{f.setup}</div>

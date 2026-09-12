@@ -60,7 +60,7 @@ export function StagingCoverageCard() {
     <div className="card p-0">
       <div className="card-header border-b border-border/40 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Database className="w-4 h-4 text-primary" />
+          <Database className="w-4 h-4 text-signal" />
           <div>
             <span className="card-title">Outage coverage</span>
             <div className="text-xs text-muted-foreground mt-0.5">

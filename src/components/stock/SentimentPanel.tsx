@@ -4,19 +4,32 @@ import { useTranslations } from "next-intl";
 import { sentimentApi } from "@/lib/api";
 import { NEUTRAL_BAND } from "@/lib/signals";
 import { RadialBarChart, RadialBar, PolarAngleAxis, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip } from "recharts";
+import { usePalette } from "@/components/heatmap/palette";
 
 interface Props { ticker: string }
 
-function sentimentColor(score: number) {
-  if (score > 0.3) return "#22c55e";
-  if (score > NEUTRAL_BAND.sentimentScore) return "#86efac";
-  if (score > -NEUTRAL_BAND.sentimentScore) return "#94a3b8";
-  if (score > -0.3) return "#fca5a5";
-  return "#ef4444";
+/** Composite score → tone. The key indexes the runtime palette for chart
+ *  fills; the class is the same tone as text. */
+type SentimentTone = "long" | "long-strong" | "neutral" | "short" | "break";
+const TONE_TEXT: Record<SentimentTone, string> = {
+  long: "text-signal-long",
+  "long-strong": "text-signal-long-strong",
+  neutral: "text-signal-neutral",
+  short: "text-signal-short",
+  break: "text-signal-break",
+};
+
+function sentimentTone(score: number): SentimentTone {
+  if (score > 0.3) return "long";
+  if (score > NEUTRAL_BAND.sentimentScore) return "long-strong";
+  if (score > -NEUTRAL_BAND.sentimentScore) return "neutral";
+  if (score > -0.3) return "short";
+  return "break";
 }
 
 export function SentimentPanel({ ticker }: Props) {
   const t = useTranslations("sentiment");
+  const pal = usePalette();
   const { data, isLoading } = useQuery({
     queryKey: ["sentiment", ticker],
     queryFn: () => sentimentApi.ticker(ticker),
@@ -27,7 +40,9 @@ export function SentimentPanel({ ticker }: Props) {
   if (!data) return null;
 
   const gaugeValue = ((data.composite_score + 1) / 2) * 100;
-  const color = sentimentColor(data.composite_score);
+  const tone = sentimentTone(data.composite_score);
+  // Chart fills need a resolved colour string; text uses the class.
+  const fill = pal ? pal[tone] : undefined;
 
   const sources = [
     { name: "StockTwits", value: data.stocktwits_score ?? 0 },
@@ -47,15 +62,20 @@ export function SentimentPanel({ ticker }: Props) {
       <div className="flex gap-6 items-center">
         {/* Gauge */}
         <div className="relative w-32 h-32 flex-shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart cx="50%" cy="50%" innerRadius="60%" outerRadius="85%" startAngle={180} endAngle={0}
-              data={[{ value: gaugeValue, fill: color }]}>
-              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-              <RadialBar background={{ fill: "#1e293b" }} dataKey="value" cornerRadius={4} angleAxisId={0} />
-            </RadialBarChart>
-          </ResponsiveContainer>
+          {/* The palette resolves on the client; until then the gauge is an empty ring. */}
+          {pal ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <RadialBarChart cx="50%" cy="50%" innerRadius="60%" outerRadius="85%" startAngle={180} endAngle={0}
+                data={[{ value: gaugeValue, fill }]}>
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar background={{ fill: pal.muted }} dataKey="value" cornerRadius={4} angleAxisId={0} />
+              </RadialBarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full" />
+          )}
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-4">
-            <span className="text-xl font-bold font-mono" style={{ color }}>
+            <span className={`text-xl font-bold font-mono ${TONE_TEXT[tone]}`}>
               {data.composite_score >= 0 ? "+" : ""}{(data.composite_score * 100).toFixed(0)}
             </span>
             <span className="text-xs text-muted-foreground">{t("gaugeLabel")}</span>
@@ -66,17 +86,19 @@ export function SentimentPanel({ ticker }: Props) {
         <div className="flex-1">
           <div className="text-xs text-muted-foreground mb-2">{t("bySource")}</div>
           <div className="h-28">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={sources} layout="vertical" margin={{ left: 0, right: 20 }}>
-                <XAxis type="number" domain={[-1, 1]} tick={{ fontSize: 10, fill: "#64748b" }} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: "#94a3b8" }} width={85} />
-                <Tooltip
-                  formatter={(v: number) => [`${(v * 100).toFixed(1)}`, t("score")]}
-                  contentStyle={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 8, fontSize: 11 }}
-                />
-                <Bar dataKey="value" fill={color} radius={[0, 4, 4, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {pal && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sources} layout="vertical" margin={{ left: 0, right: 20 }}>
+                  <XAxis type="number" domain={[-1, 1]} tick={{ fontSize: 10, fill: pal.mutedFg }} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 10, fill: pal.mutedFg }} width={85} />
+                  <Tooltip
+                    formatter={(v: number) => [`${(v * 100).toFixed(1)}`, t("score")]}
+                    contentStyle={{ background: pal.panel, border: `1px solid ${pal.border}`, color: pal.ink, borderRadius: 8, fontSize: 11 }}
+                  />
+                  <Bar dataKey="value" fill={fill} radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
@@ -98,11 +120,11 @@ export function SentimentPanel({ ticker }: Props) {
       {data.polygon_reasoning && (
         <div className="mt-3 pt-3 border-t border-border">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-signal/15 text-signal border border-signal/30">
               {t("polygonRead")}
             </span>
             {data.polygon_score != null && (
-              <span className="text-xs font-mono font-semibold" style={{ color: sentimentColor(data.polygon_score) }}>
+              <span className={`text-xs font-mono font-semibold ${TONE_TEXT[sentimentTone(data.polygon_score)]}`}>
                 {data.polygon_score >= 0 ? "+" : ""}{(data.polygon_score * 100).toFixed(0)}
               </span>
             )}

@@ -123,14 +123,14 @@ export function SectorHeatmapCard() {
               </button>
             ))}
           </div>
-          <Link href="/heatmap" className="inline-flex items-center gap-0.5 text-[11px] text-primary hover:underline">
+          <Link href="/heatmap" className="inline-flex items-center gap-0.5 text-[11px] text-signal hover:underline">
             {t("sectorHeatmapOpen")}<ArrowUpRight className="h-3 w-3" />
           </Link>
         </div>
       </div>
 
       {isLoading && <div className="text-muted-foreground text-sm animate-pulse py-8 text-center">{t("sectorHeatmapLoading")}</div>}
-      {error && <div className="text-danger text-sm py-8 text-center">{t("sectorHeatmapError")}</div>}
+      {error && <div className="text-signal-short text-sm py-8 text-center">{t("sectorHeatmapError")}</div>}
 
       {data && (
         <>

@@ -110,7 +110,7 @@ export function McpTokensCard() {
             link: (chunks) => (
               <a
                 href="/mcp"
-                className="underline text-primary hover:text-primary/80"
+                className="underline text-signal hover:text-signal/80"
               >
                 {chunks}
               </a>
@@ -124,7 +124,7 @@ export function McpTokensCard() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t("tokens.namePlaceholder")}
-            className="flex-1 bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+            className="flex-1 bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-signal/50"
             onKeyDown={(e) => {
               if (e.key === "Enter") void create();
             }}
@@ -133,7 +133,7 @@ export function McpTokensCard() {
             value={scope}
             onChange={(e) => setScope(e.target.value as McpScope)}
             title="Token scope — which tools this token may call"
-            className="bg-background/50 border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+            className="bg-background/50 border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-signal/50"
           >
             {MCP_SCOPES.map((s) => (
               <option key={s} value={s}>
@@ -144,7 +144,7 @@ export function McpTokensCard() {
           <button
             onClick={() => void create()}
             disabled={creating || !name.trim()}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-primary/15 border border-primary/40 text-foreground hover:bg-primary/25 disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-signal/15 border border-signal/40 text-foreground hover:bg-signal/25 disabled:opacity-50"
           >
             {creating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -157,8 +157,8 @@ export function McpTokensCard() {
 
         {/* Reveal new secret once */}
         {revealed && (
-          <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
-            <div className="text-xs font-medium text-warning flex items-center gap-1.5">
+          <div className="rounded-lg border border-signal-caution/40 bg-signal-caution/10 p-3 space-y-2">
+            <div className="text-xs font-medium text-signal-caution flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5" /> {t("tokens.copyNow")}
             </div>
             <div className="flex items-center gap-2">
@@ -171,10 +171,10 @@ export function McpTokensCard() {
                   setCopied(true);
                   setTimeout(() => setCopied(false), 1500);
                 }}
-                className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] rounded border border-border hover:border-primary/40"
+                className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] rounded border border-border hover:border-signal/40"
               >
                 {copied ? (
-                  <Check className="w-3 h-3 text-success" />
+                  <Check className="w-3 h-3 text-signal-long" />
                 ) : (
                   <Copy className="w-3 h-3" />
                 )}
@@ -223,7 +223,7 @@ export function McpTokensCard() {
                 <button
                   onClick={() => revoke(tok.id)}
                   title={t("tokens.revokeTitle")}
-                  className="p-1.5 text-muted-foreground hover:text-danger"
+                  className="p-1.5 text-muted-foreground hover:text-signal-short"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -233,7 +233,7 @@ export function McpTokensCard() {
         )}
 
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
+          <div className="flex items-start gap-2 p-3 bg-signal-short/10 border border-signal-short/30 rounded-lg text-xs text-signal-short">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div>{error}</div>
           </div>
@@ -270,7 +270,7 @@ export function McpTokensCard() {
               link: (chunks) => (
                 <a
                   href="/mcp"
-                  className="underline text-foreground hover:text-primary"
+                  className="underline text-foreground hover:text-signal"
                 >
                   {chunks}
                 </a>

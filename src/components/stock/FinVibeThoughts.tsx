@@ -97,13 +97,13 @@ export function FinVibeThoughts({
       <div className="card p-5">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Brain className="w-4 h-4 text-primary" />
+            <Brain className="w-4 h-4 text-signal" />
             <h2 className="text-sm font-semibold text-foreground/80">{t('finvibeThoughts')}</h2>
           </div>
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-3 h-3 ${generating ? "animate-spin" : ""}`} />
             {generating ? t('generating') : t('generateAnalysis')}
@@ -128,7 +128,7 @@ export function FinVibeThoughts({
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <Brain className="w-4 h-4 text-primary" />
+          <Brain className="w-4 h-4 text-signal" />
           <h2 className="text-sm font-semibold text-foreground/80">{t('finvibeThoughts')}</h2>
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground/60">
@@ -161,10 +161,10 @@ export function FinVibeThoughts({
       <div
         className={`rounded-lg p-4 mb-4 ${
           verdict === "buy"
-            ? "bg-success/10 border border-success/20"
+            ? "bg-signal-long/10 border border-signal-long/20"
             : verdict === "avoid"
-            ? "bg-danger/10 border border-danger/20"
-            : "bg-warning/10 border border-warning/20"
+            ? "bg-signal-short/10 border border-signal-short/20"
+            : "bg-signal-caution/10 border border-signal-caution/20"
         }`}
       >
         <div className="flex items-center justify-between">
@@ -197,7 +197,7 @@ export function FinVibeThoughts({
             {llmIntrinsicValue != null && (
               <div className="text-right">
                 <div className="text-[10px] text-muted-foreground">{t('intrinsicAi')}</div>
-                <span className="font-mono text-sm text-primary dark:text-primary">
+                <span className="font-mono text-sm text-signal">
                   ${llmIntrinsicValue.toFixed(2)}
                 </span>
               </div>
@@ -246,7 +246,7 @@ export function FinVibeThoughts({
       {/* Bull/Bear Cases */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         {thoughts.bull_case && (
-          <div className="border border-success/20 bg-success/5 rounded-lg p-4">
+          <div className="border border-signal-long/20 bg-signal-long/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-signal-long uppercase tracking-wider">{t('bullCase')}</span>
               {thoughts.bull_case.price_target_12m != null && (
@@ -259,7 +259,7 @@ export function FinVibeThoughts({
           </div>
         )}
         {thoughts.bear_case && (
-          <div className="border border-danger/20 bg-danger/5 rounded-lg p-4">
+          <div className="border border-signal-short/20 bg-signal-short/5 rounded-lg p-4">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-semibold text-signal-short uppercase tracking-wider">{t('bearCase')}</span>
               {thoughts.bear_case.price_target_12m != null && (
@@ -327,13 +327,13 @@ export function FinVibeThoughts({
                   {tpa("cardTitle")}
                 </div>
                 {syn && (
-                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-primary/10 text-primary/80 border border-primary/20">
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-signal/10 text-signal/80 border border-signal/20">
                     {tpa("liveSync")}
                   </span>
                 )}
               </div>
               {setup && (
-                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-signal/15 text-signal border border-signal/30">
                   {String(setup)}
                 </span>
               )}
@@ -373,9 +373,9 @@ export function FinVibeThoughts({
               <div
                 className={`mt-3 rounded-md border p-2.5 ${
                   plan.action.startsWith("enter")
-                    ? "border-success/30 bg-success/5"
+                    ? "border-signal-long/30 bg-signal-long/5"
                     : plan.action.startsWith("wait")
-                    ? "border-warning/30 bg-warning/5"
+                    ? "border-signal-caution/30 bg-signal-caution/5"
                     : "border-border/40 bg-accent/20"
                 }`}
               >

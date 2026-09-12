@@ -96,7 +96,7 @@ export function LoginHistoryCard() {
         )}
 
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
+          <div className="flex items-start gap-2 p-3 bg-signal-short/10 border border-signal-short/30 rounded-lg text-xs text-signal-short">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div>{error}</div>
           </div>

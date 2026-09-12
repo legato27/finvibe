@@ -1,5 +1,10 @@
 import type { Config } from "tailwindcss";
 
+// Colour names are semantic and map 1:1 to the CSS variables in
+// src/app/globals.css — the only file that knows what colour "signal" is.
+// Do not add literal colours here; scripts/check-colors.mjs enforces it.
+const hsl = (name: string) => `hsl(var(--${name}) / <alpha-value>)`;
+
 const config: Config = {
   darkMode: "class",
   content: [
@@ -10,64 +15,56 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        success: "hsl(var(--success))",
-        danger: "hsl(var(--danger))",
-        warning: "hsl(var(--warning))",
-        "accent-solid": "hsl(var(--accent-solid))",
-        // ── Signal tokens (AA-checked CSS vars; see globals.css). New
-        // components use ONLY these for directional/verdict coloring.
+        background: hsl("background"),
+        foreground: hsl("foreground"),
+        card: { DEFAULT: hsl("card"), foreground: hsl("card-foreground") },
+        raised: hsl("raised"),
+        border: hsl("border"),
+        input: hsl("input"),
+        ring: hsl("ring"),
+        // The accent as a FILL (lime in both themes, ink text on it).
+        primary: { DEFAULT: hsl("primary"), foreground: hsl("primary-foreground") },
+        muted: { DEFAULT: hsl("muted"), foreground: hsl("muted-foreground") },
+        dim: hsl("dim"),
+        accent: { DEFAULT: hsl("accent"), foreground: hsl("accent-foreground") },
+        // The accent as TEXT, plus the directional / verdict family.
+        // Every fg is AA on the page ground and on its own -bg tint.
         signal: {
-          long: "hsl(var(--signal-long))",
-          "long-bg": "hsl(var(--signal-long-bg))",
-          "long-strong": "hsl(var(--signal-long-strong))",
-          short: "hsl(var(--signal-short))",
-          "short-bg": "hsl(var(--signal-short-bg))",
-          "short-strong": "hsl(var(--signal-short-strong))",
-          neutral: "hsl(var(--signal-neutral))",
-          "neutral-bg": "hsl(var(--signal-neutral-bg))",
-          conflict: "hsl(var(--signal-conflict))",
-          "conflict-bg": "hsl(var(--signal-conflict-bg))",
-          caution: "hsl(var(--signal-caution))",
-          "caution-bg": "hsl(var(--signal-caution-bg))",
+          DEFAULT: hsl("signal"),
+          bg: hsl("signal-bg"),
+          long: hsl("signal-long"),
+          "long-bg": hsl("signal-long-bg"),
+          "long-strong": hsl("signal-long-strong"),
+          short: hsl("signal-short"),
+          "short-bg": hsl("signal-short-bg"),
+          "short-strong": hsl("signal-short-strong"),
+          neutral: hsl("signal-neutral"),
+          "neutral-bg": hsl("signal-neutral-bg"),
+          conflict: hsl("signal-conflict"),
+          "conflict-bg": hsl("signal-conflict-bg"),
+          caution: hsl("signal-caution"),
+          "caution-bg": hsl("signal-caution-bg"),
+          break: hsl("signal-break"),
+          "break-bg": hsl("signal-break-bg"),
         },
-        bull: "#22c55e",
-        bear: "#ef4444",
-        neutral: "#94a3b8",
-        "moat-wide": "#10b981",
-        "moat-narrow": "#f59e0b",
-        "moat-none": "#ef4444",
-        "swarm-black": "#1e1e2e",
-        "swarm-gray": "#6b7280",
-        "swarm-white": "#f8fafc",
-        "swarm-neutral": "#64748b",
+        protocol: { DEFAULT: hsl("protocol"), bg: hsl("protocol-bg") },
+        chart: {
+          1: hsl("chart-1"), 2: hsl("chart-2"), 3: hsl("chart-3"), 4: hsl("chart-4"),
+          5: hsl("chart-5"), 6: hsl("chart-6"), 7: hsl("chart-7"), 8: hsl("chart-8"),
+        },
       },
       fontFamily: {
-        // `mono` is repurposed as the display/figure font (Space Grotesk) — used
-        // for headings, stat figures and labels. Numerics still align via
-        // tabular-nums / the .nums utility.
-        mono: ["var(--font-mono)", "Space Grotesk", "ui-sans-serif", "sans-serif"],
-        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        // Chivo carries interface text; JetBrains Mono carries every number,
+        // ticker, tool name and section label.
+        sans: ["var(--font-sans)", "Chivo", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+      },
+      borderRadius: {
+        panel: "14px",
+        control: "10px",
+      },
+      boxShadow: {
+        float: "var(--shadow-float)",
       },
       animation: {
         "pulse-slow": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",

@@ -117,10 +117,10 @@ export function RegisterMcpClientCard() {
                 <button
                   type="button"
                   onClick={() => copy(e.label, e.value)}
-                  className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-border hover:border-primary/40"
+                  className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded border border-border hover:border-signal/40"
                 >
                   {copied === e.label ? (
-                    <Check className="w-3 h-3 text-success" />
+                    <Check className="w-3 h-3 text-signal-long" />
                   ) : (
                     <Copy className="w-3 h-3" />
                   )}
@@ -139,7 +139,7 @@ export function RegisterMcpClientCard() {
                   type="button"
                   key={p.label}
                   onClick={() => applyPreset(p)}
-                  className="text-[11px] px-2 py-1 rounded border border-border bg-background/40 text-muted-foreground hover:text-foreground hover:border-primary/40"
+                  className="text-[11px] px-2 py-1 rounded border border-border bg-background/40 text-muted-foreground hover:text-foreground hover:border-signal/40"
                 >
                   {t("register.presetSuffix", { name: p.label })}
                 </button>
@@ -155,7 +155,7 @@ export function RegisterMcpClientCard() {
                 onChange={(e) => setName(e.target.value)}
                 placeholder={t("register.appNamePh")}
                 required
-                className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-signal/50"
               />
             </div>
 
@@ -169,7 +169,7 @@ export function RegisterMcpClientCard() {
                 rows={3}
                 placeholder={"http://localhost:33418/oauth/callback/debug"}
                 required
-                className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                className="mt-1 w-full bg-background/50 border border-border rounded-lg px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-signal/50"
               />
               <p className="text-[10px] text-muted-foreground mt-1">
                 {t("register.redirectHint")}
@@ -177,7 +177,7 @@ export function RegisterMcpClientCard() {
             </div>
 
             {error && (
-              <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
+              <div className="flex items-start gap-2 p-3 bg-signal-short/10 border border-signal-short/30 rounded-lg text-xs text-signal-short">
                 <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                 <div>{error}</div>
               </div>
@@ -186,7 +186,7 @@ export function RegisterMcpClientCard() {
             <button
               type="submit"
               disabled={busy || !name.trim() || redirect_uris.length === 0}
-              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-primary/15 border border-primary/40 text-foreground hover:bg-primary/25 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-sm rounded-lg bg-signal/15 border border-signal/40 text-foreground hover:bg-signal/25 disabled:opacity-50"
             >
               {busy ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -200,8 +200,8 @@ export function RegisterMcpClientCard() {
 
         {created && (
           <div className="space-y-3">
-            <div className="rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
-              <div className="text-xs font-medium text-warning flex items-center gap-1.5">
+            <div className="rounded-lg border border-signal-caution/40 bg-signal-caution/10 p-3 space-y-2">
+              <div className="text-xs font-medium text-signal-caution flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5" /> {t("register.saveNow")}
               </div>
 
@@ -272,10 +272,10 @@ function Field({
         </code>
         <button
           onClick={onCopy}
-          className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] rounded border border-border hover:border-primary/40"
+          className="inline-flex items-center gap-1 px-2 py-1.5 text-[11px] rounded border border-border hover:border-signal/40"
         >
           {copied ? (
-            <Check className="w-3 h-3 text-success" />
+            <Check className="w-3 h-3 text-signal-long" />
           ) : (
             <Copy className="w-3 h-3" />
           )}

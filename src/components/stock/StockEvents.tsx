@@ -21,7 +21,7 @@ function CountdownBadge({ days }: { days: number }) {
   const soon = days <= 30;
   return (
     <span className={`text-xs font-mono px-2 py-0.5 rounded-full ${
-      urgent ? "bg-warning/20 text-warning" :
+      urgent ? "bg-signal-caution/20 text-signal-caution" :
       soon   ? "bg-signal-caution-bg text-signal-caution border border-signal-caution/40" :
                "bg-muted text-muted-foreground"
     }`}>
@@ -70,7 +70,7 @@ export function StockEvents({ ticker }: { ticker: string }) {
       {/* Earnings */}
       <div className="card p-4">
         <div className="flex items-center gap-2 mb-3">
-          <Calendar className="w-4 h-4 text-primary" />
+          <Calendar className="w-4 h-4 text-signal" />
           <span className="text-sm font-semibold">{t("earnings")}</span>
         </div>
         {hasEarnings ? (

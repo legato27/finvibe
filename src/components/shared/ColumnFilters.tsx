@@ -93,7 +93,7 @@ function NumberControl({
   const r = range ?? { min: null, max: null };
   const parse = (s: string): number | null => (s.trim() === "" ? null : Number(s));
   const cls =
-    "w-20 rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs nums focus:outline-none focus:ring-1 focus:ring-primary/50";
+    "w-20 rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs nums focus:outline-none focus:ring-1 focus:ring-signal/50";
   return (
     <div className="flex items-center gap-1">
       <input
@@ -142,7 +142,7 @@ function SelectControl({
             onClick={() => toggle(opt)}
             className={`rounded-md border px-2 py-0.5 text-xs transition-colors ${
               on
-                ? "border-primary bg-primary/15 text-primary"
+                ? "border-signal bg-signal/15 text-signal"
                 : "border-border/40 text-muted-foreground hover:text-foreground"
             }`}
           >
@@ -194,7 +194,7 @@ export function ColumnFilterBar<Row>({
           aria-expanded={open}
           className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
             activeCount > 0
-              ? "border-primary/50 bg-primary/10 text-primary"
+              ? "border-signal/50 bg-signal/10 text-signal"
               : "border-border/30 bg-muted/50 text-muted-foreground hover:text-foreground/80"
           }`}
         >
@@ -232,7 +232,7 @@ export function ColumnFilterBar<Row>({
                   value={(state[def.key] as string) ?? ""}
                   onChange={(e) => setOne(def.key, e.target.value)}
                   placeholder={`Filter ${def.label.toLowerCase()}…`}
-                  className="w-40 rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"
+                  className="w-40 rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-signal/50"
                 />
               )}
               {def.kind === "select" && (

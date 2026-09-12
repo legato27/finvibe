@@ -107,13 +107,13 @@ export function LiveTerminal({ data }: TerminalProps) {
   const updated = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
   return (
-    <div className="rounded-xl border border-border bg-card/90 backdrop-blur shadow-2xl shadow-primary/10 overflow-hidden">
+    <div className="rounded-panel border border-border bg-card/90 backdrop-blur shadow-2xl shadow-primary/10 overflow-hidden">
       {/* Chrome bar */}
       <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/70 bg-muted/40">
         <span className="flex gap-1.5" aria-hidden>
-          <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--danger))]/70" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--warning))]/70" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--success))]/70" />
+          <span className="w-2.5 h-2.5 rounded-full bg-signal-short/70" />
+          <span className="w-2.5 h-2.5 rounded-full bg-signal-caution/70" />
+          <span className="w-2.5 h-2.5 rounded-full bg-signal-long/70" />
         </span>
         <span className="flex-1 text-center font-mono text-[11px] text-muted-foreground truncate">
           vibefin · market pulse
@@ -121,13 +121,13 @@ export function LiveTerminal({ data }: TerminalProps) {
         <span
           className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
             live
-              ? "text-signal-long border-success/40 bg-success/10"
+              ? "text-signal-long border-signal-long/40 bg-signal-long/10"
               : "text-muted-foreground border-border bg-muted/40"
           }`}
         >
           {live ? (
             <span className="inline-flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--success))] animate-pulse" aria-hidden />
+              <span className="w-1.5 h-1.5 rounded-full bg-signal-long animate-pulse" aria-hidden />
               {t("liveBadge")}
             </span>
           ) : (
@@ -139,7 +139,7 @@ export function LiveTerminal({ data }: TerminalProps) {
       {/* Body */}
       <div className="px-4 sm:px-5 py-4 space-y-3.5">
         <div className="term-line font-mono text-[11px] text-muted-foreground" style={{ animationDelay: "0ms" }}>
-          <span className="text-primary">$</span> vibefin pulse --today
+          <span className="text-signal">$</span> vibefin pulse --today
         </div>
 
         <Row
@@ -173,7 +173,7 @@ export function LiveTerminal({ data }: TerminalProps) {
         />
 
         <div className="term-line font-mono text-[11px] text-muted-foreground pt-1" style={{ animationDelay: "620ms" }}>
-          <span className="text-primary">$</span> {t("terminalUpdated", { time: updated })} — {t("terminalHint")}
+          <span className="text-signal">$</span> {t("terminalUpdated", { time: updated })} — {t("terminalHint")}
           <span className="term-cursor inline-block w-[7px] h-[13px] ml-1 align-middle bg-primary/80" aria-hidden />
         </div>
       </div>

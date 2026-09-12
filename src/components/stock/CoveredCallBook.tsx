@@ -156,7 +156,7 @@ export default function CoveredCallBook() {
       <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Layers className="h-4 w-4 text-primary" />
+            <Layers className="h-4 w-4 text-signal" />
             Covered calls on what you hold
           </h2>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">

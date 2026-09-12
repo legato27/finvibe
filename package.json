@@ -4,9 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/check-colors.mjs && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "lint:colors": "node scripts/check-colors.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",

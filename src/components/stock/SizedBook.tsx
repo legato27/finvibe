@@ -85,7 +85,7 @@ export default function SizedBook({
       <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Wallet className="h-4 w-4 text-primary" />
+            <Wallet className="h-4 w-4 text-signal" />
             What fits in the book
           </h2>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
@@ -113,7 +113,7 @@ export default function SizedBook({
           <button
             type="button"
             onClick={apply}
-            className="rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary"
+            className="rounded border border-signal/40 bg-signal/10 px-3 py-1.5 text-sm font-medium text-signal"
           >
             Size it
           </button>

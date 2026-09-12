@@ -203,7 +203,7 @@ export default function VerdictCard({ verdict }: { verdict: VerdictJson | null |
       {/* ── Details on demand ── */}
       <button
         type="button"
-        className="mt-3 text-xs text-primary underline-offset-2 hover:underline"
+        className="mt-3 text-xs text-signal underline-offset-2 hover:underline"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >

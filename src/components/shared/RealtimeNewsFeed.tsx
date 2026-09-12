@@ -17,22 +17,22 @@ interface NewsItem {
 }
 
 function SentimentIcon({ label }: { label: string }) {
-  if (label === "Bullish") return <TrendingUp className="w-3 h-3 text-success" />;
-  if (label === "Bearish") return <TrendingDown className="w-3 h-3 text-danger" />;
+  if (label === "Bullish") return <TrendingUp className="w-3 h-3 text-signal-long" />;
+  if (label === "Bearish") return <TrendingDown className="w-3 h-3 text-signal-short" />;
   return <Minus className="w-3 h-3 text-muted-foreground" />;
 }
 
 function scoreToClass(score: number) {
-  if (score > 0.1) return "border-success/50 bg-success/20";
-  if (score < -0.1) return "border-danger/50 bg-danger/20";
+  if (score > 0.1) return "border-signal-long/50 bg-signal-long/20";
+  if (score < -0.1) return "border-signal-short/50 bg-signal-short/20";
   return "border-border/50";
 }
 
 // Left-border + text tint for the per-ticker "why" line (Polygon reasoning),
 // keyed to the sentiment sign so the rationale reads in the label's color.
 function reasoningToClass(score: number) {
-  if (score > 0.1) return "border-success text-success/80";
-  if (score < -0.1) return "border-danger text-danger/80";
+  if (score > 0.1) return "border-signal-long text-signal-long/80";
+  if (score < -0.1) return "border-signal-short text-signal-short/80";
   return "border-border text-muted-foreground";
 }
 
@@ -74,7 +74,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
         {feed.map((item: NewsItem, idx: number) => (
           <div
             key={idx}
-            className={`flex items-start gap-2 p-2 rounded-lg border ${scoreToClass(item.score)} hover:bg-white/5 transition-colors`}
+            className={`flex items-start gap-2 p-2 rounded-lg border ${scoreToClass(item.score)} hover:bg-accent transition-colors`}
           >
             <div className="flex-shrink-0 mt-0.5">
               <SentimentIcon label={item.sentiment_label} />
@@ -83,7 +83,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-0.5">
                 {item.ticker && (
-                  <span className="text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded font-mono font-bold">
+                  <span className="text-xs px-1.5 py-0.5 bg-signal/20 text-signal rounded font-mono font-bold">
                     {item.ticker}
                   </span>
                 )}
@@ -104,7 +104,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
                     href={item.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex-shrink-0 text-muted-foreground hover:text-primary"
+                    className="flex-shrink-0 text-muted-foreground hover:text-signal"
                   >
                     <ExternalLink className="w-3 h-3" />
                   </a>
@@ -122,7 +122,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
 
             <div
               className={`flex-shrink-0 text-xs font-mono font-bold ${
-                item.score > 0.1 ? "text-success" : item.score < -0.1 ? "text-danger" : "text-muted-foreground"
+                item.score > 0.1 ? "text-signal-long" : item.score < -0.1 ? "text-signal-short" : "text-muted-foreground"
               }`}
             >
               {item.score >= 0 ? "+" : ""}{(item.score * 100).toFixed(0)}

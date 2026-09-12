@@ -19,6 +19,7 @@ import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import StatChip from "@/components/ui/StatChip";
 import { ivRankTone } from "@/lib/signals";
+import { usePalette } from "@/components/heatmap/palette";
 
 const STALE = 15 * 60 * 1000; // matches the backend chain-cache TTL
 
@@ -56,7 +57,7 @@ function SideCells({ side, maxOi }: { side?: ChainSide; maxOi: number }) {
         <span className="relative inline-block min-w-[3.5rem]">
           <span
             aria-hidden="true"
-            className="absolute inset-y-0 right-0 rounded-sm bg-primary/15"
+            className="absolute inset-y-0 right-0 rounded-sm bg-signal/15"
             style={{ width: `${maxOi > 0 ? Math.min(100, ((side?.oi ?? 0) / maxOi) * 100) : 0}%` }}
           />
           <span className="relative">{side?.oi?.toLocaleString() ?? "—"}</span>
@@ -98,6 +99,7 @@ function strategyTrade(r: StrategyLogRow): string {
 }
 
 export default function OptionsChainTab({ ticker }: { ticker: string }) {
+  const pal = usePalette();
   const t = useTranslations("optionsChain");
   const tg = useTranslations("optionsGuide");
   const [expiry, setExpiry] = useState<string | undefined>(undefined);
@@ -267,7 +269,7 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
                   formatter={(v: number) => [`${v}%`, t("atmIv")]}
                   labelFormatter={(d) => `${d} DTE`}
                 />
-                <Line type="monotone" dataKey="atm_iv_pct" stroke="hsl(var(--primary))" strokeWidth={2} dot />
+                <Line type="monotone" dataKey="atm_iv_pct" stroke={pal?.signal ?? "currentColor"} strokeWidth={2} dot />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -292,7 +294,7 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
               onClick={() => setExpiry(e)}
               className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
                 e === chain?.expiry
-                  ? "border-primary bg-primary/15 text-primary"
+                  ? "border-signal bg-signal/15 text-signal"
                   : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -341,12 +343,12 @@ export default function OptionsChainTab({ ticker }: { ticker: string }) {
                 return (
                   <tr
                     key={r.strike}
-                    className={`border-b border-border/50 last:border-0 ${atm ? "bg-primary/5" : ""} ${
+                    className={`border-b border-border/50 last:border-0 ${atm ? "bg-signal/5" : ""} ${
                       crossesSpot ? "border-t-2 border-t-primary/50" : ""
                     }`}
                   >
                     <SideCells side={r.call} maxOi={maxOi} />
-                    <td className={`nums px-2 py-1.5 text-center font-mono font-semibold ${atm ? "text-primary" : ""}`}>
+                    <td className={`nums px-2 py-1.5 text-center font-mono font-semibold ${atm ? "text-signal" : ""}`}>
                       {r.strike}
                     </td>
                     <SideCells side={r.put} maxOi={maxOi} />

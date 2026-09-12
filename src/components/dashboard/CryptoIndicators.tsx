@@ -3,7 +3,7 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingDown, TrendingUp, Bitcoin, Coins } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
-import { fngColor } from "@/lib/signals";
+import { fngTone, FNG_TONE_CLASS } from "@/lib/signals";
 
 interface CryptoData {
   symbol: string;
@@ -25,7 +25,7 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
         <div className="flex items-center gap-2">
           <span className="text-sm font-bold">{data.name}</span>
           <span className={`text-[9px] px-1 py-0 rounded ${
-            data.momentum === "bullish" ? "bg-success/15 text-success" : "bg-danger/15 text-danger"
+            data.momentum === "bullish" ? "bg-signal-long/15 text-signal-long" : "bg-signal-short/15 text-signal-short"
           }`}>{data.momentum === "bullish" ? t("cryptoBull") : t("cryptoBear")}</span>
         </div>
         <div className="text-[10px] text-muted-foreground font-mono">
@@ -39,7 +39,7 @@ function CoinRow({ data, icon }: { data: CryptoData; icon: React.ReactNode }) {
         <div className="text-sm font-bold font-mono">
           ${data.price?.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
         </div>
-        <div className={`text-xs font-mono flex items-center gap-0.5 justify-end ${up ? "text-success" : "text-danger"}`}>
+        <div className={`text-xs font-mono flex items-center gap-0.5 justify-end ${up ? "text-signal-long" : "text-signal-short"}`}>
           {up ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           {up ? "+" : ""}{data.change_24h?.toFixed(2)}%
         </div>
@@ -105,8 +105,8 @@ export function CryptoIndicators() {
         <span className="text-[10px] text-muted-foreground">{tc("live")}</span>
       </div>
       <div className="flex-1 divide-y divide-border/30">
-        <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-warning flex-shrink-0" />} />
-        {eth && <CoinRow data={eth} icon={<Coins className="w-5 h-5 text-primary flex-shrink-0" />} />}
+        <CoinRow data={btc} icon={<Bitcoin className="w-5 h-5 text-signal-caution flex-shrink-0" />} />
+        {eth && <CoinRow data={eth} icon={<Coins className="w-5 h-5 text-signal flex-shrink-0" />} />}
         {sol && <CoinRow data={sol} icon={<Coins className="w-5 h-5 text-signal-conflict flex-shrink-0" />} />}
       </div>
 
@@ -120,9 +120,9 @@ export function CryptoIndicators() {
                 <InfoTip size={9} tip={t("fngTip")} />
               </div>
               {/* Gauge bar */}
-              <div className="relative w-full h-2 rounded-full overflow-hidden bg-gradient-to-r from-danger via-warning to-success opacity-30">
+              <div className="relative w-full h-2 rounded-full overflow-hidden bg-gradient-to-r from-signal-short via-signal-caution to-signal-long opacity-30">
                 <div
-                  className="absolute top-0 h-full w-2 rounded-full bg-white shadow-md shadow-white/40"
+                  className="absolute top-0 h-full w-2 rounded-full bg-foreground shadow-md"
                   style={{ left: `calc(${fng.value}% - 4px)` }}
                 />
               </div>
@@ -132,10 +132,10 @@ export function CryptoIndicators() {
               </div>
             </div>
             <div className="text-right flex-shrink-0">
-              <div className="text-2xl font-black font-mono" style={{ color: fngColor(fng.value) }}>
+              <div className={`text-2xl font-black font-mono ${FNG_TONE_CLASS[fngTone(fng.value)].text}`}>
                 {fng.value}
               </div>
-              <div className="text-[10px] font-medium" style={{ color: fngColor(fng.value) }}>
+              <div className={`text-[10px] font-medium ${FNG_TONE_CLASS[fngTone(fng.value)].text}`}>
                 {fng.classification}
               </div>
             </div>
@@ -146,10 +146,9 @@ export function CryptoIndicators() {
               {fng.history_7d.slice(0, 7).reverse().map((d: any, i: number) => (
                 <div
                   key={i}
-                  className="flex-1 rounded-sm min-w-0"
+                  className={`flex-1 rounded-sm min-w-0 ${FNG_TONE_CLASS[fngTone(d.value)].bg}`}
                   style={{
                     height: `${Math.max(15, (d.value / 100) * 100)}%`,
-                    backgroundColor: fngColor(d.value),
                     opacity: 0.4 + (i / 10),
                   }}
                   title={`${d.label}: ${d.value}`}

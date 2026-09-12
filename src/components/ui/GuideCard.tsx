@@ -41,7 +41,7 @@ export default function GuideCard({
         className="flex w-full items-center justify-between gap-2 text-left"
       >
         <span className="flex items-center gap-2 text-sm font-semibold text-foreground/90">
-          <BookOpen className="h-4 w-4 text-primary" aria-hidden="true" />
+          <BookOpen className="h-4 w-4 text-signal" aria-hidden="true" />
           {title}
         </span>
         {open ? (

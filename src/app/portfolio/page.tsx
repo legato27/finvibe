@@ -64,7 +64,7 @@ function TickerInput({
 
   return (
     <div ref={containerRef} className="relative">
-      <div className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg focus-within:ring-1 focus-within:ring-primary">
+      <div className="flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg focus-within:ring-1 focus-within:ring-signal">
         <Search className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
         <input
           type="text"
@@ -81,7 +81,7 @@ function TickerInput({
           required
         />
         {isLoading && query && open && (
-          <div className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
+          <div className="w-3.5 h-3.5 border-2 border-signal/30 border-t-primary rounded-full animate-spin flex-shrink-0" />
         )}
       </div>
 
@@ -102,8 +102,8 @@ function TickerInput({
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
-                    <span className="text-[9px] text-warning bg-warning/10 border border-warning/30 px-1 rounded">{ccy}</span>
+                    <span className="font-mono text-sm font-bold text-signal">{stock.ticker}</span>
+                    <span className="text-[9px] text-signal-caution bg-signal-caution/10 border border-signal-caution/30 px-1 rounded">{ccy}</span>
                     {stock.exchange && (
                       <span className="text-[9px] text-muted-foreground/60 bg-muted px-1 rounded">{stock.exchange}</span>
                     )}
@@ -341,7 +341,7 @@ export default function PortfolioPage() {
           {activePortfolio && (
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors"
             >
               <Plus className="w-3.5 h-3.5" /> {t("addInvestment")}
             </button>
@@ -357,7 +357,7 @@ export default function PortfolioPage() {
             value={newPortfolioName}
             onChange={(e) => setNewPortfolioName(e.target.value)}
             placeholder={t("namePlaceholder")}
-            className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
             autoFocus
           />
           <button
@@ -387,7 +387,7 @@ export default function PortfolioPage() {
               onClick={() => setActiveId(p.id)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                 activePortfolio?.id === p.id
-                  ? "bg-primary/20 text-primary"
+                  ? "bg-signal/20 text-signal"
                   : "text-muted-foreground hover:bg-accent"
               }`}
             >
@@ -401,7 +401,7 @@ export default function PortfolioPage() {
                     e.stopPropagation();
                     if (confirm(t("deletePrompt", { name: p.name }))) deletePortfolio.mutate(p.id);
                   }}
-                  className="text-muted-foreground/30 hover:text-danger"
+                  className="text-muted-foreground/30 hover:text-signal-short"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -448,7 +448,7 @@ export default function PortfolioPage() {
             <div className="card p-3">
               <div className="stat-label">{t("gainLoss")}</div>
               <div className={`text-lg font-bold font-mono flex items-center gap-1 ${
-                totalGainLoss >= 0 ? "text-success" : "text-danger"
+                totalGainLoss >= 0 ? "text-signal-long" : "text-signal-short"
               }`}>
                 {totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                 {hideBalances
@@ -497,7 +497,7 @@ export default function PortfolioPage() {
                     value={form.shares}
                     onChange={(e) => setForm({ ...form, shares: e.target.value })}
                     placeholder={t("sharesPh")}
-                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                     required
                   />
                   {/* Cost + currency selector */}
@@ -508,13 +508,13 @@ export default function PortfolioPage() {
                       value={form.cost_basis}
                       onChange={(e) => setForm({ ...form, cost_basis: e.target.value })}
                       placeholder={t("costPerShare")}
-                      className="flex-1 min-w-0 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex-1 min-w-0 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                       required
                     />
                     <select
                       value={form.currency}
                       onChange={(e) => setForm({ ...form, currency: e.target.value as Currency })}
-                      className="px-2 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+                      className="px-2 bg-background border border-border rounded-lg text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-signal cursor-pointer"
                       title={t("currencyTitle")}
                     >
                       {SUPPORTED_CURRENCIES.map((c) => (
@@ -526,7 +526,7 @@ export default function PortfolioPage() {
                     type="date"
                     value={form.acquired_date}
                     onChange={(e) => setForm({ ...form, acquired_date: e.target.value })}
-                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
@@ -536,7 +536,7 @@ export default function PortfolioPage() {
                     value={form.broker}
                     onChange={(e) => setForm({ ...form, broker: e.target.value })}
                     placeholder={t("brokerPh")}
-                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                   />
                   <datalist id="broker-list">
                     {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab","TD Ameritrade"].map((b) => (
@@ -548,7 +548,7 @@ export default function PortfolioPage() {
                     value={form.notes}
                     onChange={(e) => setForm({ ...form, notes: e.target.value })}
                     placeholder={t("notesPh")}
-                    className="sm:col-span-2 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                    className="sm:col-span-2 px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                   />
                   <button type="submit" className="px-4 py-3 bg-primary text-primary-foreground rounded-lg text-sm font-medium">
                     {tc("add")}
@@ -557,7 +557,7 @@ export default function PortfolioPage() {
               </form>
               {form.name && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  {t("selectedPrefix")} <span className="font-mono text-primary">{form.ticker}</span> — {form.name}
+                  {t("selectedPrefix")} <span className="font-mono text-signal">{form.ticker}</span> — {form.name}
                 </div>
               )}
             </div>
@@ -599,7 +599,7 @@ export default function PortfolioPage() {
               <span className="card-title">{activePortfolio?.name || "Holdings"}</span>
               {positions.length ? (
                 <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-signal-long animate-pulse" />
                   Auto-refresh 60s
                 </span>
               ) : null}
@@ -654,8 +654,8 @@ export default function PortfolioPage() {
                         >
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="font-mono font-bold text-primary">{pos.ticker}</span>
-                              <span className="text-[9px] text-warning/80 bg-warning/10 border border-warning/30 px-1 rounded font-mono">
+                              <span className="font-mono font-bold text-signal">{pos.ticker}</span>
+                              <span className="text-[9px] text-signal-caution/80 bg-signal-caution/10 border border-signal-caution/30 px-1 rounded font-mono">
                                 {nativeCcy}
                               </span>
                             </div>
@@ -676,7 +676,7 @@ export default function PortfolioPage() {
                             <div className="flex items-center justify-end gap-1">
                               {price > 0 ? formatCurrency(price, nativeCcy) : "—"}
                               {isStale && price > 0 && (
-                                <span title="Price may be stale (>24h)"><Clock className="w-3 h-3 text-warning" /></span>
+                                <span title="Price may be stale (>24h)"><Clock className="w-3 h-3 text-signal-caution" /></span>
                               )}
                             </div>
                           </td>
@@ -693,7 +693,7 @@ export default function PortfolioPage() {
                             ) : "—"}
                           </td>
                           <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
-                            gainLoss > 0 ? "text-success" : gainLoss < 0 ? "text-danger" : "text-muted-foreground"
+                            gainLoss > 0 ? "text-signal-long" : gainLoss < 0 ? "text-signal-short" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (
                               <div className="flex flex-col items-end">
@@ -709,7 +709,7 @@ export default function PortfolioPage() {
                             ) : "—"}
                           </td>
                           <td className={`px-3 py-2.5 text-right font-mono font-semibold hidden sm:table-cell ${
-                            returnPct > 0 ? "text-success" : returnPct < 0 ? "text-danger" : "text-muted-foreground"
+                            returnPct > 0 ? "text-signal-long" : returnPct < 0 ? "text-signal-short" : "text-muted-foreground"
                           }`}>
                             {price > 0 ? (
                               <>
@@ -726,7 +726,7 @@ export default function PortfolioPage() {
                                   : `Delete ${pos.ticker}?`;
                                 if (confirm(msg)) deleteHolding.mutate(pos.lotIds);
                               }}
-                              className="text-muted-foreground/30 hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="text-muted-foreground/30 hover:text-signal-short opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>

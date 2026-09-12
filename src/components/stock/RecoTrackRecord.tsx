@@ -123,7 +123,7 @@ export default function RecoTrackRecord({
     <section className="rounded-lg border border-border bg-card p-4">
       <header className="mb-3">
         <h2 className="flex items-center gap-2 text-base font-semibold">
-          <ClipboardList className="h-4 w-4 text-primary" />
+          <ClipboardList className="h-4 w-4 text-signal" />
           What the engine actually called
         </h2>
         <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
@@ -167,7 +167,7 @@ export default function RecoTrackRecord({
           </div>
 
           {focus ? (
-            <p className="mt-3 max-w-3xl border-l-2 border-primary pl-3 text-sm text-muted-foreground">
+            <p className="mt-3 max-w-3xl border-l-2 border-signal pl-3 text-sm text-muted-foreground">
               On the strategy this desk is set to, the engine is{" "}
               <span className="text-foreground">
                 {calibrated ? "well calibrated" : "poorly calibrated"}

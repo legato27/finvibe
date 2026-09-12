@@ -7,8 +7,47 @@ import { InfoTip } from "@/components/shared/InfoTip";
 const STATES = ["Expansion", "Peak", "Contraction", "Trough"] as const;
 type CycleState = typeof STATES[number];
 
+// Each phase carries a directional tone; every colour below is a semantic
+// Tailwind class (or an SVG fill/stroke utility) resolved from the skin tokens.
+type PhaseTone = {
+  text: string;     // text colour
+  dot: string;      // solid fill (legend dot, probability bar)
+  pill: string;     // text + tint + hairline border
+  note: string;     // description box: text + tint + left rule
+  arc: string;      // active ring segment
+  arcDim: string;   // inactive ring segment
+  fill: string;     // SVG text fill
+};
+
+const TONES: Record<"long" | "caution" | "break" | "conflict", PhaseTone> = {
+  long: {
+    text: "text-signal-long", dot: "bg-signal-long",
+    pill: "text-signal-long bg-signal-long-bg border-signal-long/30",
+    note: "text-signal-long bg-signal-long-bg border-signal-long/40",
+    arc: "stroke-signal-long", arcDim: "stroke-signal-long/25", fill: "fill-signal-long",
+  },
+  caution: {
+    text: "text-signal-caution", dot: "bg-signal-caution",
+    pill: "text-signal-caution bg-signal-caution-bg border-signal-caution/30",
+    note: "text-signal-caution bg-signal-caution-bg border-signal-caution/40",
+    arc: "stroke-signal-caution", arcDim: "stroke-signal-caution/25", fill: "fill-signal-caution",
+  },
+  break: {
+    text: "text-signal-break", dot: "bg-signal-break",
+    pill: "text-signal-break bg-signal-break-bg border-signal-break/30",
+    note: "text-signal-break bg-signal-break-bg border-signal-break/40",
+    arc: "stroke-signal-break", arcDim: "stroke-signal-break/25", fill: "fill-signal-break",
+  },
+  conflict: {
+    text: "text-signal-conflict", dot: "bg-signal-conflict",
+    pill: "text-signal-conflict bg-signal-conflict-bg border-signal-conflict/30",
+    note: "text-signal-conflict bg-signal-conflict-bg border-signal-conflict/40",
+    arc: "stroke-signal-conflict", arcDim: "stroke-signal-conflict/25", fill: "fill-signal-conflict",
+  },
+};
+
 const STATE_VISUAL: Record<CycleState, {
-  color: string;
+  tone: PhaseTone;
   icon: string;
   abbr: string;
   phaseKey: string;
@@ -18,7 +57,7 @@ const STATE_VISUAL: Record<CycleState, {
   assetKeys: string[];
 }> = {
   Expansion: {
-    color: "#22c55e",
+    tone: TONES.long,
     icon: "↑",
     abbr: "EXPN",
     phaseKey: "cyclePhaseExpansion",
@@ -28,7 +67,7 @@ const STATE_VISUAL: Record<CycleState, {
     assetKeys: ["cycleAssetEquities", "cycleAssetCyclicals", "cycleAssetRealEstate", "cycleAssetCommodities"],
   },
   Peak: {
-    color: "#f59e0b",
+    tone: TONES.caution,
     icon: "⬆",
     abbr: "PEAK",
     phaseKey: "cyclePhasePeak",
@@ -38,7 +77,7 @@ const STATE_VISUAL: Record<CycleState, {
     assetKeys: ["cycleAssetValueStocks", "cycleAssetEnergy", "cycleAssetMaterials", "cycleAssetShortDuration"],
   },
   Contraction: {
-    color: "#ef4444",
+    tone: TONES.break,
     icon: "↓",
     abbr: "CONT",
     phaseKey: "cyclePhaseContraction",
@@ -48,7 +87,7 @@ const STATE_VISUAL: Record<CycleState, {
     assetKeys: ["cycleAssetGovBonds", "cycleAssetUtilities", "cycleAssetHealthcare", "cycleAssetGold"],
   },
   Trough: {
-    color: "#8b5cf6",
+    tone: TONES.conflict,
     icon: "↗",
     abbr: "TRGH",
     phaseKey: "cyclePhaseTrough",
@@ -109,14 +148,7 @@ export function BusinessCycleWheel() {
           >
             {showLegend ? t("cycleHideLegend") : t("cycleShowLegend")}
           </button>
-          <span
-            className="text-xs font-semibold px-2 py-0.5 rounded"
-            style={{
-              color: currentVisual.color,
-              backgroundColor: `${currentVisual.color}22`,
-              border: `1px solid ${currentVisual.color}44`,
-            }}
-          >
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded border ${currentVisual.tone.pill}`}>
             {t(currentVisual.phaseKey)}
           </span>
         </div>
@@ -133,14 +165,11 @@ export function BusinessCycleWheel() {
             const isActive = s === currentState;
             return (
               <div key={s} className={`flex gap-2.5 p-2 rounded ${isActive ? "bg-muted/70" : ""}`}>
-                <div className="mt-0.5 w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: cfg.color }} />
+                <div className={`mt-0.5 w-2 h-2 rounded-full flex-shrink-0 ${cfg.tone.dot}`} />
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 mb-0.5">
-                    <span className="font-bold" style={{ color: cfg.color }}>{t(cfg.phaseKey)}</span>
-                    <span
-                      className="text-[10px] px-1.5 py-0.5 rounded font-semibold"
-                      style={{ color: cfg.color, backgroundColor: `${cfg.color}20` }}
-                    >
+                    <span className={`font-bold ${cfg.tone.text}`}>{t(cfg.phaseKey)}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border ${cfg.tone.pill}`}>
                       {t(cfg.signalKey)}
                     </span>
                     {isActive && <span className="text-[10px] text-muted-foreground">{t("cycleCurrentMark")}</span>}
@@ -165,7 +194,7 @@ export function BusinessCycleWheel() {
       <div className="flex gap-4 items-start">
         {/* SVG Wheel */}
         <svg width={176} height={176} className="flex-shrink-0">
-          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e293b" strokeWidth={20} />
+          <circle cx={cx} cy={cy} r={r} fill="none" className="stroke-muted" strokeWidth={20} />
 
           {STATES.map((state, i) => {
             const startAngle = -90 + i * 90;
@@ -189,7 +218,7 @@ export function BusinessCycleWheel() {
                 <path
                   d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
                   fill="none"
-                  stroke={isActive ? cfg.color : `${cfg.color}38`}
+                  className={isActive ? cfg.tone.arc : cfg.tone.arcDim}
                   strokeWidth={isActive ? 22 : 17}
                   strokeLinecap="round"
                 />
@@ -199,7 +228,7 @@ export function BusinessCycleWheel() {
                   dominantBaseline="middle"
                   fontSize={7.5}
                   fontWeight={isActive ? "bold" : "normal"}
-                  fill={isActive ? cfg.color : "#475569"}
+                  className={isActive ? cfg.tone.fill : "fill-muted-foreground"}
                 >
                   {cfg.abbr}
                 </text>
@@ -208,11 +237,11 @@ export function BusinessCycleWheel() {
           })}
 
           {/* Centre */}
-          <circle cx={cx} cy={cy} r={34} fill="#0a0a12" />
-          <text x={cx} y={cy - 9} textAnchor="middle" fontSize={18} fill={currentVisual.color}>
+          <circle cx={cx} cy={cy} r={34} className="fill-background" />
+          <text x={cx} y={cy - 9} textAnchor="middle" fontSize={18} className={currentVisual.tone.fill}>
             {currentVisual.icon}
           </text>
-          <text x={cx} y={cy + 9} textAnchor="middle" fontSize={8} fontWeight="bold" fill="#94a3b8">
+          <text x={cx} y={cy + 9} textAnchor="middle" fontSize={8} fontWeight="bold" className="fill-muted-foreground">
             {currentVisual.abbr}
           </text>
         </svg>
@@ -229,22 +258,16 @@ export function BusinessCycleWheel() {
               const isActive = state === currentState;
               return (
                 <div key={state} className="flex items-center gap-2 mb-1">
-                  <div
-                    className="text-xs w-[76px] flex-shrink-0"
-                    style={{ color: isActive ? cfg.color : "#64748b" }}
-                  >
+                  <div className={`text-xs w-[76px] flex-shrink-0 ${isActive ? cfg.tone.text : "text-muted-foreground"}`}>
                     {t(cfg.phaseKey)}
                   </div>
                   <div className="flex-1 bg-muted rounded-full h-1.5">
                     <div
-                      className="h-1.5 rounded-full transition-all duration-500"
-                      style={{ width: `${prob * 100}%`, backgroundColor: cfg.color }}
+                      className={`h-1.5 rounded-full transition-all duration-500 ${cfg.tone.dot}`}
+                      style={{ width: `${prob * 100}%` }}
                     />
                   </div>
-                  <div
-                    className="text-xs font-mono w-9 text-right tabular-nums flex-shrink-0"
-                    style={{ color: isActive ? cfg.color : "#64748b" }}
-                  >
+                  <div className={`text-xs font-mono w-9 text-right tabular-nums flex-shrink-0 ${isActive ? cfg.tone.text : "text-muted-foreground"}`}>
                     {(prob * 100).toFixed(0)}%
                   </div>
                 </div>
@@ -253,14 +276,7 @@ export function BusinessCycleWheel() {
           </div>
 
           {/* Current phase description */}
-          <div
-            className="text-xs italic leading-relaxed px-2 py-1.5 rounded"
-            style={{
-              color: currentVisual.color,
-              backgroundColor: `${currentVisual.color}11`,
-              borderLeft: `2px solid ${currentVisual.color}60`,
-            }}
-          >
+          <div className={`text-xs italic leading-relaxed px-2 py-1.5 rounded border-l-2 ${currentVisual.tone.note}`}>
             <span className="font-semibold not-italic">{t(currentVisual.signalKey)}: </span>
             {t(currentVisual.descKey)}
           </div>

@@ -84,13 +84,13 @@ function AddToPortfolioModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm" onClick={onClose}>
       <div className="card w-full max-w-md mx-4 p-0 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="card-header border-b border-border/40">
           <div>
             <span className="card-title">{tw("addToPortfolioTitle")}</span>
             <div className="text-xs text-muted-foreground mt-0.5">
-              <span className="font-mono text-primary">{ticker}</span>
+              <span className="font-mono text-signal">{ticker}</span>
               {stockName && <span> &mdash; {stockName}</span>}
             </div>
           </div>
@@ -106,7 +106,7 @@ function AddToPortfolioModal({
                 <select
                   value={effectivePortfolioId ?? ""}
                   onChange={(e) => setSelectedPortfolioId(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                 >
                   {portfolios?.map((p: any) => (
                     <option key={p.id} value={p.id}>{p.name}{p.is_default ? tp("defaultSuffix") : ""}</option>
@@ -114,7 +114,7 @@ function AddToPortfolioModal({
                 </select>
                 <button
                   onClick={() => setCreatingNew(true)}
-                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                  className="flex items-center gap-1.5 text-xs text-signal hover:text-signal/80 transition-colors"
                 >
                   <FolderPlus className="w-3.5 h-3.5" /> {tp("createNewPortfolio")}
                 </button>
@@ -126,7 +126,7 @@ function AddToPortfolioModal({
                   value={newPortfolioName}
                   onChange={(e) => setNewPortfolioName(e.target.value)}
                   placeholder={tp("newPortfolioNamePh")}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
                   autoFocus
                 />
                 <button
@@ -150,7 +150,7 @@ function AddToPortfolioModal({
                 value={shares}
                 onChange={(e) => setShares(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal font-mono"
               />
             </div>
             <div>
@@ -162,7 +162,7 @@ function AddToPortfolioModal({
                 value={costBasis}
                 onChange={(e) => setCostBasis(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary font-mono"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal font-mono"
               />
             </div>
           </div>
@@ -174,7 +174,7 @@ function AddToPortfolioModal({
                 type="date"
                 value={acquiredDate}
                 onChange={(e) => setAcquiredDate(e.target.value)}
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
               />
             </div>
             <div>
@@ -184,7 +184,7 @@ function AddToPortfolioModal({
                 value={broker}
                 onChange={(e) => setBroker(e.target.value)}
                 placeholder={tp("brokerExamples")}
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
               />
               <datalist id="modal-broker-list">
                 {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab"].map((b) => (
@@ -200,12 +200,12 @@ function AddToPortfolioModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={tp("notesExamples")}
-              className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
             />
           </div>
 
-          {error && <div className="text-xs text-danger">{error}</div>}
-          {success && <div className="text-xs text-success">{tp("addedToPortfolio")}</div>}
+          {error && <div className="text-xs text-signal-short">{error}</div>}
+          {success && <div className="text-xs text-signal-long">{tp("addedToPortfolio")}</div>}
 
           <button
             onClick={handleSubmit}
@@ -407,7 +407,7 @@ export default function WatchlistPage() {
               onClick={handleRefreshPrices}
               disabled={refreshing}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors disabled:opacity-50 ${
-                refreshError ? "text-danger hover:text-danger" : "text-muted-foreground hover:text-foreground"
+                refreshError ? "text-signal-short hover:text-signal-short" : "text-muted-foreground hover:text-foreground"
               }`}
               title={refreshError ? t("refreshFailedTitle") : t("refreshNowTitle")}
             >
@@ -417,7 +417,7 @@ export default function WatchlistPage() {
           )}
           <button
             onClick={() => setShowNewList(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors"
           >
             <Plus className="w-3.5 h-3.5" /> {t("newWatchlist")}
           </button>
@@ -432,7 +432,7 @@ export default function WatchlistPage() {
             value={newListName}
             onChange={(e) => setNewListName(e.target.value)}
             placeholder={t("namePlaceholder")}
-            className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
             autoFocus
           />
           <button
@@ -462,7 +462,7 @@ export default function WatchlistPage() {
               onClick={() => setActiveId(wl.id)}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
                 activeWatchlist?.id === wl.id
-                  ? "bg-primary/20 text-primary"
+                  ? "bg-signal/20 text-signal"
                   : "text-muted-foreground hover:bg-accent"
               }`}
             >
@@ -477,7 +477,7 @@ export default function WatchlistPage() {
                     e.stopPropagation();
                     if (confirm(t("deletePrompt", { name: wl.name }))) deleteWatchlist.mutate(wl.id);
                   }}
-                  className="text-muted-foreground/50 hover:text-danger"
+                  className="text-muted-foreground/50 hover:text-signal-short"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -504,14 +504,14 @@ export default function WatchlistPage() {
                             setEditingName(false);
                           } else if (e.key === "Escape") setEditingName(false);
                         }}
-                        className="bg-muted/50 border border-border/40 rounded px-2 py-0.5 text-sm focus:outline-none focus:border-primary/50"
+                        className="bg-muted/50 border border-border/40 rounded px-2 py-0.5 text-sm focus:outline-none focus:border-signal/50"
                       />
                       <button
                         onClick={() => {
                           if (nameDraft.trim()) renameWatchlist.mutate({ id: activeWatchlist.id, name: nameDraft });
                           setEditingName(false);
                         }}
-                        className="text-primary hover:text-primary/80"
+                        className="text-signal hover:text-signal/80"
                         aria-label="Save name"
                       >
                         <Check className="w-4 h-4" />
@@ -522,7 +522,7 @@ export default function WatchlistPage() {
                       <span className="card-title">{activeWatchlist.name}</span>
                       <button
                         onClick={() => { setNameDraft(activeWatchlist.name); setEditingName(true); }}
-                        className="text-muted-foreground/40 hover:text-primary opacity-0 group-hover/name:opacity-100 transition-opacity"
+                        className="text-muted-foreground/40 hover:text-signal opacity-0 group-hover/name:opacity-100 transition-opacity"
                         aria-label="Rename watchlist"
                         title="Rename"
                       >
@@ -532,7 +532,7 @@ export default function WatchlistPage() {
                   )}
                   {activeTickers.length > 0 && (
                     <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-signal-long animate-pulse" />
                       {tc("live")}
                     </span>
                   )}
@@ -547,7 +547,7 @@ export default function WatchlistPage() {
                   ) : (
                     <button
                       onClick={() => setShowSearch(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" /> {t("addStock")}
                     </button>

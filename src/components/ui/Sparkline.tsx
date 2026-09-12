@@ -7,7 +7,7 @@ export default function Sparkline({
   values,
   width = 64,
   height = 20,
-  className = "text-primary",
+  className = "text-signal",
   title,
 }: {
   values: number[] | null | undefined;

@@ -166,7 +166,7 @@ export default async function ConsentPage(props: {
               name="mcp_scope"
               form="consent-form"
               defaultValue="manage"
-              className="mt-1 w-full bg-background/50 border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-primary/50"
+              className="mt-1 w-full bg-background/50 border border-border rounded-lg px-2 py-2 text-sm text-foreground focus:outline-none focus:border-signal/50"
             >
               {MCP_SCOPES.map((s) => (
                 <option key={s} value={s}>
@@ -196,13 +196,13 @@ export default async function ConsentPage(props: {
 
         <button
           formAction={approve}
-          className="flex-1 px-4 py-2 rounded-lg bg-primary/20 border border-primary/50 text-foreground hover:bg-primary/30 text-sm"
+          className="flex-1 px-4 py-2 rounded-lg bg-signal/20 border border-signal/50 text-foreground hover:bg-signal/30 text-sm"
         >
           {t("consent.approve")}
         </button>
         <button
           formAction={deny}
-          className="flex-1 px-4 py-2 rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground hover:border-danger/40 text-sm"
+          className="flex-1 px-4 py-2 rounded-lg bg-background border border-border text-muted-foreground hover:text-foreground hover:border-signal-short/40 text-sm"
         >
           {t("consent.deny")}
         </button>

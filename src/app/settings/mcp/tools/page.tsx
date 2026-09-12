@@ -28,9 +28,9 @@ const GROUP_ORDER: ToolGroup[] = [
 //   user-data writes  → manage or full
 //   other writes      → full only
 const ACCESS_TO_SCOPE: Record<ToolAccess, { label: string; cls: string }> = {
-  read: { label: "read", cls: "bg-success/10 text-success border-success/30" },
-  write_user: { label: "manage", cls: "bg-warning/10 text-warning border-warning/30" },
-  write_other: { label: "full", cls: "bg-danger/10 text-danger border-danger/30" },
+  read: { label: "read", cls: "bg-signal-long/10 text-signal-long border-signal-long/30" },
+  write_user: { label: "manage", cls: "bg-signal-caution/10 text-signal-caution border-signal-caution/30" },
+  write_other: { label: "full", cls: "bg-signal-short/10 text-signal-short border-signal-short/30" },
 };
 
 function ScopeBadge({ access }: { access: ToolAccess }) {
@@ -94,7 +94,7 @@ export default function McpToolsPage() {
                 Settings → Connectors → <span className="text-foreground">Add custom connector</span>,
                 paste the endpoint, sign in and approve a scope. OAuth 2.1 — no token to copy.
               </p>
-              <Link href="/settings/mcp/oauth" className="text-primary hover:text-primary/80 underline">
+              <Link href="/settings/mcp/oauth" className="text-signal hover:text-signal/80 underline">
                 Connected apps →
               </Link>
             </div>
@@ -107,7 +107,7 @@ export default function McpToolsPage() {
                 <code className="font-mono text-[11px]">Authorization: Bearer vbf_…</code> on every
                 request.
               </p>
-              <Link href="/settings/mcp/tokens" className="text-primary hover:text-primary/80 underline">
+              <Link href="/settings/mcp/tokens" className="text-signal hover:text-signal/80 underline">
                 Create a token →
               </Link>
             </div>
@@ -137,11 +137,11 @@ export default function McpToolsPage() {
 
           <p className="text-[11px] text-muted-foreground">
             Full per-parameter reference and client snippets:{" "}
-            <Link href="/mcp" className="text-primary hover:text-primary/80 underline">
+            <Link href="/mcp" className="text-signal hover:text-signal/80 underline">
               /mcp
             </Link>{" "}
             · step-by-step{" "}
-            <Link href="/settings/mcp/guide" className="text-primary hover:text-primary/80 underline">
+            <Link href="/settings/mcp/guide" className="text-signal hover:text-signal/80 underline">
               connection guide
             </Link>
             .

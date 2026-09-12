@@ -560,7 +560,7 @@ export default function OptionDeskPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-bold">
-            <Landmark className="h-5 w-5 text-primary" />
+            <Landmark className="h-5 w-5 text-signal" />
             Option desk
           </h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
@@ -589,13 +589,13 @@ export default function OptionDeskPage() {
               aria-pressed={active}
               className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
                 active
-                  ? "border-primary/40 bg-primary/10"
-                  : "border-border bg-card hover:border-primary/30 hover:bg-accent"
+                  ? "border-signal/40 bg-signal/10"
+                  : "border-border bg-card hover:border-signal/30 hover:bg-accent"
               }`}
             >
-              <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`} />
+              <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-signal" : "text-muted-foreground"}`} />
               <span className="flex flex-col leading-tight">
-                <span className={`text-sm font-semibold ${active ? "text-primary" : "text-foreground"}`}>
+                <span className={`text-sm font-semibold ${active ? "text-signal" : "text-foreground"}`}>
                   {label}
                 </span>
                 <span className="text-[11px] text-muted-foreground">{caption}</span>
@@ -694,7 +694,7 @@ export default function OptionDeskPage() {
             onClick={() => setTierFilter("all")}
             aria-pressed={tierFilter === "all"}
             className={`rounded border px-2 py-1 font-medium ${
-              tierFilter === "all" ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-card"
+              tierFilter === "all" ? "border-signal/40 bg-signal/10 text-signal" : "border-border bg-card"
             }`}
           >
             All {data?.universe_size ?? 0}

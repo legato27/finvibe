@@ -165,7 +165,7 @@ export default async function McpDocsPage() {
               {t("authBodyMid")}{" "}
               <Link
                 href="/settings"
-                className="underline text-primary hover:text-primary/80"
+                className="underline text-signal hover:text-signal/80"
               >
                 /settings
               </Link>{" "}

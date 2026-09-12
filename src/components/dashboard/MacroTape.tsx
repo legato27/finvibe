@@ -13,6 +13,7 @@ interface Instrument {
   sparkline: number[];
 }
 
+/** `color` is a semantic text-colour class; the line is drawn in currentColor. */
 function Sparkline({ data, color }: { data: number[]; color: string }) {
   if (!data || data.length < 2) return null;
   const min = Math.min(...data);
@@ -30,11 +31,11 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
     .join(" ");
 
   return (
-    <svg width={w} height={h} className="flex-shrink-0">
+    <svg width={w} height={h} className={`flex-shrink-0 ${color}`}>
       <polyline
         points={points}
         fill="none"
-        stroke={color}
+        stroke="currentColor"
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -81,7 +82,7 @@ export function MacroTape() {
         {instruments.map((inst) => {
           const up1d = inst.change_1d >= 0;
           const up1m = inst.change_1m >= 0;
-          const sparkColor = up1m ? "#22c55e" : "#ef4444";
+          const sparkColor = up1m ? "text-signal-long" : "text-signal-short";
           const tipKey = INSTRUMENT_TIP_KEYS[inst.key];
           const tipText = tipKey ? t(tipKey) : t("macroFallback", { label: inst.label });
 
@@ -103,11 +104,11 @@ export function MacroTape() {
               <Sparkline data={inst.sparkline} color={sparkColor} />
 
               <div className="flex items-center gap-2">
-                <span className={`text-[10px] font-mono flex items-center gap-0.5 ${up1d ? "text-success" : "text-danger"}`}>
+                <span className={`text-[10px] font-mono flex items-center gap-0.5 ${up1d ? "text-signal-long" : "text-signal-short"}`}>
                   {up1d ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                   {up1d ? "+" : ""}{inst.change_1d.toFixed(2)}%
                 </span>
-                <span className={`text-[9px] font-mono ${up1m ? "text-success/60" : "text-danger/60"}`}>
+                <span className={`text-[9px] font-mono ${up1m ? "text-signal-long/60" : "text-signal-short/60"}`}>
                   1M {up1m ? "+" : ""}{inst.change_1m.toFixed(1)}%
                 </span>
               </div>

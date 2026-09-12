@@ -36,39 +36,40 @@ const ACTION_CONFIG = {
   add: {
     labelKey: "adviceAddToPosition",
     icon: PlusCircle,
-    bg: "bg-success/15",
-    text: "text-success",
-    border: "border-success/30",
-    ring: "#22c55e",
+    bg: "bg-signal-long/15",
+    text: "text-signal-long",
+    border: "border-signal-long/30",
+    ring: "text-signal-long",
   },
   hold: {
     labelKey: "adviceHold",
     icon: Minus,
-    bg: "bg-warning/15",
-    text: "text-warning",
-    border: "border-warning/30",
-    ring: "#eab308",
+    bg: "bg-signal-caution/15",
+    text: "text-signal-caution",
+    border: "border-signal-caution/30",
+    ring: "text-signal-caution",
   },
   reduce: {
     labelKey: "adviceReducePosition",
     icon: MinusCircle,
-    bg: "bg-warning/15",
-    text: "text-warning",
-    border: "border-warning/30",
-    ring: "#f97316",
+    bg: "bg-signal-caution/15",
+    text: "text-signal-caution",
+    border: "border-signal-caution/30",
+    ring: "text-signal-short",
   },
   exit: {
     labelKey: "adviceExitPosition",
     icon: LogOut,
-    bg: "bg-danger/15",
-    text: "text-danger",
-    border: "border-danger/30",
-    ring: "#ef4444",
+    bg: "bg-signal-short/15",
+    text: "text-signal-short",
+    border: "border-signal-short/30",
+    ring: "text-signal-break",
   },
 } as const;
 
 // ── Confidence arc ─────────────────────────────────────────────
 
+/** `color` is a text-colour class; the arc strokes with currentColor. */
 function ConfidenceArc({ value, color }: { value: number; color: string }) {
   const r = 28;
   const circ = 2 * Math.PI * r;
@@ -78,7 +79,8 @@ function ConfidenceArc({ value, color }: { value: number; color: string }) {
       <circle cx="36" cy="36" r={r} fill="none" stroke="currentColor" strokeWidth="5" className="text-muted/30" />
       <circle
         cx="36" cy="36" r={r} fill="none"
-        stroke={color} strokeWidth="5"
+        stroke="currentColor" strokeWidth="5"
+        className={color}
         strokeDasharray={`${filled} ${circ - filled}`}
         strokeLinecap="round"
       />
@@ -147,10 +149,10 @@ function PositionAdviceCard({
     return (
       <div className="card p-5 flex items-center justify-between text-muted-foreground text-sm">
         <div className="flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 text-warning" />
+          <AlertTriangle className="w-4 h-4 text-signal-caution" />
           {t("adviceUnavailable")}
         </div>
-        <button onClick={() => refetch()} className="text-xs text-primary hover:underline flex items-center gap-1">
+        <button onClick={() => refetch()} className="text-xs text-signal hover:underline flex items-center gap-1">
           <RefreshCw className="w-3 h-3" /> {t("retry")}
         </button>
       </div>
@@ -201,18 +203,18 @@ function PositionAdviceCard({
               {data.target_price && (
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("target")}</div>
-                  <div className="text-sm font-mono font-semibold text-success">${Number(data.target_price).toFixed(2)}</div>
+                  <div className="text-sm font-mono font-semibold text-signal-long">${Number(data.target_price).toFixed(2)}</div>
                 </div>
               )}
               {data.stop_loss && (
                 <div>
                   <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("stopLoss")}</div>
-                  <div className="text-sm font-mono font-semibold text-danger">${Number(data.stop_loss).toFixed(2)}</div>
+                  <div className="text-sm font-mono font-semibold text-signal-short">${Number(data.stop_loss).toFixed(2)}</div>
                 </div>
               )}
               <div className="ml-auto">
                 <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{t("unrealisedPnl")}</div>
-                <div className={`text-sm font-mono font-semibold ${pnlPct >= 0 ? "text-success" : "text-danger"}`}>
+                <div className={`text-sm font-mono font-semibold ${pnlPct >= 0 ? "text-signal-long" : "text-signal-short"}`}>
                   {pnlPct >= 0 ? <TrendingUp className="w-3.5 h-3.5 inline mr-1" /> : <TrendingDown className="w-3.5 h-3.5 inline mr-1" />}
                   {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%
                 </div>

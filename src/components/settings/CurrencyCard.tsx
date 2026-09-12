@@ -47,7 +47,7 @@ export function CurrencyCard() {
             </span>
           )}
           {savedAt && !update.isPending && (
-            <span className="flex items-center gap-1 text-[10px] text-success">
+            <span className="flex items-center gap-1 text-[10px] text-signal-long">
               <Check className="w-3 h-3" /> {t("saved")}
             </span>
           )}
@@ -70,8 +70,8 @@ export function CurrencyCard() {
                   disabled={update.isPending}
                   className={`flex items-center justify-between gap-2 px-3 py-2.5 rounded-lg border text-left transition-colors disabled:opacity-50 ${
                     currency === c
-                      ? "bg-primary/15 border-primary/50 text-foreground"
-                      : "bg-background/50 border-border hover:border-primary/30 text-muted-foreground hover:text-foreground"
+                      ? "bg-signal/15 border-signal/50 text-foreground"
+                      : "bg-background/50 border-border hover:border-signal/30 text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <div>
@@ -81,7 +81,7 @@ export function CurrencyCard() {
                     </div>
                   </div>
                   {currency === c && (
-                    <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
+                    <Check className="w-3.5 h-3.5 text-signal flex-shrink-0" />
                   )}
                 </button>
               ))}
@@ -89,7 +89,7 @@ export function CurrencyCard() {
           )}
 
           {update.isError && (
-            <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
+            <div className="flex items-start gap-2 p-3 bg-signal-short/10 border border-signal-short/30 rounded-lg text-xs text-signal-short">
               <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
               <div>
                 {(update.error as Error)?.message ||

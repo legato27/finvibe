@@ -39,9 +39,9 @@ const MODEL_META: Record<
 const GROUP_ORDER: ModelGroup[] = ["forecast", "risk", "fundamentals"];
 
 const COLOR = {
-  good: "text-success dark:text-success",
-  bad:  "text-danger dark:text-danger",
-  warn: "text-warning dark:text-warning",
+  good: "text-signal-long",
+  bad:  "text-signal-short",
+  warn: "text-signal-caution",
   neutral: "text-muted-foreground",
 } as const;
 
@@ -152,7 +152,7 @@ function ForecastSparkline({ pred, currentPrice }: { pred: any; currentPrice?: n
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-16" preserveAspectRatio="none" aria-hidden="true">
-      {bandPath && <path d={bandPath} className="fill-primary/15" />}
+      {bandPath && <path d={bandPath} className="fill-signal/15" />}
       {currentPrice != null && (
         <line
           x1={PAD}
@@ -164,7 +164,7 @@ function ForecastSparkline({ pred, currentPrice }: { pred: any; currentPrice?: n
           strokeWidth={1}
         />
       )}
-      <path d={meanPath} className="stroke-primary" strokeWidth={1.5} fill="none" />
+      <path d={meanPath} className="stroke-signal" strokeWidth={1.5} fill="none" />
     </svg>
   );
 }
@@ -282,15 +282,15 @@ function ModelCard({
           onToggle();
         }
       }}
-      className={`rounded-lg border p-3 cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+      className={`rounded-lg border p-3 cursor-pointer transition-colors text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-signal/50 ${
         isEnsemble
-          ? "border-primary/40 bg-primary/5 hover:bg-primary/10 col-span-2 md:col-span-1"
+          ? "border-signal/40 bg-signal/5 hover:bg-signal/10 col-span-2 md:col-span-1"
           : "border-border bg-card hover:bg-accent/40"
       } ${expanded ? "md:col-span-2 lg:col-span-2" : ""}`}
     >
       <div className="flex items-center gap-2 mb-2">
-        <span className={isEnsemble ? "text-primary" : "text-muted-foreground"}>{icon}</span>
-        <span className={`text-xs font-semibold ${isEnsemble ? "text-primary" : "text-foreground"}`}>
+        <span className={isEnsemble ? "text-signal" : "text-muted-foreground"}>{icon}</span>
+        <span className={`text-xs font-semibold ${isEnsemble ? "text-signal" : "text-foreground"}`}>
           {label}
         </span>
         <ChevronDown
@@ -487,19 +487,19 @@ export function ModelCards({ ticker }: { ticker: string }) {
             </>
           )}
           {isRunning && (
-            <span className="flex items-center gap-1.5 text-primary">
+            <span className="flex items-center gap-1.5 text-signal">
               <Loader2 className="w-3 h-3 animate-spin" />
               {t("running")}
             </span>
           )}
           {generatingThoughts && !isRunning && (
-            <span className="flex items-center gap-1.5 text-primary">
+            <span className="flex items-center gap-1.5 text-signal">
               <Brain className="w-3 h-3 animate-pulse" />
               {t("generatingThoughts")}
             </span>
           )}
           {runError && (
-            <span className="text-warning dark:text-warning">{runError}</span>
+            <span className="text-signal-caution">{runError}</span>
           )}
         </div>
         <button
@@ -507,7 +507,7 @@ export function ModelCards({ ticker }: { ticker: string }) {
           disabled={!canRun}
           className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg transition-colors ${
             canRun
-              ? "bg-primary/20 text-primary hover:bg-primary/30"
+              ? "bg-signal/20 text-signal hover:bg-signal/30"
               : "bg-muted text-muted-foreground/70 cursor-not-allowed"
           }`}
           title={

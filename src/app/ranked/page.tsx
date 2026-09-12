@@ -130,7 +130,7 @@ export default function RankedBookPage() {
       cell: (r) => (
         <span className="font-mono">
           <span className="text-muted-foreground mr-1.5">{r.rank}</span>
-          <span className="font-semibold text-primary">{r.ticker}</span>
+          <span className="font-semibold text-signal">{r.ticker}</span>
         </span>
       ),
     },
@@ -269,7 +269,7 @@ export default function RankedBookPage() {
       />
 
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">Computing cross-sectional ranking…</div>}
-      {error && <div className="card p-6 text-sm text-danger">Failed to load ranking.</div>}
+      {error && <div className="card p-6 text-sm text-signal-short">Failed to load ranking.</div>}
 
       {data && (
         <>

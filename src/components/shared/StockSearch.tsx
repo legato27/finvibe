@@ -95,7 +95,7 @@ export function StockSearch({
         <select
           value={market}
           onChange={(e) => setMarket(e.target.value as MarketCode)}
-          className="px-2 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-primary cursor-pointer"
+          className="px-2 py-2 text-xs bg-background border border-border rounded-lg text-foreground focus:outline-none focus:ring-1 focus:ring-signal cursor-pointer"
           title={t("marketTitle")}
         >
           {MARKET_OPTIONS.map((m) => (
@@ -106,7 +106,7 @@ export function StockSearch({
         </select>
 
         {/* Search input */}
-        <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg focus-within:ring-1 focus-within:ring-primary">
+        <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-background border border-border rounded-lg focus-within:ring-1 focus-within:ring-signal">
           <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <input
             ref={inputRef}
@@ -119,7 +119,7 @@ export function StockSearch({
             autoFocus
           />
           {isLoading && query && (
-            <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-signal/30 border-t-primary rounded-full animate-spin" />
           )}
         </div>
       </div>
@@ -134,7 +134,7 @@ export function StockSearch({
               {t("noResultsFor", { query })}
               <button
                 onClick={() => onSelect(query, query, { ticker: query, name: query })}
-                className="ml-2 text-primary hover:underline"
+                className="ml-2 text-signal hover:underline"
               >
                 {t("addAnyway", { query })}
               </button>
@@ -154,12 +154,12 @@ export function StockSearch({
                     current_price: price,
                   })
                 }
-                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/5 transition-colors text-left border-b border-border/20 last:border-0"
+                className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-accent transition-colors text-left border-b border-border/20 last:border-0"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm font-bold text-primary">{stock.ticker}</span>
-                    <span className="text-[9px] text-warning bg-warning/10 border border-warning/30 px-1 rounded">
+                    <span className="font-mono text-sm font-bold text-signal">{stock.ticker}</span>
+                    <span className="text-[9px] text-signal-caution bg-signal-caution/10 border border-signal-caution/30 px-1 rounded">
                       {ccy}
                     </span>
                     {stock.market && stock.market !== "US" && (
@@ -188,7 +188,7 @@ export function StockSearch({
                   )}
                   {stock.change_pct != null && (
                     <span className={`flex items-center gap-0.5 font-mono text-[10px] ${
-                      stock.change_pct >= 0 ? "text-success" : "text-danger"
+                      stock.change_pct >= 0 ? "text-signal-long" : "text-signal-short"
                     }`}>
                       {stock.change_pct >= 0 ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
                       {stock.change_pct >= 0 ? "+" : ""}{stock.change_pct.toFixed(2)}%

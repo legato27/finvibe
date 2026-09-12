@@ -12,30 +12,32 @@ const WINDOWS = [
   { key: "perf_12m", label: "12M" },
 ] as const;
 
-function perfColor(value: number | undefined): string {
-  if (value === undefined || value === null) return "#1e293b";
-  if (value >= 10) return "#14532d";
-  if (value >= 5) return "#166534";
-  if (value >= 2) return "#15803d";
-  if (value >= 0) return "#166534aa";
-  if (value >= -2) return "#7f1d1d99";
-  if (value >= -5) return "#7f1d1d";
-  if (value >= -10) return "#991b1b";
-  return "#450a0a";
+/** Cell tint: sign picks the hue, magnitude picks the alpha step. Ink stays
+ *  the page foreground so it reads on every step in both themes; the sign is
+ *  also in the text, so the hue is never the only carrier. */
+function perfCellClass(value: number | undefined): string {
+  if (value === undefined || value === null) return "bg-muted text-muted-foreground";
+  if (value >= 10) return "bg-signal-long/60 text-foreground";
+  if (value >= 5) return "bg-signal-long/45 text-foreground";
+  if (value >= 2) return "bg-signal-long/30 text-foreground";
+  if (value >= 0) return "bg-signal-long/15 text-foreground";
+  if (value >= -2) return "bg-signal-short/15 text-foreground";
+  if (value >= -5) return "bg-signal-short/30 text-foreground";
+  if (value >= -10) return "bg-signal-short/45 text-foreground";
+  return "bg-signal-short/60 text-foreground";
 }
 
-function perfTextColor(value: number | undefined): string {
-  if (value === undefined || value === null) return "#64748b";
-  return value >= 0 ? "#86efac" : "#fca5a5";
+function forecastClass(value: number | undefined): string {
+  if (value == null) return "text-muted-foreground";
+  if (value >= 8) return "text-signal-long";
+  if (value >= 4) return "text-signal-long-strong";
+  if (value >= 0) return "text-signal-caution";
+  if (value >= -3) return "text-signal-short";
+  return "text-signal-break";
 }
 
-function forecastColor(value: number | undefined): string {
-  if (value == null) return "#64748b";
-  if (value >= 8) return "#22c55e";
-  if (value >= 4) return "#86efac";
-  if (value >= 0) return "#fbbf24";
-  if (value >= -3) return "#f97316";
-  return "#ef4444";
+function rankClass(rank: number): string {
+  return rank <= 3 ? "text-signal-long" : rank >= 9 ? "text-signal-short" : "text-signal-neutral";
 }
 
 export function SectorRotationHeatmap() {
@@ -81,7 +83,7 @@ export function SectorRotationHeatmap() {
         </span>
         <div className="flex items-center gap-2">
           {regimeData && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-primary/15 text-primary rounded border border-primary/20">
+            <span className="text-[9px] px-1.5 py-0.5 bg-signal/15 text-signal rounded border border-signal/20">
               {t("sectorRegimeBadge", { regime: regimeData.regime })}
             </span>
           )}
@@ -119,8 +121,7 @@ export function SectorRotationHeatmap() {
                     <td className="py-1 pl-1 text-center">
                       {forecast != null ? (
                         <span
-                          className="font-mono font-bold text-[11px]"
-                          style={{ color: forecastColor(forecast) }}
+                          className={`font-mono font-bold text-[11px] ${forecastClass(forecast)}`}
                           title={t("sectorFwdTitle", { regime: regimeData.regime, sector: row.sector, forecast })}
                         >
                           {forecast >= 0 ? "+" : ""}{forecast.toFixed(1)}%
@@ -135,11 +136,7 @@ export function SectorRotationHeatmap() {
                     return (
                       <td
                         key={key}
-                        className="py-1 px-1 text-center font-mono rounded"
-                        style={{
-                          backgroundColor: perfColor(val),
-                          color: perfTextColor(val),
-                        }}
+                        className={`py-1 px-1 text-center font-mono rounded ${perfCellClass(val)}`}
                       >
                         {val !== undefined && val !== null
                           ? `${val >= 0 ? "+" : ""}${val.toFixed(1)}%`
@@ -148,12 +145,7 @@ export function SectorRotationHeatmap() {
                     );
                   })}
                   <td className="py-1 pl-1 text-center">
-                    <span
-                      className="font-mono font-bold"
-                      style={{
-                        color: (row.rs_rank || 11) <= 3 ? "#22c55e" : (row.rs_rank || 11) >= 9 ? "#ef4444" : "#94a3b8",
-                      }}
-                    >
+                    <span className={`font-mono font-bold ${rankClass(row.rs_rank || 11)}`}>
                       #{Math.round(row.rs_rank || 11)}
                     </span>
                   </td>
@@ -169,14 +161,14 @@ export function SectorRotationHeatmap() {
         <div className="border-t border-border/30 mt-1 pt-1.5 px-1">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[9px] text-muted-foreground">
             <span>
-              <span className="text-primary font-medium">{t("sectorLegendFwd")}</span> {t("sectorLegendDesc")}{" "}
-              <span className="text-primary">{regimeData.regime}</span> {t("sectorLegendRegimes")}
+              <span className="text-signal font-medium">{t("sectorLegendFwd")}</span> {t("sectorLegendDesc")}{" "}
+              <span className="text-signal">{regimeData.regime}</span> {t("sectorLegendRegimes")}
             </span>
             <span>
-              {t("sectorFavors")} <span className="text-success font-medium">{regimeData.top_3?.join(", ")}</span>
+              {t("sectorFavors")} <span className="text-signal-long font-medium">{regimeData.top_3?.join(", ")}</span>
             </span>
             <span>
-              {t("sectorAvoids")} <span className="text-danger font-medium">{regimeData.bottom_3?.join(", ")}</span>
+              {t("sectorAvoids")} <span className="text-signal-short font-medium">{regimeData.bottom_3?.join(", ")}</span>
             </span>
           </div>
         </div>

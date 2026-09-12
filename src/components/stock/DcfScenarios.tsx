@@ -28,7 +28,7 @@ const usd = (x?: number | null) => (x == null ? "n/a" : `$${x.toFixed(2)}`);
 const SCEN = [
   { key: "bear", label: "Bear", color: "text-signal-short" },
   { key: "base", label: "Base", color: "text-foreground" },
-  { key: "bull", label: "Bull", color: "text-success" },
+  { key: "bull", label: "Bull", color: "text-signal-long" },
 ];
 
 export function DcfScenarios({ dcf }: { dcf: DcfDetail | null | undefined }) {
@@ -51,7 +51,7 @@ export function DcfScenarios({ dcf }: { dcf: DcfDetail | null | undefined }) {
       </div>
 
       {dcfUnreliable && (
-        <div className="bg-warning/10 border border-warning/30 rounded-lg p-3 text-[11px] text-warning/90 leading-relaxed">
+        <div className="bg-signal-caution/10 border border-signal-caution/30 rounded-lg p-3 text-[11px] text-signal-caution/90 leading-relaxed">
           ⚠ The simple 10-year DCF implies deep overvaluation here. This model
           systematically undervalues high-growth / high-beta companies (high WACC
           + a 5-year median FCF base). Treat these figures as a conservative floor
@@ -100,7 +100,7 @@ export function DcfScenarios({ dcf }: { dcf: DcfDetail | null | undefined }) {
         <div>
           <button
             onClick={() => setShowGrid(!showGrid)}
-            className="flex items-center gap-1 text-xs text-primary/70 hover:text-primary"
+            className="flex items-center gap-1 text-xs text-signal/70 hover:text-signal"
           >
             {showGrid ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             Sensitivity (WACC × terminal growth)
@@ -126,7 +126,7 @@ export function DcfScenarios({ dcf }: { dcf: DcfDetail | null | undefined }) {
                           <td
                             key={j}
                             className={`p-1 text-center ${
-                              v == null ? "text-muted-foreground" : above ? "text-success" : "text-signal-short"
+                              v == null ? "text-muted-foreground" : above ? "text-signal-long" : "text-signal-short"
                             }`}
                           >
                             {v == null ? "—" : `$${v.toFixed(0)}`}

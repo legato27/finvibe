@@ -278,7 +278,7 @@ export default function WatchlistTable({
       {/* Symbol + inline badges */}
       <td className="px-3 py-2">
         <div className="flex items-center gap-2">
-          <Link href={`/stock/${r.ticker}`} className="font-mono text-sm font-bold text-primary hover:underline">
+          <Link href={`/stock/${r.ticker}`} className="font-mono text-sm font-bold text-signal hover:underline">
             {r.ticker}
           </Link>
           {moatStyle(r.moat).show && (
@@ -290,18 +290,18 @@ export default function WatchlistTable({
             </span>
           )}
           {r.enrichmentStatus === "pending" && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-warning/10 text-signal-caution rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 bg-signal-caution/10 text-signal-caution rounded animate-pulse">
               {t("pending")}
             </span>
           )}
           {r.enrichmentStatus === "processing" && (
-            <span className="text-[9px] px-1.5 py-0.5 bg-primary/10 text-primary dark:text-primary rounded animate-pulse">
+            <span className="text-[9px] px-1.5 py-0.5 bg-signal/10 text-signal rounded animate-pulse">
               {t("enriching")}
             </span>
           )}
           {r.hasThoughts && (
             <span title={t("thoughtsAvailable")}>
-              <Brain className="w-3 h-3 text-primary/50" aria-label={t("thoughtsAvailable")} />
+              <Brain className="w-3 h-3 text-signal/50" aria-label={t("thoughtsAvailable")} />
             </span>
           )}
         </div>
@@ -338,7 +338,7 @@ export default function WatchlistTable({
             {r.livePrice == null && r.lastPriceUpdatedAt && (
               <div
                 className={`text-[10px] ${
-                  isStale(r.lastPriceUpdatedAt) ? "text-warning/70" : "text-muted-foreground/40"
+                  isStale(r.lastPriceUpdatedAt) ? "text-signal-caution/70" : "text-muted-foreground/40"
                 }`}
               >
                 {timeAgo(r.lastPriceUpdatedAt)}
@@ -415,7 +415,7 @@ export default function WatchlistTable({
         {r.opt?.strategy ? (
           <span
             title={r.opt.conviction != null ? `${(r.opt.conviction * 100).toFixed(0)}% conviction` : undefined}
-            className="inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-primary/30 bg-primary/10 text-primary"
+            className="inline-block text-[10px] font-mono px-1.5 py-0.5 rounded border border-signal/30 bg-signal/10 text-signal"
           >
             {r.opt.strategy}
           </span>
@@ -429,7 +429,7 @@ export default function WatchlistTable({
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={() => onAddToPortfolio(r)}
-            className="p-1.5 rounded text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors"
+            className="p-1.5 rounded text-muted-foreground hover:text-signal hover:bg-signal/10 transition-colors"
             title={t("addToPortfolioTitle")}
             aria-label={t("addToPortfolioTitle")}
           >
@@ -472,7 +472,7 @@ export default function WatchlistTable({
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("quickSearchPh")}
             aria-label={t("quickSearchPh")}
-            className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
           />
         </div>
         <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -481,7 +481,7 @@ export default function WatchlistTable({
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as GroupKey)}
-            className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            className="bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
           >
             <option value="none">{t("groupNone")}</option>
             <option value="sector">{t("groupSector")}</option>
@@ -496,7 +496,7 @@ export default function WatchlistTable({
         </span>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-border">
+      <div className="overflow-x-auto rounded-panel border border-border">
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">{t("title")}</caption>
           <thead className="sticky top-0 z-10 bg-muted/80 backdrop-blur">

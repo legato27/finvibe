@@ -35,7 +35,7 @@ export function StockHeroHeader({
       value: (llmData.intrinsic_value ?? llmData.llm_intrinsic_value) != null
         ? `$${Number(llmData.intrinsic_value ?? llmData.llm_intrinsic_value).toFixed(2)}` : null,
       sub: t('ai'),
-      color: "text-primary dark:text-primary",
+      color: "text-signal",
     },
     {
       label: t('mos'),
@@ -63,14 +63,14 @@ export function StockHeroHeader({
     <div className="card p-5">
       <div className="flex items-start gap-4">
         <Link href={backHref} aria-label="Back to watchlist"
-              className="text-muted-foreground hover:text-primary mt-1 transition-colors">
+              className="text-muted-foreground hover:text-signal mt-1 transition-colors">
           <ArrowLeft className="w-5 h-5" aria-hidden="true" />
         </Link>
 
         <div className="flex-1 min-w-0">
           {/* Row 1: Ticker + name + badges */}
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold font-mono text-primary">{ticker}</h1>
+            <h1 className="text-2xl font-bold font-mono text-signal">{ticker}</h1>
             <span className="text-lg text-foreground/80 truncate">{detail?.name || "—"}</span>
             {moatStyle(detail?.moat_rating).show && (
               <span className={`text-[10px] px-2 py-0.5 rounded border ${moatStyle(detail?.moat_rating).badgeClass}`}>
@@ -104,7 +104,7 @@ export function StockHeroHeader({
 
             {detail?.quarterly_trend && (
               <span className={`flex items-center gap-1 text-sm font-mono ${
-                detail.quarterly_trend === "up" ? "text-success" : detail.quarterly_trend === "down" ? "text-danger" : "text-muted-foreground"
+                detail.quarterly_trend === "up" ? "text-signal-long" : detail.quarterly_trend === "down" ? "text-signal-short" : "text-muted-foreground"
               }`}>
                 {detail.quarterly_trend === "up" ? <TrendingUp className="w-4 h-4" /> : detail.quarterly_trend === "down" ? <TrendingDown className="w-4 h-4" /> : <Minus className="w-4 h-4" />}
                 <span className="text-xs text-muted-foreground">{t('quarterlyShort')}</span>
@@ -122,10 +122,10 @@ export function StockHeroHeader({
             )}
 
             {detail?.enrichment_status === "pending" && (
-              <span className="text-[10px] px-2 py-0.5 bg-warning/10 text-signal-caution rounded animate-pulse">{t('statusPending')}</span>
+              <span className="text-[10px] px-2 py-0.5 bg-signal-caution/10 text-signal-caution rounded animate-pulse">{t('statusPending')}</span>
             )}
             {detail?.enrichment_status === "processing" && (
-              <span className="text-[10px] px-2 py-0.5 bg-primary/10 text-primary dark:text-primary rounded animate-pulse">{t('statusEnriching')}</span>
+              <span className="text-[10px] px-2 py-0.5 bg-signal/10 text-signal rounded animate-pulse">{t('statusEnriching')}</span>
             )}
           </div>
 
@@ -135,7 +135,7 @@ export function StockHeroHeader({
               {stats.map(({ label, value, sub, color }, i) => (
                 <div key={`${label}-${sub || i}`} className="text-center min-w-[60px]">
                   <div className="text-[10px] text-muted-foreground">
-                    {label}{sub ? <span className="text-primary dark:text-primary ml-0.5">({sub})</span> : null}
+                    {label}{sub ? <span className="text-signal ml-0.5">({sub})</span> : null}
                   </div>
                   <div className={`font-mono text-sm font-semibold ${color || "text-foreground"}`}>{value}</div>
                 </div>

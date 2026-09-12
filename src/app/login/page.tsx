@@ -67,7 +67,7 @@ function LoginInner() {
       {error && (
         <div
           role="alert"
-          className="mb-4 p-3 rounded-lg bg-[hsl(var(--danger-bg))] border border-[hsl(var(--danger))]/40 text-[hsl(var(--danger))] text-xs"
+          className="mb-4 p-3 rounded-lg bg-signal-short-bg border border-signal-short/40 text-signal-short text-xs"
         >
           {error}
         </div>
@@ -134,7 +134,7 @@ function LoginInner() {
 
       <p className="text-center text-xs text-muted-foreground mt-6">
         {t("noAccount")}{" "}
-        <Link href="/register" className="text-primary font-medium hover:underline">
+        <Link href="/register" className="text-signal font-medium hover:underline">
           {t("createOne")}
         </Link>
       </p>

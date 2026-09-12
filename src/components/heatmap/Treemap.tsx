@@ -17,7 +17,7 @@ import {
   type GroupKey, type HeatmapRow, type Metric, type SizeKey,
   STRATEGY_LABEL, fmtCap, groupOf, sizeOf,
 } from "@/lib/heatmap";
-import { colorFor, inkFor, usePalette } from "@/components/heatmap/palette";
+import { colorFor, inkFor, tokenAlpha, usePalette } from "@/components/heatmap/palette";
 
 const pct = (d: number) => (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(d)}%`;
 
@@ -170,7 +170,7 @@ export function Treemap({
         ref={hostRef}
         role="img"
         aria-label={`Treemap of ${rows.length} names grouped by ${group}, coloured by ${metric.label}`}
-        className="relative w-full overflow-hidden rounded-xl border border-border bg-background"
+        className="relative w-full overflow-hidden rounded-panel border border-border bg-background"
         style={{ height }}
         onMouseLeave={() => setHover(null)}
       >
@@ -211,7 +211,7 @@ export function Treemap({
                   left: l.x0, top: l.y0, width: w, height: h,
                   background: bg,
                   color: bg && pal ? inkFor(bg, pal) : undefined,
-                  boxShadow: ring ? "inset 0 0 0 1px hsl(var(--primary) / 0.7)" : undefined,
+                  boxShadow: ring && pal ? `inset 0 0 0 1px ${tokenAlpha("--signal", 0.7)}` : undefined,
                 }}
               >
                 {w >= 22 && h >= 14 && (

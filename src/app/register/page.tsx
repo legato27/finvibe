@@ -42,11 +42,11 @@ export default function RegisterPage() {
   if (success) {
     return (
       <AuthShell title={t("signUpTitle")}>
-        <div className="p-4 rounded-lg bg-[hsl(var(--success-bg))] border border-[hsl(var(--success))]/40 text-sm text-foreground flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))] flex-shrink-0 mt-0.5" />
+        <div className="p-4 rounded-lg bg-signal-long-bg border border-signal-long/40 text-sm text-foreground flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-signal-long flex-shrink-0 mt-0.5" />
           <span>
             {t("checkEmail")}{" "}
-            <Link href="/login" className="text-primary font-medium underline">
+            <Link href="/login" className="text-signal font-medium underline">
               {t("signInLink")}
             </Link>
             .
@@ -61,7 +61,7 @@ export default function RegisterPage() {
       {error && (
         <div
           role="alert"
-          className="mb-4 p-3 rounded-lg bg-[hsl(var(--danger-bg))] border border-[hsl(var(--danger))]/40 text-[hsl(var(--danger))] text-xs"
+          className="mb-4 p-3 rounded-lg bg-signal-short-bg border border-signal-short/40 text-signal-short text-xs"
         >
           {error}
         </div>
@@ -124,7 +124,7 @@ export default function RegisterPage() {
 
       <p className="text-center text-xs text-muted-foreground mt-6">
         {t("hasAccount")}{" "}
-        <Link href="/login" className="text-primary font-medium hover:underline">
+        <Link href="/login" className="text-signal font-medium hover:underline">
           {t("signInLink")}
         </Link>
       </p>

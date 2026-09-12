@@ -52,7 +52,7 @@ export function TodaySignalsPanel() {
           <ul className="space-y-1">
             {data.new_pam_triggers.slice(0, 6).map((s) => (
               <li key={`${s.ticker}-${s.triggered_at}`} className="flex flex-wrap items-center gap-2 text-sm">
-                <Link href={`/stock/${s.ticker}`} className="font-mono font-semibold text-primary hover:underline">
+                <Link href={`/stock/${s.ticker}`} className="font-mono font-semibold text-signal hover:underline">
                   {s.ticker}
                 </Link>
                 <span className={s.direction === "long" ? "text-signal-long" : "text-signal-short"}>
@@ -86,7 +86,7 @@ export function TodaySignalsPanel() {
           <ul className="space-y-1">
             {data.verdict_changes.slice(0, 6).map((c) => (
               <li key={`${c.ticker}-${c.at}`} className="flex items-center gap-2 text-sm">
-                <Link href={`/stock/${c.ticker}`} className="font-mono font-semibold text-primary hover:underline">
+                <Link href={`/stock/${c.ticker}`} className="font-mono font-semibold text-signal hover:underline">
                   {c.ticker}
                 </Link>
                 <VerdictBadge state={c.from as VerdictState} size="sm" />
@@ -107,7 +107,7 @@ export function TodaySignalsPanel() {
           <ul className="space-y-1">
             {data.conflicts.slice(0, 6).map((c) => (
               <li key={c.ticker} className="flex flex-wrap items-center gap-2 text-sm">
-                <Link href={`/stock/${c.ticker}`} className="font-mono font-semibold text-primary hover:underline">
+                <Link href={`/stock/${c.ticker}`} className="font-mono font-semibold text-signal hover:underline">
                   {c.ticker}
                 </Link>
                 <span className="text-signal-conflict">

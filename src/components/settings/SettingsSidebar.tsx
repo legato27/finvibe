@@ -43,7 +43,7 @@ export function SettingsSidebar() {
               href={href}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors whitespace-nowrap ${
                 active
-                  ? "bg-primary/15 border border-primary/40 text-foreground"
+                  ? "bg-signal/15 border border-signal/40 text-foreground"
                   : "text-muted-foreground hover:text-foreground hover:bg-background/40"
               }`}
             >

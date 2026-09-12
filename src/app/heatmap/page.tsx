@@ -40,7 +40,7 @@ const TONE_DOT: Record<string, string> = {
 };
 
 const selectCls =
-  "rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs text-foreground/90 focus:outline-none focus:ring-1 focus:ring-primary/50";
+  "rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs text-foreground/90 focus:outline-none focus:ring-1 focus:ring-signal/50";
 const inputCls = `${selectCls} w-20 nums`;
 
 function Chip({ on, onClick, children, dot }: { on: boolean; onClick: () => void; children: React.ReactNode; dot?: string }) {
@@ -50,7 +50,7 @@ function Chip({ on, onClick, children, dot }: { on: boolean; onClick: () => void
       aria-pressed={on}
       onClick={onClick}
       className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs transition-colors ${
-        on ? "border-primary bg-primary/15 text-primary" : "border-border/40 text-muted-foreground hover:text-foreground"
+        on ? "border-signal bg-signal/15 text-signal" : "border-border/40 text-muted-foreground hover:text-foreground"
       }`}
     >
       {dot && <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-[2px] ${dot}`} />}
@@ -156,7 +156,7 @@ function HeatmapPageInner() {
   ];
   const columns: Column<HeatmapRow>[] = [
     { key: "ticker", header: "Ticker", sortable: true, sortValue: (r) => r.ticker,
-      cell: (r) => <span className="font-mono font-semibold text-primary">{r.ticker}</span> },
+      cell: (r) => <span className="font-mono font-semibold text-signal">{r.ticker}</span> },
     { key: "watch", header: <span className="sr-only">Watchlist</span>, ariaLabel: "Watchlist", cell: (r) => <WatchlistStar ticker={r.ticker} /> },
     { key: "name", header: "Name", hideBelow: "md", cell: (r) => <span className="text-muted-foreground truncate max-w-[180px] inline-block align-bottom">{r.name ?? "—"}</span> },
     { key: "sector", header: "Sector", optional: true, sortable: true, sortValue: (r) => r.sector ?? "", cell: (r) => <span className="text-muted-foreground">{r.sector ?? "—"}</span> },
@@ -212,7 +212,7 @@ function HeatmapPageInner() {
       />
 
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">{t("loading")}</div>}
-      {error && <div className="card p-6 text-sm text-danger">{t("loadError")}</div>}
+      {error && <div className="card p-6 text-sm text-signal-short">{t("loadError")}</div>}
 
       {data && (
         <>

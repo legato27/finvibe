@@ -94,7 +94,7 @@ export default function TradeJournal({
     return (
       <section className="rounded-lg border border-border bg-card p-4">
         <h2 className="flex items-center gap-2 text-base font-semibold">
-          <NotebookPen className="h-4 w-4 text-primary" />
+          <NotebookPen className="h-4 w-4 text-signal" />
           Trade journal
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -109,7 +109,7 @@ export default function TradeJournal({
       <header className="mb-3 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <NotebookPen className="h-4 w-4 text-primary" />
+            <NotebookPen className="h-4 w-4 text-signal" />
             Trade journal
           </h2>
           <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
@@ -121,7 +121,7 @@ export default function TradeJournal({
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
-          className="flex items-center gap-1.5 rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary"
+          className="flex items-center gap-1.5 rounded border border-signal/40 bg-signal/10 px-3 py-1.5 text-sm font-medium text-signal"
         >
           {adding ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
           {adding ? "Cancel" : "Log a trade"}
@@ -224,7 +224,7 @@ export default function TradeJournal({
                           <button
                             type="button"
                             onClick={() => setClosingId(closingId === t.id ? null : t.id)}
-                            className="ml-2 text-[11px] text-primary underline underline-offset-2"
+                            className="ml-2 text-[11px] text-signal underline underline-offset-2"
                           >
                             resolve
                           </button>
@@ -365,7 +365,7 @@ function AddForm({
         <button
           type="submit"
           disabled={!valid || pending}
-          className="rounded border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm font-medium text-primary disabled:opacity-50"
+          className="rounded border border-signal/40 bg-signal/10 px-3 py-1.5 text-sm font-medium text-signal disabled:opacity-50"
         >
           {pending ? "Saving…" : "Save trade"}
         </button>
@@ -435,7 +435,7 @@ function CloseForm({
               underlying_price_at_close: spot ? Number(spot) : null,
             })
           }
-          className="rounded border border-primary/40 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary disabled:opacity-50"
+          className="rounded border border-signal/40 bg-signal/10 px-2.5 py-1 text-xs font-medium text-signal disabled:opacity-50"
         >
           {pending ? "Saving…" : "Record"}
         </button>

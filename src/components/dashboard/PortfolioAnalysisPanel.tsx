@@ -136,7 +136,7 @@ export function PortfolioAnalysisPanel({
     <div className="card">
       <div className="card-header flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-primary" />
+          <Sparkles className="w-4 h-4 text-signal" />
           <span className="card-title">{t("aiPortfolioTitle")}</span>
           <span className="text-[10px] text-muted-foreground">
             {t("aiPortfolioSubtitle")}
@@ -146,7 +146,7 @@ export function PortfolioAnalysisPanel({
           <button
             onClick={() => run("claude")}
             disabled={!canRun || !!running}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-primary/20 text-primary rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             title={t("runViaClaude")}
           >
             {running === "claude" ? (
@@ -180,7 +180,7 @@ export function PortfolioAnalysisPanel({
         )}
 
         {error && (
-          <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
+          <div className="flex items-start gap-2 p-3 bg-signal-short/10 border border-signal-short/30 rounded-lg text-xs text-signal-short">
             <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
             <div>{error}</div>
           </div>
@@ -260,8 +260,8 @@ function AnalysisBlock({
 
   const providerTint =
     analysis.provider === "claude"
-      ? "bg-primary/15 text-primary border-primary/30"
-      : "bg-success/15 text-success border-success/30";
+      ? "bg-signal/15 text-signal border-signal/30"
+      : "bg-signal-long/15 text-signal-long border-signal-long/30";
 
   const structured = (analysis.summary as any)?.structured as
     | StructuredAnalysis
@@ -274,7 +274,7 @@ function AnalysisBlock({
     <div
       className={`rounded-lg overflow-hidden border transition-colors ${
         isLatest
-          ? "border-primary/40 shadow-[0_0_0_1px_rgba(var(--primary-rgb,99,102,241),0.15)]"
+          ? "border-signal/40 shadow-[0_0_0_1px_rgba(var(--primary-rgb,99,102,241),0.15)]"
           : "border-border/40"
       }`}
     >
@@ -294,7 +294,7 @@ function AnalysisBlock({
             {providerLabel}
           </span>
           {isLatest && (
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-success/15 text-success border border-success/30 flex-shrink-0">
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-semibold bg-signal-long/15 text-signal-long border border-signal-long/30 flex-shrink-0">
               {t("latest")}
             </span>
           )}
@@ -311,7 +311,7 @@ function AnalysisBlock({
         </button>
         <button
           onClick={onDelete}
-          className="text-muted-foreground/40 hover:text-danger transition-colors flex-shrink-0"
+          className="text-muted-foreground/40 hover:text-signal-short transition-colors flex-shrink-0"
           title={t("deleteAnalysis")}
         >
           <Trash2 className="w-3.5 h-3.5" />
@@ -341,7 +341,7 @@ function AnalysisBlock({
                   <tbody className="divide-y divide-border/20">
                     {snapshot.map((h) => (
                       <tr key={h.ticker} className="hover:bg-accent/10 transition-colors">
-                        <td className="px-2.5 py-1.5 font-mono font-semibold text-primary">
+                        <td className="px-2.5 py-1.5 font-mono font-semibold text-signal">
                           {h.ticker}
                         </td>
                         <td className="px-2.5 py-1.5 text-muted-foreground hidden md:table-cell">
@@ -390,10 +390,10 @@ function AnalysisBlock({
 // ── Structured memo renderer ──────────────────────────────────
 
 const SEVERITY_STYLES: Record<string, string> = {
-  normal: "bg-success/10 text-success border-success/30",
-  elevated: "bg-warning/10 text-warning border-warning/30",
-  high: "bg-warning/10 text-warning border-warning/30",
-  critical: "bg-danger/10 text-danger border-danger/30",
+  normal: "bg-signal-long/10 text-signal-long border-signal-long/30",
+  elevated: "bg-signal-caution/10 text-signal-caution border-signal-caution/30",
+  high: "bg-signal-caution/10 text-signal-caution border-signal-caution/30",
+  critical: "bg-signal-short/10 text-signal-short border-signal-short/30",
 };
 
 function SeverityPill({ severity }: { severity: string }) {
@@ -420,7 +420,7 @@ function StructuredMemo({
   return (
     <div className="space-y-5">
       {structured.summary_headline && (
-        <div className="p-3 rounded-lg bg-primary/10 border border-primary/30 text-sm font-semibold text-foreground">
+        <div className="p-3 rounded-lg bg-signal/10 border border-signal/30 text-sm font-semibold text-foreground">
           {structured.summary_headline}
         </div>
       )}
@@ -467,7 +467,7 @@ function StructuredMemo({
               <tbody className="divide-y divide-border/20">
                 {structured.position_risks.map((p) => (
                   <tr key={p.ticker} className="hover:bg-accent/10">
-                    <td className="px-2.5 py-1.5 font-mono font-semibold text-primary">
+                    <td className="px-2.5 py-1.5 font-mono font-semibold text-signal">
                       {p.ticker}
                     </td>
                     <td className="px-2.5 py-1.5 text-right font-mono">
@@ -476,7 +476,7 @@ function StructuredMemo({
                     <td className="px-2.5 py-1.5 text-right font-mono">
                       {p.ann_vol_pct != null ? `${p.ann_vol_pct}%` : "—"}
                     </td>
-                    <td className="px-2.5 py-1.5 text-right font-mono text-danger">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-signal-short">
                       {p.max_drawdown_pct != null ? `${p.max_drawdown_pct}%` : "—"}
                     </td>
                     <td className="px-2.5 py-1.5 text-foreground/80">{p.notes || "—"}</td>
@@ -523,7 +523,7 @@ function StructuredMemo({
                 {structured.stress_test.map((s, i) => (
                   <tr key={i} className="hover:bg-accent/10">
                     <td className="px-2.5 py-1.5 font-medium">{s.scenario}</td>
-                    <td className="px-2.5 py-1.5 text-right font-mono text-danger">
+                    <td className="px-2.5 py-1.5 text-right font-mono text-signal-short">
                       {s.portfolio_return_pct != null ? `${s.portfolio_return_pct}%` : "—"}
                     </td>
                     <td className="px-2.5 py-1.5 text-right font-mono text-muted-foreground">
@@ -549,7 +549,7 @@ function StructuredMemo({
                 className="p-3 rounded-lg border border-border/40 bg-background/50"
               >
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <div className="text-xs font-semibold text-primary">{h.strategy}</div>
+                  <div className="text-xs font-semibold text-signal">{h.strategy}</div>
                   {h.sizing && (
                     <span className="text-[10px] font-mono text-muted-foreground bg-accent/30 px-2 py-0.5 rounded">
                       {h.sizing}
@@ -564,7 +564,7 @@ function StructuredMemo({
       )}
 
       {structured.verdict && (
-        <div className="p-3 rounded-lg bg-accent/20 border-l-2 border-primary/50 text-sm text-foreground/90 leading-relaxed">
+        <div className="p-3 rounded-lg bg-accent/20 border-l-2 border-signal/50 text-sm text-foreground/90 leading-relaxed">
           {structured.verdict}
         </div>
       )}
@@ -663,7 +663,7 @@ function UnstructuredFallback({ raw }: { raw: string }) {
   if (looksLikeJson) {
     return (
       <div className="space-y-2">
-        <div className="flex items-start gap-2 p-3 bg-warning/10 border border-warning/30 rounded-lg text-xs text-warning">
+        <div className="flex items-start gap-2 p-3 bg-signal-caution/10 border border-signal-caution/30 rounded-lg text-xs text-signal-caution">
           <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           <div>
             Model returned JSON but it couldn&apos;t be parsed — likely truncated
@@ -686,7 +686,7 @@ const MEMO_CLASS = [
   "text-sm text-foreground/90 leading-relaxed space-y-3",
   "[&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-foreground [&_h1]:tracking-tight [&_h1]:mt-4 [&_h1]:mb-2",
   "[&_h2]:text-base [&_h2]:font-bold [&_h2]:text-foreground [&_h2]:tracking-tight [&_h2]:mt-5 [&_h2]:pb-1 [&_h2]:border-b [&_h2]:border-border/40",
-  "[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-primary [&_h3]:mt-4 [&_h3]:mb-1.5",
+  "[&_h3]:text-sm [&_h3]:font-semibold [&_h3]:text-signal [&_h3]:mt-4 [&_h3]:mb-1.5",
   "[&_h4]:text-xs [&_h4]:font-semibold [&_h4]:text-foreground/90 [&_h4]:uppercase [&_h4]:tracking-wider [&_h4]:mt-3",
   "[&_p]:my-1.5",
   "[&_strong]:text-foreground [&_strong]:font-semibold",
@@ -694,11 +694,11 @@ const MEMO_CLASS = [
   "[&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1 [&_ul]:my-1.5 [&_ul_ul]:mt-1",
   "[&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-1 [&_ol]:my-1.5",
   "[&_li]:marker:text-muted-foreground/60",
-  "[&_code]:bg-muted/60 [&_code]:text-primary [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px] [&_code]:font-mono",
+  "[&_code]:bg-muted/60 [&_code]:text-signal [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[12px] [&_code]:font-mono",
   "[&_pre]:bg-muted/40 [&_pre]:border [&_pre]:border-border/30 [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:overflow-x-auto [&_pre]:text-[11px]",
   "[&_pre_code]:bg-transparent [&_pre_code]:p-0 [&_pre_code]:text-foreground/90",
-  "[&_blockquote]:border-l-2 [&_blockquote]:border-primary/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-foreground/75 [&_blockquote]:my-3",
-  "[&_a]:text-primary [&_a]:underline-offset-2 [&_a]:hover:underline",
+  "[&_blockquote]:border-l-2 [&_blockquote]:border-signal/50 [&_blockquote]:pl-3 [&_blockquote]:italic [&_blockquote]:text-foreground/75 [&_blockquote]:my-3",
+  "[&_a]:text-signal [&_a]:underline-offset-2 [&_a]:hover:underline",
   "[&_hr]:my-4 [&_hr]:border-border/40",
   "[&_table]:w-full [&_table]:text-[12px] [&_table]:border-collapse [&_table]:tabular-nums [&_table]:my-3 [&_table]:rounded-lg [&_table]:overflow-hidden [&_table]:border [&_table]:border-border/40",
   "[&_thead]:bg-accent/30",

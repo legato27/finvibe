@@ -26,10 +26,10 @@ interface PamRead {
   near_pivot?: boolean;
 }
 const PAM_STYLE: Record<string, string> = {
-  UC: "text-success",
-  DC: "text-danger",
-  "UR zone": "text-warning",
-  "DR zone": "text-warning",
+  UC: "text-signal-long",
+  DC: "text-signal-short",
+  "UR zone": "text-signal-caution",
+  "DR zone": "text-signal-caution",
   Ranging: "text-muted-foreground",
 };
 
@@ -97,14 +97,14 @@ interface ScanResult {
 }
 
 const REGIME_STYLE: Record<string, string> = {
-  risk_on: "text-success border-success/40 bg-success/10",
-  neutral: "text-warning border-warning/40 bg-warning/10",
-  risk_off: "text-danger border-danger/40 bg-danger/10",
+  risk_on: "text-signal-long border-signal-long/40 bg-signal-long/10",
+  neutral: "text-signal-caution border-signal-caution/40 bg-signal-caution/10",
+  risk_off: "text-signal-short border-signal-short/40 bg-signal-short/10",
 };
 const VERDICT_STYLE: Record<string, string> = {
-  clean: "text-success",
-  caution: "text-warning",
-  avoid: "text-danger",
+  clean: "text-signal-long",
+  caution: "text-signal-caution",
+  avoid: "text-signal-short",
 };
 const TIPS = {
   track:
@@ -125,7 +125,7 @@ const TIPS = {
 const pct = (x?: number | null) =>
   x == null ? "—" : `${x > 0 ? "+" : ""}${x.toFixed(1)}%`;
 const pctColor = (x?: number | null) =>
-  x == null ? "text-muted-foreground" : x >= 0 ? "text-success" : "text-danger";
+  x == null ? "text-muted-foreground" : x >= 0 ? "text-signal-long" : "text-signal-short";
 
 export default function MultibaggerPage() {
   const [track, setTrack] = useState<"all" | "A" | "B">("all");
@@ -187,7 +187,7 @@ export default function MultibaggerPage() {
       cell: (c) => (
         <span className="font-mono whitespace-nowrap">
           <span className="text-muted-foreground mr-1.5">{c.rank}</span>
-          <span className="font-semibold text-primary">{c.ticker}</span>
+          <span className="font-semibold text-signal">{c.ticker}</span>
           {c.market_cap_band && (
             <span className="text-[9px] text-muted-foreground uppercase ml-1">{c.market_cap_band}</span>
           )}
@@ -208,7 +208,7 @@ export default function MultibaggerPage() {
       sortValue: (c) => c.track,
       cell: (c) => (
         <span className={`inline-flex items-center justify-center w-5 h-5 rounded text-[10px] font-bold ${
-          c.track === "A" ? "bg-primary/15 text-primary" : "bg-signal-conflict/15 text-signal-conflict"
+          c.track === "A" ? "bg-signal/15 text-signal" : "bg-signal-conflict/15 text-signal-conflict"
         }`}>{c.track}</span>
       ),
     },
@@ -349,7 +349,7 @@ export default function MultibaggerPage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-primary" /> Multibagger Scanner
+            <Sparkles className="w-4 h-4 text-signal" /> Multibagger Scanner
           </h1>
           <p className="text-xs text-muted-foreground mt-1 max-w-3xl">
             A scan of the whole US market for potential big winners.{" "}
@@ -363,7 +363,7 @@ export default function MultibaggerPage() {
         <button
           onClick={() => refetch()}
           disabled={isFetching}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary/20 text-primary hover:bg-primary/30 disabled:opacity-50"
+          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-signal/20 text-signal hover:bg-signal/30 disabled:opacity-50"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> Refresh
         </button>
@@ -397,7 +397,7 @@ export default function MultibaggerPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
-              tab === t ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+              tab === t ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-foreground/80"
             }`}
           >
             {t}
@@ -415,7 +415,7 @@ export default function MultibaggerPage() {
                   key={f}
                   onClick={() => setTrack(f)}
                   className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    track === f ? "bg-primary/20 text-primary" : "text-muted-foreground hover:text-foreground/80"
+                    track === f ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-foreground/80"
                   }`}
                 >
                   {label}
@@ -426,7 +426,7 @@ export default function MultibaggerPage() {
           </div>
 
           {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
-          {error && <div className="card p-6 text-sm text-danger">Failed to load candidates.</div>}
+          {error && <div className="card p-6 text-sm text-signal-short">Failed to load candidates.</div>}
 
           {data && (
             <>
@@ -502,9 +502,9 @@ export default function MultibaggerPage() {
                         <td className="p-2 font-medium">{h}</td>
                         <td className="p-2 text-right font-mono">{a.n}</td>
                         <td className="p-2 text-right font-mono">{a.hit_rate_pos_pct}%</td>
-                        <td className="p-2 text-right font-mono text-primary">{a.hit_rate_2x_pct}%</td>
+                        <td className="p-2 text-right font-mono text-signal">{a.hit_rate_2x_pct}%</td>
                         <td className={`p-2 text-right font-mono ${pctColor(a.median_ret_pct)}`}>{a.median_ret_pct}%</td>
-                        <td className="p-2 text-right font-mono text-success">{a.p90_ret_pct}%</td>
+                        <td className="p-2 text-right font-mono text-signal-long">{a.p90_ret_pct}%</td>
                       </tr>
                     );
                   })}

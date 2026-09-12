@@ -39,15 +39,15 @@ export function ScreenerTabs() {
             aria-current={active ? "page" : undefined}
             className={`flex items-start gap-2.5 rounded-lg border px-3 py-2.5 transition-colors ${
               active
-                ? "bg-primary/10 border-primary/40"
-                : "bg-card border-border hover:border-primary/30 hover:bg-accent"
+                ? "bg-signal/10 border-signal/40"
+                : "bg-card border-border hover:border-signal/30 hover:bg-accent"
             }`}
           >
             <Icon
-              className={`w-4 h-4 mt-0.5 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`}
+              className={`w-4 h-4 mt-0.5 shrink-0 ${active ? "text-signal" : "text-muted-foreground"}`}
             />
             <span className="flex flex-col leading-tight">
-              <span className={`text-sm font-semibold ${active ? "text-primary" : "text-foreground"}`}>
+              <span className={`text-sm font-semibold ${active ? "text-signal" : "text-foreground"}`}>
                 {label}
               </span>
               <span className="text-[11px] text-muted-foreground">{caption}</span>

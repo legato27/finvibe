@@ -56,7 +56,7 @@ export function MarketingLanding() {
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-foreground leading-[1.1]">
               {t("heroHeadline1")}
-              <span className="block bg-gradient-to-r from-[hsl(var(--primary))] via-[hsl(var(--success))] to-[hsl(var(--primary))] bg-clip-text text-transparent">
+              <span className="block bg-gradient-to-r from-signal via-signal-long to-signal bg-clip-text text-transparent">
                 {t("heroHeadline2")}
               </span>
             </h1>
@@ -81,7 +81,7 @@ export function MarketingLanding() {
             </div>
 
             <p className="mt-5 inline-flex items-center gap-2 text-xs text-muted-foreground">
-              <CheckCircle2 className="w-3.5 h-3.5 text-[hsl(var(--success))]" />
+              <CheckCircle2 className="w-3.5 h-3.5 text-signal-long" />
               {t("benefit5")}
             </p>
           </div>
@@ -95,7 +95,7 @@ export function MarketingLanding() {
       {/* ── Live stat strip ──────────────────────────────── */}
       <section aria-label={t("statRegime")} className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {stats.map(({ label, value, detail, tone }) => (
-          <div key={label} className="card-3d rounded-xl border border-border bg-card p-4">
+          <div key={label} className="card-3d rounded-panel border border-border bg-card p-4">
             <div className="text-[10px] uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
             <div className={`font-mono text-lg font-bold ${tone}`}>{value}</div>
             <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{detail}</div>
@@ -117,15 +117,15 @@ export function MarketingLanding() {
             { icon: TrendingUp, title: t("featOptionsFlowTitle"), bars: [40, 80, 55, 90, 35] },
             { icon: Brain, title: t("lockedPanelWatchlist"), bars: [65, 50, 75, 40, 88] },
           ].map(({ icon: Icon, title, bars }) => (
-            <div key={title} className="relative rounded-xl border border-border bg-card overflow-hidden group">
+            <div key={title} className="relative rounded-panel border border-border bg-card overflow-hidden group">
               <div className="p-4 blur-[3px] opacity-60 select-none pointer-events-none" aria-hidden>
-                <Icon className="w-5 h-5 text-primary mb-3" />
+                <Icon className="w-5 h-5 text-signal mb-3" />
                 <div className="space-y-2">
                   {bars.map((w, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <div className="h-2 rounded bg-muted flex-1 overflow-hidden">
                         <div
-                          className={`h-full rounded ${i % 3 === 0 ? "bg-signal-long/60" : i % 3 === 1 ? "bg-primary/50" : "bg-signal-short/50"}`}
+                          className={`h-full rounded ${i % 3 === 0 ? "bg-signal-long/60" : i % 3 === 1 ? "bg-signal/50" : "bg-signal-short/50"}`}
                           style={{ width: `${w}%` }}
                         />
                       </div>
@@ -136,7 +136,7 @@ export function MarketingLanding() {
               </div>
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/30">
                 <span className="w-9 h-9 rounded-full border border-border bg-card flex items-center justify-center shadow-lg">
-                  <Lock className="w-4 h-4 text-primary" />
+                  <Lock className="w-4 h-4 text-signal" />
                 </span>
                 <span className="text-xs font-semibold text-foreground text-center px-3">{title}</span>
               </div>
@@ -169,11 +169,11 @@ export function MarketingLanding() {
             { step: "03", icon: Radio, title: t("step3Title"), desc: t("step3Desc") },
           ].map(({ step, icon: Icon, title, desc }) => (
             <div key={step} className="card-3d card relative overflow-hidden group">
-              <div aria-hidden="true" className="absolute top-3 right-3 text-3xl font-bold text-primary/10 font-mono">
+              <div aria-hidden="true" className="absolute top-3 right-3 text-3xl font-bold text-signal/10 font-mono">
                 {step}
               </div>
-              <div className="relative w-11 h-11 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
-                <Icon className="w-5 h-5 text-primary" />
+              <div className="relative w-11 h-11 rounded-lg bg-signal/10 border border-signal/20 flex items-center justify-center mb-4">
+                <Icon className="w-5 h-5 text-signal" />
               </div>
               <h3 className="text-base font-semibold text-foreground mb-1.5">{title}</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
@@ -200,8 +200,8 @@ export function MarketingLanding() {
             { icon: Radio, title: t("featLiveNewsTitle"), desc: t("featLiveNewsDesc") },
             { icon: Activity, title: t("featCryptoPulseTitle"), desc: t("featCryptoPulseDesc") },
           ].map(({ icon: Icon, title, desc }) => (
-            <div key={title} className="card-3d p-4 rounded-xl border border-border bg-card">
-              <Icon className="w-5 h-5 text-primary mb-3" />
+            <div key={title} className="card-3d p-4 rounded-panel border border-border bg-card">
+              <Icon className="w-5 h-5 text-signal mb-3" />
               <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
             </div>
@@ -221,7 +221,7 @@ export function MarketingLanding() {
           <ul className="space-y-3">
             {[t("benefit1"), t("benefit2"), t("benefit3"), t("benefit4"), t("benefit5")].map((item) => (
               <li key={item} className="flex items-start gap-3">
-                <CheckCircle2 className="w-5 h-5 text-[hsl(var(--success))] flex-shrink-0 mt-0.5" />
+                <CheckCircle2 className="w-5 h-5 text-signal-long flex-shrink-0 mt-0.5" />
                 <span className="text-sm text-foreground">{item}</span>
               </li>
             ))}
@@ -230,7 +230,7 @@ export function MarketingLanding() {
       </section>
 
       {/* ── Final CTA ───────────────────────────────────── */}
-      <section className="relative rounded-2xl overflow-hidden border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-[hsl(var(--success))]/10 p-8 sm:p-14 text-center">
+      <section className="relative rounded-2xl overflow-hidden border border-signal/30 bg-gradient-to-br from-signal/10 via-card to-signal-long/10 p-8 sm:p-14 text-center">
         <div className="hero-glow opacity-60" aria-hidden />
         <div className="relative">
           <h2 className="text-2xl sm:text-4xl font-bold text-foreground leading-tight">{t("finalCtaTitle")}</h2>

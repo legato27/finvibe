@@ -73,7 +73,8 @@
     "updating": "Updating…",
     "viewAll": "View all",
     "yes": "Yes",
-    "moreInfo": "More info"
+    "moreInfo": "More info",
+    "storedCopy": "Stored copy"
   },
   "dashboard": {
     "addStocks": "Add stocks",
@@ -615,13 +616,16 @@
     "volLabel": "Vol"
   },
   "nav": {
-    "dashboard": "Market Dashboard",
-    "portfolio": "Portfolios",
-    "ranked": "Ranked Book",
+    "primary": "Primary",
+    "today": "Today",
+    "screeners": "Screeners",
+    "watchlist": "Watchlist",
+    "portfolio": "Portfolio",
+    "desk": "Desk",
     "settings": "Settings",
-    "watchlist": "Watchlists",
-    "optionsBook": "Options Book",
-    "screeners": "Screeners"
+    "connectors": "Connectors & MCP",
+    "account": "Account menu",
+    "dashboard": "Today"
   },
   "options": {
     "adjustment": "Adjustment plan",
@@ -1390,7 +1394,8 @@
       "earnings_window": "Earnings imminent — capped to Stand Aside",
       "high_vol_regime": "High-volatility regime — strong tier demoted",
       "epistemic_uncertainty": "Models disagree — strong tier demoted",
-      "altman_distress": "Altman distress zone — strong long vetoed"
+      "altman_distress": "Altman distress zone — strong long vetoed",
+      "thin_evidence": "Thin evidence — confidence provisional"
     },
     "neutralStance": "neutral stance",
     "echoDiscounted": "echoes the quant inputs it read — counted at reduced weight",
@@ -1569,5 +1574,12 @@
     "guideRead2": "A hatched tile has no value for that metric. For an index name outside the book that means no signals at all; for a book name it means that one input is missing (no DCF, no options chain, no setup).",
     "guideRead3": "Filters stack: verdict and sector chips, cap band, minimum IV rank, earnings within N days, a watchlist, or enriched names only. The status line says how many tiles remain and how many carry the metric.",
     "guideFootnote": "Constituents from Wikipedia and Nasdaq's own list, refreshed Sunday and Wednesday. Market cap from Polygon, refreshed nightly. Signals are the same ones the ranked book, the options screener and the stock page show."
+  },
+  "news": {
+    "newsAndSentiment": "News & sentiment",
+    "articlesCount": "{count} articles",
+    "loadingFeed": "Loading feed…",
+    "noNewsYet": "No news yet",
+    "noNewsForTickers": "No news for these tickers yet"
   }
 }

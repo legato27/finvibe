@@ -19,7 +19,7 @@ const BROKERS = [
 
 // ── Shared input style ────────────────────────────────────────
 const inputCls =
-  "px-2.5 py-1.5 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary w-full";
+  "px-2.5 py-1.5 bg-background border border-border rounded-md text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal w-full";
 
 // ── Edit form for an existing lot ─────────────────────────────
 interface EditRowProps {
@@ -50,7 +50,7 @@ function EditRow({ lot, onDone }: EditRowProps) {
   }
 
   return (
-    <tr className="bg-primary/5 border-b border-border/40">
+    <tr className="bg-signal/5 border-b border-border/40">
       <td className="px-3 py-2">
         <input
           type="date"
@@ -108,7 +108,7 @@ function EditRow({ lot, onDone }: EditRowProps) {
           <button
             onClick={save}
             disabled={update.isPending}
-            className="p-1.5 rounded bg-primary/20 hover:bg-primary/30 text-primary transition-colors"
+            className="p-1.5 rounded bg-signal/20 hover:bg-signal/30 text-signal transition-colors"
           >
             <Check className="w-3.5 h-3.5" />
           </button>
@@ -157,7 +157,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
   }
 
   return (
-    <tr className="bg-success/5 border-b border-border/40">
+    <tr className="bg-signal-long/5 border-b border-border/40">
       <td className="px-3 py-2">
         <input
           type="date"
@@ -221,7 +221,7 @@ function AddLotRow({ ticker, portfolioId, onDone }: AddLotRowProps) {
           <button
             onClick={submit}
             disabled={add.isPending || !fields.shares || !fields.cost_basis}
-            className="p-1.5 rounded bg-success/20 hover:bg-success/30 text-success transition-colors disabled:opacity-40"
+            className="p-1.5 rounded bg-signal-long/20 hover:bg-signal-long/30 text-signal-long transition-colors disabled:opacity-40"
           >
             <Check className="w-3.5 h-3.5" />
           </button>
@@ -275,7 +275,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
   }
 
   return (
-    <tr className="bg-warning/5 border-b border-border/40">
+    <tr className="bg-signal-caution/5 border-b border-border/40">
       <td className="px-3 py-2">
         <input
           type="date"
@@ -319,7 +319,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
           ${proceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}
         </div>
         {sharesNum > 0 && priceNum > 0 && (
-          <div className={`text-[10px] font-semibold ${realized >= 0 ? "text-success" : "text-danger"}`}>
+          <div className={`text-[10px] font-semibold ${realized >= 0 ? "text-signal-long" : "text-signal-short"}`}>
             P&L {realized >= 0 ? "+" : "−"}${Math.abs(realized).toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </div>
         )}
@@ -349,7 +349,7 @@ function SellRow({ lot, onDone }: SellRowProps) {
           <button
             onClick={submit}
             disabled={sell.isPending || !valid}
-            className="p-1.5 rounded bg-warning/20 hover:bg-warning/30 text-warning transition-colors disabled:opacity-40"
+            className="p-1.5 rounded bg-signal-caution/20 hover:bg-signal-caution/30 text-signal-caution transition-colors disabled:opacity-40"
             title={t("confirmSellTitle")}
           >
             <Check className="w-3.5 h-3.5" />
@@ -371,7 +371,7 @@ function DeleteConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCance
   const t = useTranslations("stock");
   return (
     <div className="flex items-center gap-1.5">
-      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-danger/20 text-danger rounded hover:bg-danger/30 min-h-[36px]">{t("yes")}</button>
+      <button onClick={onConfirm} className="text-xs px-3 py-1.5 bg-signal-short/20 text-signal-short rounded hover:bg-signal-short/30 min-h-[36px]">{t("yes")}</button>
       <button onClick={onCancel} className="text-xs px-3 py-1.5 bg-accent rounded text-muted-foreground hover:bg-accent/70 min-h-[36px]">{t("no")}</button>
     </div>
   );
@@ -394,7 +394,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
           </span>
         </div>
         <div className={`text-xs font-mono font-semibold flex items-center gap-1 ${
-          totalRealized >= 0 ? "text-success" : "text-danger"
+          totalRealized >= 0 ? "text-signal-long" : "text-signal-short"
         }`}>
           {totalRealized >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
           Realized {totalRealized >= 0 ? "+" : "−"}${Math.abs(totalRealized).toLocaleString(undefined, { maximumFractionDigits: 0 })}
@@ -436,7 +436,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
                     ${proceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                   </td>
                   <td className={`px-3 py-2.5 font-mono text-right font-semibold ${
-                    isGain ? "text-success" : "text-danger"
+                    isGain ? "text-signal-long" : "text-signal-short"
                   }`}>
                     {isGain ? "+" : "−"}${Math.abs(s.realized_pnl).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                     <div className="text-[9px] font-normal text-muted-foreground/70">
@@ -469,7 +469,7 @@ function SoldHistory({ sales }: { sales: StockSale[] }) {
                   ${totalProceeds.toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </td>
                 <td className={`px-3 py-2 font-mono font-semibold text-sm text-right ${
-                  totalRealized >= 0 ? "text-success" : "text-danger"
+                  totalRealized >= 0 ? "text-signal-long" : "text-signal-short"
                 }`}>
                   {totalRealized >= 0 ? "+" : "−"}${Math.abs(totalRealized).toLocaleString(undefined, { maximumFractionDigits: 0 })}
                 </td>
@@ -518,7 +518,7 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
         <span className="card-title">Transaction History — {ticker}</span>
         <button
           onClick={() => { setShowAdd(true); setEditingId(null); }}
-          className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-primary/15 hover:bg-primary/25 text-primary rounded-md transition-colors"
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-signal/15 hover:bg-signal/25 text-signal rounded-md transition-colors"
         >
           <Plus className="w-3.5 h-3.5" /> Add Lot
         </button>
@@ -592,20 +592,20 @@ export function TransactionHistory({ ticker, portfolioId, lots }: TransactionHis
                       <div className="flex items-center gap-1 justify-end sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button
                           onClick={() => { setSellingId(lot.id); setEditingId(null); setDeletingId(null); }}
-                          className="p-2 rounded hover:bg-warning/20 text-muted-foreground hover:text-warning transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className="p-2 rounded hover:bg-signal-caution/20 text-muted-foreground hover:text-signal-caution transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                           title="Record sell"
                         >
                           <DollarSign className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => { setEditingId(lot.id); setDeletingId(null); setSellingId(null); }}
-                          className="p-2 rounded hover:bg-primary/20 text-muted-foreground hover:text-primary transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className="p-2 rounded hover:bg-signal/20 text-muted-foreground hover:text-signal transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => { setDeletingId(lot.id); setEditingId(null); setSellingId(null); }}
-                          className="p-2 rounded hover:bg-danger/20 text-muted-foreground hover:text-danger transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+                          className="p-2 rounded hover:bg-signal-short/20 text-muted-foreground hover:text-signal-short transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>

@@ -25,7 +25,7 @@ export function McpSubnav() {
               href={href}
               className={`px-3 py-2 text-sm whitespace-nowrap border-b-2 transition-colors ${
                 active
-                  ? "border-primary text-foreground"
+                  ? "border-signal text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >

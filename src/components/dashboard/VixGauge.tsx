@@ -6,15 +6,29 @@ import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { InfoTip } from "@/components/shared/InfoTip";
+import { usePalette, type Palette } from "@/components/heatmap/palette";
 
 const VIX_MAX = 80;
 
-const ZONE_COLORS: Record<string, string> = {
-  COMPLACENCY: "#22c55e",
-  LOW_VOLATILITY: "#86efac",
-  NORMAL: "#fbbf24",
-  ELEVATED: "#f97316",
-  EXTREME_FEAR: "#ef4444",
+/** A zone or structure as a tone: the palette key for chart fills, the
+ *  semantic classes for text and the pill. */
+type ToneKey = "long" | "long-strong" | "caution" | "short" | "break" | "neutral";
+const TONE: Record<ToneKey, { text: string; pill: string }> = {
+  long: { text: "text-signal-long", pill: "text-signal-long bg-signal-long-bg border-signal-long/30" },
+  "long-strong": { text: "text-signal-long-strong", pill: "text-signal-long-strong bg-signal-long-bg border-signal-long/30" },
+  caution: { text: "text-signal-caution", pill: "text-signal-caution bg-signal-caution-bg border-signal-caution/30" },
+  short: { text: "text-signal-short", pill: "text-signal-short bg-signal-short-bg border-signal-short/30" },
+  break: { text: "text-signal-break", pill: "text-signal-break bg-signal-break-bg border-signal-break/30" },
+  neutral: { text: "text-signal-neutral", pill: "text-signal-neutral bg-signal-neutral-bg border-signal-neutral/30" },
+};
+const toneFill = (pal: Palette, k: ToneKey) => pal[k];
+
+const ZONE_TONE: Record<string, ToneKey> = {
+  COMPLACENCY: "long",
+  LOW_VOLATILITY: "long-strong",
+  NORMAL: "caution",
+  ELEVATED: "short",
+  EXTREME_FEAR: "break",
 };
 
 const ZONE_KEY_MAP: Record<string, string> = {
@@ -25,12 +39,12 @@ const ZONE_KEY_MAP: Record<string, string> = {
   EXTREME_FEAR: "vixZoneExtremeFear",
 };
 
-const STRUCTURE_COLORS: Record<string, string> = {
-  contango: "#22c55e",
-  mild_contango: "#86efac",
-  flat: "#fbbf24",
-  mild_backwardation: "#f97316",
-  backwardation: "#ef4444",
+const STRUCTURE_TONE: Record<string, ToneKey> = {
+  contango: "long",
+  mild_contango: "long-strong",
+  flat: "caution",
+  mild_backwardation: "short",
+  backwardation: "break",
 };
 
 const STRUCTURE_KEY_MAP: Record<string, string> = {
@@ -44,6 +58,7 @@ const STRUCTURE_KEY_MAP: Record<string, string> = {
 export function VixGauge() {
   const t = useTranslations("dashboard");
   const vix = useAppStore((s) => s.macro.vix);
+  const pal = usePalette();
 
   // Fetch term structure separately (included in dashboard call but also standalone)
   const { data: termStructure } = useQuery({
@@ -62,11 +77,12 @@ export function VixGauge() {
 
   const value = Math.min(vix.current, VIX_MAX);
   const pct = (value / VIX_MAX) * 100;
-  const color = ZONE_COLORS[vix.zone] || "#94a3b8";
-  const data = [{ name: "VIX", value: pct, fill: color }];
+  const zoneKey: ToneKey = ZONE_TONE[vix.zone] || "neutral";
+  const tone = TONE[zoneKey];
+  const data = pal ? [{ name: "VIX", value: pct, fill: toneFill(pal, zoneKey) }] : [];
 
   const ts = termStructure?.levels;
-  const tsColor = STRUCTURE_COLORS[termStructure?.structure] || "#94a3b8";
+  const tsTone = TONE[STRUCTURE_TONE[termStructure?.structure] || "neutral"];
 
   const zoneLabel = ZONE_KEY_MAP[vix.zone]
     ? t(ZONE_KEY_MAP[vix.zone])
@@ -90,8 +106,7 @@ export function VixGauge() {
           <InfoTip tip={t("vixInfo")} />
         </span>
         <span
-          className="text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded"
-          style={{ color, backgroundColor: `${color}22`, border: `1px solid ${color}44` }}
+          className={`text-[10px] sm:text-xs font-medium px-1.5 sm:px-2 py-0.5 rounded border ${tone.pill}`}
           title={zoneTitle}
         >
           {zoneLabel}
@@ -101,24 +116,29 @@ export function VixGauge() {
       <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 flex-1 overflow-y-auto">
         {/* Gauge */}
         <div className="relative w-32 h-32 sm:w-40 sm:h-40 flex-shrink-0">
-          <ResponsiveContainer width="100%" height="100%">
-            <RadialBarChart
-              cx="50%" cy="50%"
-              innerRadius="65%" outerRadius="90%"
-              startAngle={180} endAngle={0}
-              data={data}
-            >
-              <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
-              <RadialBar
-                background={{ fill: "#1e293b" }}
-                dataKey="value"
-                cornerRadius={6}
-                angleAxisId={0}
-              />
-            </RadialBarChart>
-          </ResponsiveContainer>
+          {/* The palette resolves on the client; until then the gauge is an empty ring. */}
+          {pal ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <RadialBarChart
+                cx="50%" cy="50%"
+                innerRadius="65%" outerRadius="90%"
+                startAngle={180} endAngle={0}
+                data={data}
+              >
+                <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
+                <RadialBar
+                  background={{ fill: pal.muted }}
+                  dataKey="value"
+                  cornerRadius={6}
+                  angleAxisId={0}
+                />
+              </RadialBarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="w-full h-full" />
+          )}
           <div className="absolute inset-0 flex flex-col items-center justify-center pt-6">
-            <span className="text-2xl sm:text-3xl font-bold font-mono" style={{ color }}>
+            <span className={`text-2xl sm:text-3xl font-bold font-mono ${tone.text}`}>
               {vix.current.toFixed(1)}
             </span>
             <span className="text-xs text-muted-foreground">{t("vix")}</span>
@@ -129,7 +149,7 @@ export function VixGauge() {
         <div className="flex flex-col gap-2 sm:gap-3 flex-1 w-full">
           <div>
             <div className="stat-label text-xs">{t("vix24hChange")}</div>
-            <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change > 0 ? "text-danger" : vix.change < 0 ? "text-success" : "text-muted-foreground"}`}>
+            <div className={`flex items-center gap-1 text-base sm:text-lg font-mono font-semibold ${vix.change > 0 ? "text-signal-short" : vix.change < 0 ? "text-signal-long" : "text-muted-foreground"}`}>
               {vix.change > 0 ? <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" /> : vix.change < 0 ? <TrendingDown className="w-3 h-3 sm:w-4 sm:h-4" /> : <Minus className="w-3 h-3 sm:w-4 sm:h-4" />}
               {vix.change > 0 ? "+" : ""}{vix.change.toFixed(2)} ({vix.change_pct.toFixed(1)}%)
             </div>
@@ -158,10 +178,7 @@ export function VixGauge() {
               {t("vixTermStructure")}
               <InfoTip size={10} tip={t("vixTermStructureTip")} />
             </span>
-            <span
-              className="text-[9px] font-bold px-1.5 py-0.5 rounded"
-              style={{ color: tsColor, backgroundColor: `${tsColor}18`, border: `1px solid ${tsColor}33` }}
-            >
+            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${tsTone.pill}`}>
               {structureLabel}
             </span>
           </div>
@@ -175,7 +192,7 @@ export function VixGauge() {
                 <div key={key} className="flex-1 text-center bg-muted/40 rounded py-1 px-1">
                   <div className="text-[9px] text-muted-foreground">{key}</div>
                   <div className={`text-xs font-mono font-bold ${
-                    isHigher ? "text-danger" : isLower ? "text-success" : "text-foreground"
+                    isHigher ? "text-signal-short" : isLower ? "text-signal-long" : "text-foreground"
                   }`}>
                     {val?.toFixed(1) ?? "—"}
                   </div>
@@ -185,7 +202,7 @@ export function VixGauge() {
           </div>
           {termStructure.spread_9d_3m != null && (
             <div className="text-[9px] text-muted-foreground mt-1 italic">
-              {t("vixSpread9d3m")} <span className={termStructure.spread_9d_3m > 0 ? "text-danger" : "text-success"}>
+              {t("vixSpread9d3m")} <span className={termStructure.spread_9d_3m > 0 ? "text-signal-short" : "text-signal-long"}>
                 {termStructure.spread_9d_3m > 0 ? "+" : ""}{termStructure.spread_9d_3m}
               </span>
               {" · "}{termStructure.structure_description}

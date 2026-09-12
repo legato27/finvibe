@@ -71,9 +71,9 @@ const STYLES: Record<VerdictState, { chip: string; arrow: string }> = {
 };
 
 const SIZES = {
-  sm: { chip: "px-1.5 py-0.5 text-xs gap-1", icon: 12 },
-  md: { chip: "px-2 py-1 text-sm gap-1.5", icon: 14 },
-  lg: { chip: "px-3 py-1.5 text-base gap-2 font-semibold", icon: 18 },
+  sm: { chip: "px-2 py-0.5 text-xs gap-1", icon: 12 },
+  md: { chip: "px-2.5 py-0.5 text-sm gap-1.5", icon: 14 },
+  lg: { chip: "px-3.5 py-1 text-base gap-2 font-bold", icon: 18 },
 } as const;
 
 export default function VerdictBadge({
@@ -91,7 +91,7 @@ export default function VerdictBadge({
   const norm = (state ? state.toUpperCase() : state) as VerdictState | null | undefined;
   if (!norm || !STYLES[norm]) {
     return (
-      <span className={`inline-flex items-center rounded border border-border bg-muted px-2 py-0.5 text-xs text-muted-foreground ${className}`}>
+      <span className={`inline-flex items-center rounded-full border border-border bg-muted px-2.5 py-0.5 text-xs text-muted-foreground ${className}`}>
         {t("none")}
       </span>
     );
@@ -100,7 +100,7 @@ export default function VerdictBadge({
   const z = SIZES[size];
   return (
     <span
-      className={`inline-flex items-center rounded border font-medium ${s.chip} ${z.chip} ${className}`}
+      className={`inline-flex items-center rounded-full border font-semibold ${s.chip} ${z.chip} ${className}`}
     >
       <svg
         aria-hidden="true"

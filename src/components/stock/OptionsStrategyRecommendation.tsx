@@ -19,6 +19,7 @@ import {
   BookOpen, RefreshCw, Info,
 } from "lucide-react";
 import { stocksApi } from "@/lib/api";
+import { usePalette, tokenAlpha } from "@/components/heatmap/palette";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -104,9 +105,9 @@ function buildPayoffSeries(legs: Leg[], currentPrice: number) {
 type CategoryKey = "income" | "protection" | "speculation" | "hedge";
 
 const CATEGORY_STYLE: Record<CategoryKey, { color: string; icon: React.ReactNode }> = {
-  income:       { color: "text-success border-success/40 bg-success/10",  icon: <TrendingUp className="w-3.5 h-3.5" /> },
-  protection:   { color: "text-primary border-primary/40 bg-primary/10",              icon: <Shield className="w-3.5 h-3.5" /> },
-  speculation:  { color: "text-warning border-warning/40 bg-warning/10",        icon: <Target className="w-3.5 h-3.5" /> },
+  income:       { color: "text-signal-long border-signal-long/40 bg-signal-long/10",  icon: <TrendingUp className="w-3.5 h-3.5" /> },
+  protection:   { color: "text-signal border-signal/40 bg-signal/10",              icon: <Shield className="w-3.5 h-3.5" /> },
+  speculation:  { color: "text-signal-caution border-signal-caution/40 bg-signal-caution/10",        icon: <Target className="w-3.5 h-3.5" /> },
   hedge:        { color: "text-signal-conflict border-signal-conflict/40 bg-signal-conflict/10",     icon: <Shield className="w-3.5 h-3.5" /> },
 };
 
@@ -121,8 +122,8 @@ function Markdown({ children }: { children: string }) {
 function Stat({ label, value, tone = "default" }: { label: string; value: string; tone?: "default" | "pos" | "neg" | "muted" }) {
   const toneClass = {
     default: "text-foreground",
-    pos: "text-success",
-    neg: "text-danger",
+    pos: "text-signal-long",
+    neg: "text-signal-short",
     muted: "text-muted-foreground",
   }[tone];
   return (
@@ -164,6 +165,7 @@ export function OptionsStrategyRecommendation({
   ticker, currentPrice, stockInfo, thoughts, verdictAction, position,
 }: Props) {
   const t = useTranslations("options");
+  const pal = usePalette();
   const [riskTol, setRiskTol] = useState<RiskTol | null>(null);
   const [objective, setObjective] = useState<Objective | null>(null);
   const [submittedProfile, setSubmittedProfile] = useState<{ risk: RiskTol; obj: Objective } | null>(null);
@@ -240,7 +242,7 @@ export function OptionsStrategyRecommendation({
                 onClick={() => setRiskTol(r)}
                 className={`px-3 py-1.5 rounded text-xs capitalize transition-colors border ${
                   riskTol === r
-                    ? "bg-primary/20 text-primary border-primary/40"
+                    ? "bg-signal/20 text-signal border-signal/40"
                     : "bg-muted/30 hover:bg-muted border-transparent"
                 }`}
               >{t(`risk.${r}`)}</button>
@@ -265,14 +267,14 @@ export function OptionsStrategyRecommendation({
                 onClick={() => setObjective(o.v)}
                 className={`px-3 py-1.5 rounded text-xs transition-colors border ${
                   objective === o.v
-                    ? "bg-primary/20 text-primary border-primary/40"
+                    ? "bg-signal/20 text-signal border-signal/40"
                     : "bg-muted/30 hover:bg-muted border-transparent"
                 }`}
               >{o.label}</button>
             ))}
           </div>
           {isUnderwater && (
-            <div className="text-[10px] text-warning/80 mt-1">
+            <div className="text-[10px] text-signal-caution/80 mt-1">
               {t("repairHelp", { shares: position!.shares, ticker, cost: position!.avgCost.toFixed(2), lossPerShare: lossPerShareStr })}
             </div>
           )}
@@ -304,7 +306,7 @@ export function OptionsStrategyRecommendation({
 
   if (errorMessage) {
     return (
-      <div className="card p-6 text-sm text-warning flex items-start gap-2">
+      <div className="card p-6 text-sm text-signal-caution flex items-start gap-2">
         <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
         <div className="flex-1">
           <div className="font-semibold">{t("engineUnavailable")}</div>
@@ -340,7 +342,7 @@ export function OptionsStrategyRecommendation({
               key={r}
               onClick={() => { setRiskTol(r); setSubmittedProfile({ risk: r, obj: submittedProfile.obj }); }}
               className={`px-2 py-0.5 rounded transition-colors ${
-                submittedProfile.risk === r ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
+                submittedProfile.risk === r ? "bg-signal/20 text-signal" : "bg-muted/50 hover:bg-muted"
               }`}
             >{t(`risk.${r}`)}</button>
           ))}
@@ -355,7 +357,7 @@ export function OptionsStrategyRecommendation({
               key={o}
               onClick={() => { setObjective(o); setSubmittedProfile({ risk: submittedProfile.risk, obj: o }); }}
               className={`px-2 py-0.5 rounded transition-colors ${
-                submittedProfile.obj === o ? "bg-primary/20 text-primary" : "bg-muted/50 hover:bg-muted"
+                submittedProfile.obj === o ? "bg-signal/20 text-signal" : "bg-muted/50 hover:bg-muted"
               }`}
             >{t(`objective.${o}.short`)}</button>
           ))}
@@ -390,7 +392,7 @@ export function OptionsStrategyRecommendation({
       {/* Strategy card */}
       <div className="card p-4 space-y-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <Activity className="w-4 h-4 text-primary" />
+          <Activity className="w-4 h-4 text-signal" />
           <span className="text-lg font-semibold">{data.strategy.name}</span>
           <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${category.color}`}>
             {category.icon}
@@ -427,7 +429,7 @@ export function OptionsStrategyRecommendation({
             <tbody>
               {data.trade_setup.legs.map((leg, i) => (
                 <tr key={i} className="border-b border-border/20 last:border-0">
-                  <td className={`py-1.5 font-semibold ${leg.action === "sell" ? "text-danger" : "text-success"}`}>
+                  <td className={`py-1.5 font-semibold ${leg.action === "sell" ? "text-signal-short" : "text-signal-long"}`}>
                     {leg.action.toUpperCase()}
                   </td>
                   <td className="py-1.5 uppercase">{leg.type}</td>
@@ -496,16 +498,16 @@ export function OptionsStrategyRecommendation({
                 width={55}
               />
               <Tooltip
-                contentStyle={{ background: "rgba(23,23,28,0.95)", border: "1px solid rgba(120,120,130,0.3)", borderRadius: 8, fontSize: 11 }}
+                contentStyle={{ background: pal?.panel, color: pal?.ink, border: `1px solid ${pal?.border ?? "currentColor"}`, borderRadius: 8, fontSize: 11 }}
                 formatter={(v: number) => [fmtMoney(v), t("pnl")]}
                 labelFormatter={(v: number) => t("price", { price: `$${v.toFixed(2)}` })}
               />
-              <ReferenceLine y={0} stroke="rgba(160,160,170,0.4)" strokeDasharray="4 4" />
-              <ReferenceLine x={currentPrice} stroke="rgba(96,165,250,0.5)" strokeDasharray="2 4" label={{ value: t("now"), position: "top", fill: "#60a5fa", fontSize: 10 }} />
+              <ReferenceLine y={0} stroke={pal ? tokenAlpha("--muted-foreground", 0.4) : "currentColor"} strokeDasharray="4 4" />
+              <ReferenceLine x={currentPrice} stroke={pal ? tokenAlpha("--protocol", 0.5) : "currentColor"} strokeDasharray="2 4" label={{ value: t("now"), position: "top", fill: pal?.protocol ?? "currentColor", fontSize: 10 }} />
               {data.economics.breakeven.map((b, i) => (
-                <ReferenceLine key={i} x={b} stroke="rgba(251,191,36,0.5)" strokeDasharray="2 4" label={{ value: t("be"), position: "top", fill: "#fbbf24", fontSize: 10 }} />
+                <ReferenceLine key={i} x={b} stroke={pal ? tokenAlpha("--signal-caution", 0.5) : "currentColor"} strokeDasharray="2 4" label={{ value: t("be"), position: "top", fill: pal?.amber ?? "currentColor", fontSize: 10 }} />
               ))}
-              <Line type="monotone" dataKey="pnl" stroke="#22d3ee" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="pnl" stroke={pal?.signal ?? "currentColor"} strokeWidth={2} dot={false} />
             </LineChart>
           </ResponsiveContainer>
           <div className="text-[10px] text-muted-foreground/60 mt-1">
@@ -533,8 +535,8 @@ export function OptionsStrategyRecommendation({
       </div>
 
       {/* Risks */}
-      <div className="card p-4 space-y-2 border-warning/20">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-warning">
+      <div className="card p-4 space-y-2 border-signal-caution/20">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-signal-caution">
           <AlertTriangle className="w-3.5 h-3.5" />
           {t("risks")}
         </div>

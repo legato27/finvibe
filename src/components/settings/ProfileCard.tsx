@@ -37,7 +37,7 @@ export function ProfileCard() {
             </span>
           )}
           {savedAt && !update.isPending && (
-            <span className="flex items-center gap-1 text-[10px] text-success">
+            <span className="flex items-center gap-1 text-[10px] text-signal-long">
               <Check className="w-3 h-3" /> {t("saved")}
             </span>
           )}
@@ -70,12 +70,12 @@ export function ProfileCard() {
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder={t("yourNamePh")}
-                    className="flex-1 bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                    className="flex-1 bg-background/50 border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-signal/50"
                   />
                   <button
                     onClick={save}
                     disabled={update.isPending}
-                    className="px-3 py-2 text-sm rounded-lg bg-primary/15 border border-primary/40 text-foreground hover:bg-primary/25 disabled:opacity-50"
+                    className="px-3 py-2 text-sm rounded-lg bg-signal/15 border border-signal/40 text-foreground hover:bg-signal/25 disabled:opacity-50"
                   >
                     {tc("save")}
                   </button>
@@ -83,7 +83,7 @@ export function ProfileCard() {
               </div>
 
               {update.isError && (
-                <div className="flex items-start gap-2 p-3 bg-danger/10 border border-danger/30 rounded-lg text-xs text-danger">
+                <div className="flex items-start gap-2 p-3 bg-signal-short/10 border border-signal-short/30 rounded-lg text-xs text-signal-short">
                   <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                   <div>{(update.error as Error)?.message}</div>
                 </div>

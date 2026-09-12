@@ -31,7 +31,7 @@ function StatusBadge({ status }: { status: string | null | undefined }) {
   const map: Record<string, { cls: string; icon: React.ReactNode; key: string }> = {
     success: { cls: "text-signal-long", icon: <CheckCircle2 className="w-3.5 h-3.5" />, key: "statusSuccess" },
     failure: { cls: "text-signal-short", icon: <XCircle className="w-3.5 h-3.5" />, key: "statusFailure" },
-    started: { cls: "text-primary", icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, key: "statusRunning" },
+    started: { cls: "text-signal", icon: <Loader2 className="w-3.5 h-3.5 animate-spin" />, key: "statusRunning" },
     queued: { cls: "text-signal-caution", icon: <Clock className="w-3.5 h-3.5" />, key: "statusQueued" },
     stale: { cls: "text-signal-caution", icon: <AlertTriangle className="w-3.5 h-3.5" />, key: "statusStale" },
   };
@@ -97,8 +97,8 @@ export function JobRunsCard() {
           role="status"
           className={`text-xs rounded-lg border px-3 py-2 ${
             note.kind === "ok"
-              ? "border-success/30 bg-success/5 text-signal-long"
-              : "border-danger/30 bg-danger/5 text-signal-short"
+              ? "border-signal-long/30 bg-signal-long/5 text-signal-long"
+              : "border-signal-short/30 bg-signal-short/5 text-signal-short"
           }`}
         >
           {note.msg}

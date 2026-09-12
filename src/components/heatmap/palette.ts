@@ -1,26 +1,45 @@
 "use client";
 
 /**
- * Colour resolution shared by the heatmap page and the dashboard sector card.
+ * Colour resolution for every chart, gauge and treemap.
  *
- * Every fill comes from the app's CSS signal tokens, read at render time, so
- * both surfaces follow the theme toggle with no second palette in code. The
- * tokens are tuned as TEXT colours (green-800 on the light ground, green-400
- * on the dark one); as fills over large areas the dark steps are far too
- * bright, so in dark mode each signal tone is pulled one Lab step towards the
+ * Nothing in a component names a colour. Each fill and stroke comes from the
+ * CSS tokens in app/globals.css, read at render time, so every surface follows
+ * the theme toggle with no second palette in code. The directional tokens are
+ * tuned as TEXT colours; as fills over large areas the dark steps are too
+ * bright, so in dark mode `fill()` pulls a tone one Lab step towards the
  * ground before it becomes a tile.
  */
 import { useEffect, useState } from "react";
 import { hsl as d3hsl, lab as d3lab, scaleLinear, interpolateLab } from "d3";
 import type { Metric, Tone } from "@/lib/heatmap";
 
-export type Palette = Record<Tone | "divMid" | "seqLo" | "seqHi" | "ink" | "inkOnDark", string>;
+export type Palette = Record<
+  | Tone
+  | "divMid" | "seqLo" | "seqHi" | "ink" | "inkOnDark"
+  // surfaces and text
+  | "bg" | "panel" | "raised" | "border" | "muted" | "mutedFg"
+  // accents as text
+  | "signal" | "protocol" | "break" | "amber"
+  // accent as fill
+  | "primary",
+  string
+> & { chart: string[]; dark: boolean };
 
-function readToken(name: string): string {
+/** Resolve one CSS token to a hex string. Accepts the HSL-triple form used in
+ *  globals.css or any colour string the browser already understands. */
+export function readToken(name: string): string {
   const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
   const m = raw.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
   if (!m) return raw || "#888888";
   return d3hsl(Number(m[1]), Number(m[2]) / 100, Number(m[3]) / 100).formatHex();
+}
+
+/** A token with alpha as an `rgba()` string. Canvas libraries
+ *  (lightweight-charts) parse hex and rgb() only, so this never emits hsl. */
+export function tokenAlpha(name: string, alpha: number): string {
+  const c = d3hsl(readToken(name)).rgb();
+  return `rgba(${Math.round(c.r)}, ${Math.round(c.g)}, ${Math.round(c.b)}, ${alpha})`;
 }
 
 export function readPalette(): Palette {
@@ -30,6 +49,7 @@ export function readPalette(): Palette {
     return dark ? d3lab(c).darker(1).formatHex() : c;
   };
   return {
+    dark,
     long: fill("--signal-long"),
     "long-strong": fill("--signal-long-strong"),
     short: fill("--signal-short"),
@@ -39,9 +59,21 @@ export function readPalette(): Palette {
     caution: fill("--signal-caution"),
     divMid: readToken("--border"),
     seqLo: readToken("--muted"),
-    seqHi: readToken("--primary"),
+    seqHi: readToken("--signal"),
     ink: readToken("--foreground"),
-    inkOnDark: "#ffffff",
+    inkOnDark: readToken("--foreground"),
+    bg: readToken("--background"),
+    panel: readToken("--card"),
+    raised: readToken("--raised"),
+    border: readToken("--border"),
+    muted: readToken("--muted"),
+    mutedFg: readToken("--muted-foreground"),
+    signal: readToken("--signal"),
+    protocol: readToken("--protocol"),
+    break: readToken("--signal-break"),
+    amber: readToken("--signal-caution"),
+    primary: readToken("--primary"),
+    chart: [1, 2, 3, 4, 5, 6, 7, 8].map((i) => readToken(`--chart-${i}`)),
   };
 }
 
@@ -64,7 +96,7 @@ export function usePalette(): Palette | null {
   return pal;
 }
 
-/** Diverging scale for a plain numeric window: red below `mid`, green above. */
+/** Diverging scale for a plain numeric window: short below `mid`, long above. */
 export function divergingScale(pal: Palette, lo: number, hi: number, mid = (lo + hi) / 2): (v: number) => string {
   const s = scaleLinear<string>().domain([lo, mid, hi])
     .range([pal.short, pal.divMid, pal.long]).interpolate(interpolateLab).clamp(true);
@@ -85,5 +117,6 @@ export function colorFor(metric: Metric, pal: Palette): (v: number | string) => 
 /** Text colour that reads on a given fill. */
 export function inkFor(bg: string, pal: Palette): string {
   const l = d3lab(bg)?.l ?? 50;
-  return l > 62 ? "#13151c" : pal.inkOnDark;
+  // Light fills take the dark theme's ink, dark fills take the light one.
+  return l > 62 ? (pal.dark ? pal.bg : pal.ink) : (pal.dark ? pal.ink : pal.panel);
 }

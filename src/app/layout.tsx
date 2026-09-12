@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
-import { Inter, Space_Grotesk } from "next/font/google";
+import { Chivo, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
-// "VibeFin App" type system — Inter for body/UI, Space Grotesk for display
-// (headings, stat figures, labels). Space Grotesk is wired to --font-mono so
-// existing `font-mono` numerics/labels render in the design's figure font.
-const inter = Inter({
+// Chivo carries interface text; JetBrains Mono carries every number, ticker,
+// tool name and section label. Both are exposed as CSS variables so the
+// faces can be swapped here without touching a component.
+const chivo = Chivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "700", "900"],
   variable: "--font-sans",
   display: "swap",
 });
-const spaceGrotesk = Space_Grotesk({
+const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "700"],
   variable: "--font-mono",
   display: "swap",
 });
@@ -55,7 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className={`${inter.variable} ${spaceGrotesk.variable}`}>
+      <body className={`${chivo.variable} ${jetbrainsMono.variable}`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>

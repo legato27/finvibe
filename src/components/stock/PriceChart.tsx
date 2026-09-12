@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
+import { usePalette, tokenAlpha, type Palette } from "@/components/heatmap/palette";
 import { Download, Pencil, X, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import {
   computeVolumeProfile, sliceByDays,
@@ -49,15 +50,31 @@ const VP_WIDTH_FRAC = 0.30;
 /** Bands thinner than this on screen get merged with their neighbours. */
 const VP_MIN_BAND_PX = 3;
 
-const VP_COLORS = {
-  outside: "rgba(100, 116, 139, 0.32)",  // slate-500 — outside the value area
-  inside:  "rgba(148, 163, 184, 0.52)",  // slate-400 — inside the value area
-  poc:     "rgba(250, 204, 21, 0.60)",   // amber — point of control
-  pocLine: "rgba(250, 204, 21, 0.45)",
-  pocText: "rgba(250, 204, 21, 0.92)",
-  buy:     "rgba(34, 197, 94, 0.42)",
-  sell:    "rgba(239, 68, 68, 0.42)",
-};
+/** Volume-profile fills, read from the skin tokens at paint time so the
+ *  overlay follows the theme toggle. */
+function vpColors() {
+  return {
+    outside: tokenAlpha("--muted-foreground", 0.28),  // outside the value area
+    inside:  tokenAlpha("--muted-foreground", 0.5),   // inside the value area
+    poc:     tokenAlpha("--signal-caution", 0.6),     // point of control
+    pocLine: tokenAlpha("--signal-caution", 0.45),
+    pocText: tokenAlpha("--signal-caution", 0.92),
+    buy:     tokenAlpha("--signal-long", 0.42),
+    sell:    tokenAlpha("--signal-short", 0.42),
+  };
+}
+
+/** Moving averages take categorical chart series 2–4; series 1 is the lime
+ *  the candles already own. */
+const MA_SERIES = [
+  { key: "ma20",  chart: 1, label: "MA20"  },
+  { key: "ma50",  chart: 2, label: "MA50"  },
+  { key: "ma200", chart: 3, label: "MA200" },
+] as const;
+
+function maColor(pal: Palette | null, chart: number): string {
+  return pal?.chart[chart] ?? "currentColor";
+}
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -82,6 +99,10 @@ function fmtVol(v: number): string {
 
 export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: string; priceAction?: any; currentPrice?: number }) {
   const t = useTranslations('stock');
+  // Theme palette for everything the chart library paints itself. Null until
+  // the client resolves it, so the chart is built once it is known and
+  // rebuilt on a theme toggle.
+  const pal = usePalette();
   // ── DOM + chart refs ──────────────────────────────────────
   const containerRef  = useRef<HTMLDivElement>(null);
   const vpCanvasRef   = useRef<HTMLCanvasElement>(null);
@@ -161,10 +182,12 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
 
   // ── Build / Rebuild chart whenever data or mode changes ──
   useEffect(() => {
-    if (!containerRef.current || chartData.length === 0) return;
+    if (!containerRef.current || chartData.length === 0 || !pal) return;
 
     let cancelled = false;
     setChartReady(false);
+    const volUp   = tokenAlpha("--signal-long", 0.16);
+    const volDown = tokenAlpha("--signal-short", 0.16);
 
     import("lightweight-charts").then(
       ({ createChart, CrosshairMode, LineStyle, ColorType }) => {
@@ -181,18 +204,18 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           width:  containerRef.current!.clientWidth,
           height: containerRef.current!.clientHeight || 320,
           layout: {
-            background: { type: ColorType.Solid, color: "#0a0a12" },
-            textColor: "#64748b",
+            background: { type: ColorType.Solid, color: pal.panel },
+            textColor: pal.mutedFg,
             fontSize: 11,
           },
           grid: {
-            vertLines: { color: "#1e293b" },
-            horzLines: { color: "#1e293b" },
+            vertLines: { color: pal.border },
+            horzLines: { color: pal.border },
           },
           crosshair: { mode: CrosshairMode.Normal },
-          rightPriceScale: { borderColor: "#1e293b" },
+          rightPriceScale: { borderColor: pal.border },
           timeScale: {
-            borderColor: "#1e293b",
+            borderColor: pal.border,
             timeVisible: true,
             secondsVisible: false,
           },
@@ -213,7 +236,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           chartData.map((d) => ({
             time:  d.time,
             value: d.volume,
-            color: d.close >= d.open ? "#22c55e2a" : "#ef44442a",
+            color: d.close >= d.open ? volUp : volDown,
           }))
         );
         volSeriesRef.current = volSeries;
@@ -222,12 +245,12 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         let mainSeries: any;
         if (chartMode === "candle") {
           mainSeries = chart.addCandlestickSeries({
-            upColor:         "#22c55e",
-            downColor:       "#ef4444",
-            borderUpColor:   "#22c55e",
-            borderDownColor: "#ef4444",
-            wickUpColor:     "#22c55e",
-            wickDownColor:   "#ef4444",
+            upColor:         pal.long,
+            downColor:       pal.short,
+            borderUpColor:   pal.long,
+            borderDownColor: pal.short,
+            wickUpColor:     pal.long,
+            wickDownColor:   pal.short,
           });
           mainSeries.setData(
             chartData.map((d) => ({
@@ -235,22 +258,22 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
             }))
           );
         } else {
-          mainSeries = chart.addLineSeries({ color: "#3b82f6", lineWidth: 2 });
+          mainSeries = chart.addLineSeries({ color: pal.protocol, lineWidth: 2 });
           mainSeries.setData(chartData.map((d) => ({ time: d.time, value: d.close })));
         }
         mainSeriesRef.current = mainSeries;
 
         // ── Moving-average series ──
         const ma20S = chart.addLineSeries({
-          color: "#3b82f6", lineWidth: 1,
+          color: maColor(pal, 1), lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
         const ma50S = chart.addLineSeries({
-          color: "#f97316", lineWidth: 1,
+          color: maColor(pal, 2), lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
         const ma200S = chart.addLineSeries({
-          color: "#a855f7", lineWidth: 1,
+          color: maColor(pal, 3), lineWidth: 1,
           priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
         });
         ma20S.setData(computeMA(chartData, 20));
@@ -269,13 +292,13 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           const kl = pa.synthesis.key_levels || {};
           const lines: { price: number; color: string; title: string }[] = [];
           if (kl.sweet_spot) {
-            lines.push({ price: kl.sweet_spot.low, color: "#6366f1", title: "SS↓" });
-            lines.push({ price: kl.sweet_spot.high, color: "#6366f1", title: "SS↑" });
+            lines.push({ price: kl.sweet_spot.low, color: pal.conflict, title: "SS↓" });
+            lines.push({ price: kl.sweet_spot.high, color: pal.conflict, title: "SS↑" });
           }
-          if (kl.invalidation != null) lines.push({ price: kl.invalidation, color: "#ef4444", title: "Invalid" });
-          if (kl.structural_target != null) lines.push({ price: kl.structural_target, color: "#22c55e", title: "Target" });
+          if (kl.invalidation != null) lines.push({ price: kl.invalidation, color: pal.break, title: "Invalid" });
+          if (kl.structural_target != null) lines.push({ price: kl.structural_target, color: pal.long, title: "Target" });
           Object.entries(kl.support_resistance || {}).forEach(([k, v]) => {
-            if (typeof v === "number") lines.push({ price: v, color: "#64748b", title: k });
+            if (typeof v === "number") lines.push({ price: v, color: pal.mutedFg, title: k });
           });
           lines.forEach(({ price, color, title }) => {
             try {
@@ -296,14 +319,14 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               if (!times.has(m.date)) return;
               markers.push({
                 time: m.date, position: m.type === "H" ? "aboveBar" : "belowBar",
-                color: m.type === "H" ? "#f87171" : "#4ade80", shape: "circle", text: m.type,
+                color: m.type === "H" ? pal.short : pal.long, shape: "circle", text: m.type,
               });
             });
             (tf.fsb_markers || []).forEach((m: any) => {
               if (!times.has(m.date)) return;
               markers.push({
                 time: m.date, position: m.dir === "bull" ? "belowBar" : "aboveBar",
-                color: m.dir === "bull" ? "#22c55e" : "#ef4444",
+                color: m.dir === "bull" ? pal.long : pal.short,
                 shape: m.dir === "bull" ? "arrowUp" : "arrowDown", text: "FSB",
               });
             });
@@ -319,7 +342,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           const saved: number[] = JSON.parse(localStorage.getItem(drawKey) ?? "[]");
           saved.forEach((price) => {
             const line = mainSeries.createPriceLine({
-              price, color: "#f59e0b", lineWidth: 1,
+              price, color: pal.amber, lineWidth: 1,
               lineStyle: LineStyle.Dashed, axisLabelVisible: true,
               title: `$${price.toFixed(2)}`,
             });
@@ -357,7 +380,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           const price: number | null = mainSeries.coordinateToPrice(param.point.y);
           if (price == null) return;
           const line = mainSeries.createPriceLine({
-            price, color: "#f59e0b", lineWidth: 1,
+            price, color: pal.amber, lineWidth: 1,
             lineStyle: LineStyle.Dashed, axisLabelVisible: true,
             title: `$${price.toFixed(2)}`,
           });
@@ -386,7 +409,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
       ma20Ref.current = ma50Ref.current = ma200Ref.current = null;
       drawLinesRef.current = [];
     };
-  }, [chartData, chartMode, ticker, drawKey, priceAction, interval]);
+  }, [chartData, chartMode, ticker, drawKey, priceAction, interval, pal]);
 
   // ── MA visibility toggles (don't rebuild chart) ──────────
   useEffect(() => { ma20Ref.current?.applyOptions({ visible: showMA20 }); }, [showMA20]);
@@ -422,6 +445,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
     const series = mainSeriesRef.current;
     const chart  = chartRef.current;
     if (!profile || !series || !chart) return;
+    const VP_COLORS = vpColors();
 
     // Bars grow leftwards from the inner edge of the price scale.
     let scaleW = 0;
@@ -509,7 +533,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         ctx.fillText(`POC ${profile.poc.mid.toFixed(2)}`, rightEdge - pocBarW - 6, y - 1);
       }
     }
-  }, [profile, vpSplit]);
+  }, [profile, vpSplit, pal]);
 
   // Repaint whenever the price↔pixel mapping moves. lightweight-charts fires no
   // event for a vertical price-scale drag, so a cheap rAF poll compares where
@@ -655,7 +679,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
             </span>
           )}
           {drawMode && (
-            <span className="text-xs text-warning animate-pulse">
+            <span className="text-xs text-signal-caution animate-pulse">
               {t('drawHint')}
             </span>
           )}
@@ -665,7 +689,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           <button
             onClick={() => setDrawMode((m) => !m)}
             title={t('drawHLineTitle')}
-            className={`p-1 rounded transition-colors ${drawMode ? "text-warning bg-warning/10" : "text-muted-foreground hover:text-primary"}`}
+            className={`p-1 rounded transition-colors ${drawMode ? "text-signal-caution bg-signal-caution/10" : "text-muted-foreground hover:text-signal"}`}
           >
             <Pencil className="w-3.5 h-3.5" />
           </button>
@@ -679,7 +703,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           <button
             onClick={saveChart}
             title={t('savePngTitle')}
-            className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
+            className="p-1 rounded text-muted-foreground hover:text-signal transition-colors"
           >
             <Download className="w-3.5 h-3.5" />
           </button>
@@ -687,7 +711,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
             onClick={() => setExpanded((v) => !v)}
             title={expanded ? t('collapseChartTitle') : t('expandChartTitle')}
             aria-pressed={expanded}
-            className="p-1 rounded text-muted-foreground hover:text-primary transition-colors"
+            className="p-1 rounded text-muted-foreground hover:text-signal transition-colors"
           >
             {expanded
               ? <Minimize2 className="w-3.5 h-3.5" />
@@ -733,7 +757,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           className="absolute inset-0 z-10 pointer-events-none"
         />
         {isLoading && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#0a0a12]/60 rounded">
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-card/60 rounded">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
         )}
@@ -750,7 +774,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               onClick={() => setPeriod(p)}
               className={`px-2 py-0.5 text-xs rounded transition-colors
                 ${period === p
-                  ? "bg-primary text-background font-bold"
+                  ? "bg-primary text-primary-foreground font-bold"
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               {t(label)}
@@ -766,7 +790,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               onClick={() => setInterval_(iv)}
               className={`px-2 py-0.5 text-xs rounded transition-colors
                 ${interval === iv
-                  ? "bg-primary text-background font-bold"
+                  ? "bg-primary text-primary-foreground font-bold"
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               {t(label)}
@@ -782,7 +806,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               onClick={() => setChartMode(m)}
               className={`px-2 py-0.5 text-xs rounded transition-colors capitalize
                 ${chartMode === m
-                  ? "bg-primary text-background font-bold"
+                  ? "bg-primary text-primary-foreground font-bold"
                   : "text-muted-foreground hover:text-foreground"}`}
             >
               {m === "candle" ? t('candle') : t('line')}
@@ -793,10 +817,10 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         {/* MA toggles */}
         <div className="flex items-center gap-1 ml-auto">
           {[
-            { key: "ma20",  show: showMA20,  toggle: () => setShowMA20((v) => !v),  color: "#3b82f6", label: "MA20"  },
-            { key: "ma50",  show: showMA50,  toggle: () => setShowMA50((v) => !v),  color: "#f97316", label: "MA50"  },
-            { key: "ma200", show: showMA200, toggle: () => setShowMA200((v) => !v), color: "#a855f7", label: "MA200" },
-          ].map(({ key, show, toggle, color, label }) => (
+            { ...MA_SERIES[0], show: showMA20,  toggle: () => setShowMA20((v) => !v)  },
+            { ...MA_SERIES[1], show: showMA50,  toggle: () => setShowMA50((v) => !v)  },
+            { ...MA_SERIES[2], show: showMA200, toggle: () => setShowMA200((v) => !v) },
+          ].map(({ key, show, toggle, chart, label }) => (
             <button
               key={key}
               onClick={toggle}
@@ -804,9 +828,9 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               className={`text-[11px] px-2 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
                 show ? "text-foreground" : "text-muted-foreground border-border"
               }`}
-              style={show ? { borderColor: color + "88", backgroundColor: color + "18" } : undefined}
+              style={show && pal ? { borderColor: tokenAlpha(`--chart-${chart + 1}`, 0.55), backgroundColor: tokenAlpha(`--chart-${chart + 1}`, 0.1) } : undefined}
             >
-              <span aria-hidden="true" className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+              <span aria-hidden="true" className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: maColor(pal, chart) }} />
               {label}
             </button>
           ))}
@@ -821,11 +845,11 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           title={t('volumeProfileTitle')}
           className={`text-[11px] px-2 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
             showVP
-              ? "text-foreground border-slate-400/60 bg-slate-400/10"
+              ? "text-foreground border-signal-neutral/60 bg-signal-neutral/10"
               : "text-muted-foreground border-border"
           }`}
         >
-          <span aria-hidden="true" className="inline-block w-2 h-2 rounded-sm bg-slate-400" />
+          <span aria-hidden="true" className="inline-block w-2 h-2 rounded-sm bg-signal-neutral" />
           {t('volumeProfile')}
         </button>
 
@@ -838,7 +862,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
                   onClick={() => setVpWindow(days)}
                   className={`px-2 py-0.5 text-xs rounded transition-colors
                     ${vpWindow === days
-                      ? "bg-primary text-background font-bold"
+                      ? "bg-primary text-primary-foreground font-bold"
                       : "text-muted-foreground hover:text-foreground"}`}
                 >
                   {label}
@@ -851,7 +875,7 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               aria-pressed={vpSplit}
               className={`text-[11px] px-2 py-0.5 rounded border transition-all ${
                 vpSplit
-                  ? "text-foreground border-primary/60 bg-primary/10"
+                  ? "text-foreground border-signal/60 bg-signal/10"
                   : "text-muted-foreground border-border"
               }`}
             >
@@ -874,20 +898,23 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
 
       {/* ── Legend ────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3 mt-1.5 px-0.5 text-[10px] text-muted-foreground">
-        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#3b82f6]"/>MA20</span>
-        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#f97316]"/>MA50</span>
-        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#a855f7]"/>MA200</span>
-        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-[#f59e0b] border-dashed"/>{t('hLinesSaved')}</span>
+        {MA_SERIES.map(({ key, chart, label }) => (
+          <span key={key} className="flex items-center gap-1">
+            <span className="w-4 h-px inline-block" style={{ backgroundColor: maColor(pal, chart) }} />
+            {label}
+          </span>
+        ))}
+        <span className="flex items-center gap-1"><span className="w-4 h-px inline-block bg-signal-caution border-dashed"/>{t('hLinesSaved')}</span>
         {showVP && !vpSplit && (
           <>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-[#94a3b8]/50"/>{t('vpValueArea')}</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-[#facc15]/70"/>{t('vpPoc')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-signal-neutral/50"/>{t('vpValueArea')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-signal-caution/70"/>{t('vpPoc')}</span>
           </>
         )}
         {showVP && vpSplit && (
           <>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-[#22c55e]/50"/>{t('vpBuying')}</span>
-            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-[#ef4444]/50"/>{t('vpSelling')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-signal-long/50"/>{t('vpBuying')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-signal-short/50"/>{t('vpSelling')}</span>
           </>
         )}
       </div>
