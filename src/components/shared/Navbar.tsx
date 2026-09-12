@@ -66,7 +66,7 @@ export default function Navbar() {
   // Screeners fans out to ranked/multibagger/options/desk via ScreenerTabs;
   const navItems: { href: string; label: string; icon: typeof Activity; public: boolean; match?: string[] }[] = [
     { href: "/", label: tNav("dashboard"), icon: Activity, public: true },
-    { href: "/ranked", label: tNav("screeners"), icon: ListOrdered, public: true, match: ["/ranked", "/multibagger", "/options", "/desk"] },
+    { href: "/ranked", label: tNav("screeners"), icon: ListOrdered, public: true, match: ["/ranked", "/multibagger", "/options", "/desk", "/heatmap"] },
     { href: "/portfolio", label: tNav("portfolio"), icon: Briefcase, public: false },
     { href: "/watchlist", label: tNav("watchlist"), icon: Eye, public: false },
   ];

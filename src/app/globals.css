@@ -127,6 +127,15 @@
 }
 
 @layer components {
+  /* Heatmap tile with no value for the chosen metric — hatched, never a
+     colour that could be read as a number. */
+  .heatmap-nodata {
+    background: repeating-linear-gradient(
+      135deg,
+      hsl(var(--muted)) 0 6px,
+      hsl(var(--border)) 6px 8px
+    );
+  }
   .card {
     @apply bg-card border border-border rounded-xl p-4;
   }

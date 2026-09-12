@@ -10,7 +10,7 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ListOrdered, Rocket, Coins, Landmark } from "lucide-react";
+import { ListOrdered, Rocket, Coins, Landmark, LayoutGrid } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 const TABS = [
@@ -18,6 +18,7 @@ const TABS = [
   { href: "/multibagger", label: "Find multibaggers", caption: "Hunt the whole market", icon: Rocket },
   { href: "/options", label: "Sell options", caption: "Premium-income setups", icon: Coins },
   { href: "/desk", label: "Option desk", caption: "Graded put & call candidates", icon: Landmark },
+  { href: "/heatmap", label: "Market heatmap", caption: "Every S&P 500 and Nasdaq-100 name", icon: LayoutGrid },
 ];
 
 export function ScreenerTabs() {
@@ -27,7 +28,7 @@ export function ScreenerTabs() {
   return (
     <nav
       aria-label={tNav("screeners")}
-      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2"
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2"
     >
       {TABS.map(({ href, label, caption, icon: Icon }) => {
         const active = pathname === href;

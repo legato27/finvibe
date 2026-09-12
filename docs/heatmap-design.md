@@ -4,10 +4,12 @@ Design note, 2026-09-12. The interactive mock and the full write-up live in
 the **VibeFin Market Heatmap** artifact; this file is the part a build session
 needs in the repo.
 
-**Status.** Phases 1 and 2 are built (backend alembic 036, `universe_tasks`,
-`services/analytics/heatmap.py`, `GET /api/heatmap`; vibefin `PATH_FAMILIES`
-entry). Phase 3, the page, is not. Phase 4 was decided: ship with the hatch,
-do not enrich the 262 index-only names.
+**Status.** All three build phases are done: backend alembic 036,
+`universe_tasks`, `services/analytics/heatmap.py`, `GET /api/heatmap`; vibefin
+`PATH_FAMILIES` entry and the `/heatmap` page (`src/app/heatmap/page.tsx`,
+`src/components/heatmap/Treemap.tsx`, metric table in `src/lib/heatmap.ts`).
+Phase 4 was decided: ship with the hatch, do not enrich the 262 index-only
+names.
 
 ## What is being built
 
@@ -144,8 +146,14 @@ the user's own lists, as the ranked book does it.
    `PATH_FAMILIES` entry (`label: "heatmap"`, 3-day window, 60 s edge);
    health check lines for both beats and both tables. Tests:
    `tests/test_heatmap.py`, `tests/test_index_constituents.py`.
-3. App: `/heatmap` page, treemap component, controls, tooltip, table view,
-   i18n, both themes. ~2 days. The artifact mock is the reference.
+3. **Done.** App: `/heatmap` as the fifth Screener tab. Treemap over
+   d3-hierarchy with positioned divs, four axes plus chips and range filters,
+   hover card with every parameter and per-tier freshness, table view (forced
+   under 640 px), both themes from the signal tokens (dark fills darkened one
+   Lab step, since the tokens are tuned as text colours). Colours, scales and
+   formatting live in one metric table shared by map, table and tooltip.
+   Not built: the watchlist star on the hover card (the card is
+   pointer-transparent; the star is on the table view instead).
 4. Coverage decision: enrol the 262 unenriched index names (enrichment queue
    is capped at 20/day and each name runs the full GPU+LLM chain — needs a
    dedicated backfill task, ~2 weeks of nightly windows) or ship with the

@@ -256,6 +256,11 @@ export const modelsApi = {
 
 // ── Scheduled jobs (status page) ──────────────────────────────
 
+export const heatmapApi = {
+  /** One composed row per S&P 500 / Nasdaq-100 / book name — see docs/heatmap-design.md. */
+  get: () => api.get("/api/heatmap", { timeout: 60_000 }).then((r) => r.data),
+};
+
 export const jobsApi = {
   status: () => api.get("/api/jobs/status").then((r) => r.data),
   rerun: (taskName: string) =>
