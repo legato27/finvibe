@@ -22,6 +22,7 @@ export default function Chip({
   tone,
   onClick,
   onRemove,
+  dot,
   className = "",
 }: {
   children: ReactNode;
@@ -29,6 +30,8 @@ export default function Chip({
   tone?: ChipTone;
   onClick?: () => void;
   onRemove?: () => void;
+  /** A colour class for a small square swatch before the label. */
+  dot?: string;
   className?: string;
 }) {
   const t = TONE[tone ?? (active ? "signal" : "plain")];
@@ -36,6 +39,7 @@ export default function Chip({
   if (onClick) {
     return (
       <button type="button" aria-pressed={active} onClick={onClick} className={`${base} transition-colors hover:border-foreground/40`}>
+        {dot && <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-[2px] ${dot}`} />}
         {children}
       </button>
     );

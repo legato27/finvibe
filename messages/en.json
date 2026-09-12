@@ -1622,5 +1622,31 @@
     "loadingFeed": "Loading feed…",
     "noNewsYet": "No news yet",
     "noNewsForTickers": "No news for these tickers yet"
+  },
+  "screeners": {
+    "title": "Screeners",
+    "subtitle": "four questions · one book each",
+    "ranked": {
+      "title": "Ranked Book",
+      "question": "score the names you follow"
+    },
+    "multibagger": {
+      "title": "Multibaggers",
+      "question": "hunt the whole market"
+    },
+    "options": {
+      "title": "Sell options",
+      "question": "premium-income setups"
+    },
+    "heatmap": {
+      "title": "Market heatmap",
+      "question": "where is the money moving"
+    },
+    "candidates": "Candidates",
+    "performance": "Performance",
+    "trackAll": "All",
+    "trackA": "Track A · Leaders",
+    "trackB": "Track B · Early",
+    "refresh": "Refresh"
   }
 }

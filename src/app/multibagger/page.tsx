@@ -9,8 +9,8 @@ import LivePrice from "@/components/ui/LivePrice";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import { InfoTip } from "@/components/shared/InfoTip";
-import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
-import { LastUpdated } from "@/components/common/LastUpdated";
+import { ScreenerFrame } from "@/components/shared/ScreenerFrame";
+import Segmented from "@/components/ui/Segmented";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import { type FilterDef } from "@/components/shared/ColumnFilters";
@@ -344,31 +344,31 @@ export default function MultibaggerPage() {
   ];
 
   return (
-    <div className="space-y-4 max-w-[1200px] mx-auto">
-      <ScreenerTabs />
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-semibold flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-signal" /> Multibagger Scanner
-          </h1>
-          <p className="text-xs text-muted-foreground mt-1 max-w-3xl">
-            A scan of the whole US market for potential big winners.{" "}
-            <span className="text-foreground/80">Two tracks:</span> <strong className="text-foreground/80">Track A</strong> =
-            established leaders already trending up; <strong className="text-foreground/80">Track B</strong> = early-stage
-            names breaking out of a base. Higher Score = stronger candidate; the banner below shows whether today&rsquo;s
-            market favours A or B.
-          </p>
-          <LastUpdated at={data?.as_of} className="mt-1 inline-block" />
-        </div>
+    <ScreenerFrame
+      active="multibagger"
+      title="Multibagger Scanner"
+      subtitle={
+        <>
+          A scan of the whole US market for potential big winners.{" "}
+          <span className="text-foreground/80">Two tracks:</span> <strong className="text-foreground/80">Track A</strong> =
+          established leaders already trending up; <strong className="text-foreground/80">Track B</strong> = early-stage
+          names breaking out of a base. Higher Score = stronger candidate; the banner below shows whether today&rsquo;s
+          market favours A or B.
+        </>
+      }
+      asOf={data?.as_of}
+      scope={<WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />}
+      actions={
         <button
+          type="button"
           onClick={() => refetch()}
           disabled={isFetching}
-          className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-signal/20 text-signal hover:bg-signal/30 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-control border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:border-foreground/40 disabled:opacity-50"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? "animate-spin" : ""}`} /> Refresh
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} aria-hidden="true" /> Refresh
         </button>
-      </div>
-
+      }
+    >
       {/* ── Regime banner ── */}
       {regime && (
         <div className={`rounded-lg border px-3 py-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs ${REGIME_STYLE[regime.regime] ?? ""}`}>
@@ -390,40 +390,30 @@ export default function MultibaggerPage() {
         </div>
       )}
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
-        {(["candidates", "performance"] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
-              tab === t ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-foreground/80"
-            }`}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <Segmented
+        mode="tabs"
+        ariaLabel="Scanner view"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "candidates", label: "Candidates" },
+          { value: "performance", label: "Performance" },
+        ]}
+      />
 
       {tab === "candidates" && (
         <>
-          {/* track toggle (drives the scan query) + watchlist scope */}
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30 w-fit">
-              {([["all", "All"], ["A", "Track A · Leaders"], ["B", "Track B · Early"]] as const).map(([f, label]) => (
-                <button
-                  key={f}
-                  onClick={() => setTrack(f)}
-                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    track === f ? "bg-signal/20 text-signal" : "text-muted-foreground hover:text-foreground/80"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
-          </div>
+          <Segmented
+            ariaLabel="Track"
+            value={track}
+            onChange={setTrack}
+            size="sm"
+            options={[
+              { value: "all", label: "All" },
+              { value: "A", label: "Track A · Leaders" },
+              { value: "B", label: "Track B · Early" },
+            ]}
+          />
 
           {isLoading && <div className="card p-6 text-sm text-muted-foreground">Loading candidates…</div>}
           {error && <div className="card p-6 text-sm text-signal-short">Failed to load candidates.</div>}
@@ -522,6 +512,6 @@ export default function MultibaggerPage() {
           )}
         </div>
       )}
-    </div>
+    </ScreenerFrame>
   );
 }

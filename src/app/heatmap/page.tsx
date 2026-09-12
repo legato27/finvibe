@@ -26,8 +26,9 @@ import DataTable, { type Column } from "@/components/ui/DataTable";
 import VerdictBadge from "@/components/ui/VerdictBadge";
 import GuideCard from "@/components/ui/GuideCard";
 import { InfoTip } from "@/components/shared/InfoTip";
-import { LastUpdated } from "@/components/common/LastUpdated";
-import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { ScreenerFrame } from "@/components/shared/ScreenerFrame";
+import Segmented from "@/components/ui/Segmented";
+import Chip from "@/components/ui/Chip";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import type { FilterDef } from "@/components/shared/ColumnFilters";
@@ -42,22 +43,6 @@ const TONE_DOT: Record<string, string> = {
 const selectCls =
   "rounded-md border border-border/30 bg-muted/50 px-2 py-1 text-xs text-foreground/90 focus:outline-none focus:ring-1 focus:ring-signal/50";
 const inputCls = `${selectCls} w-20 nums`;
-
-function Chip({ on, onClick, children, dot }: { on: boolean; onClick: () => void; children: React.ReactNode; dot?: string }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs transition-colors ${
-        on ? "border-signal bg-signal/15 text-signal" : "border-border/40 text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {dot && <span aria-hidden="true" className={`inline-block h-2 w-2 rounded-[2px] ${dot}`} />}
-      {children}
-    </button>
-  );
-}
 
 function useIsNarrow(px = 640): boolean {
   const [narrow, setNarrow] = useState(false);
@@ -179,38 +164,37 @@ function HeatmapPageInner() {
   const asOfMarket = data?.as_of.market;
 
   return (
-    <div className="space-y-4 max-w-[1240px] mx-auto">
-      <ScreenerTabs />
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="text-lg font-semibold">{t("title")}</h1>
-          <div className="flex items-center gap-3">
-            <LastUpdated at={asOfMarket} label={t("marketAsOf")} />
-            <button
-              type="button"
-              onClick={() => refetch()}
-              disabled={isFetching}
-              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground disabled:opacity-50"
-              aria-label={t("refresh")}
-            >
-              <RefreshCw className={`h-3 w-3 ${isFetching ? "animate-spin" : ""}`} />
-              {t("refresh")}
-            </button>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground mt-1 max-w-3xl">{t("subtitle")}</p>
-      </div>
-
+    <ScreenerFrame
+      active="heatmap"
+      className="max-w-[1240px]"
+      title={t("title")}
+      subtitle={t("subtitle")}
+      asOf={asOfMarket}
+      asOfLabel={t("marketAsOf").toLowerCase()}
+      actions={
+        <button
+          type="button"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="inline-flex items-center gap-1.5 rounded-control border border-border px-3 py-1.5 text-xs font-bold text-foreground hover:border-foreground/40 disabled:opacity-50"
+          aria-label={t("refresh")}
+        >
+          <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} aria-hidden="true" />
+          {t("refresh")}
+        </button>
+      }
+      guide={
       <GuideCard
-        title={t("guideTitle")}
-        intro={t("guideIntro")}
-        sections={[
-          { title: t("guideAxesTitle"), tone: "plain", steps: [t("guideAxes1"), t("guideAxes2"), t("guideAxes3"), t("guideAxes4")] },
-          { title: t("guideReadTitle"), tone: "plain", steps: [t("guideRead1"), t("guideRead2"), t("guideRead3")] },
-        ]}
-        footnote={t("guideFootnote")}
-      />
-
+          title={t("guideTitle")}
+          intro={t("guideIntro")}
+          sections={[
+            { title: t("guideAxesTitle"), tone: "plain", steps: [t("guideAxes1"), t("guideAxes2"), t("guideAxes3"), t("guideAxes4")] },
+            { title: t("guideReadTitle"), tone: "plain", steps: [t("guideRead1"), t("guideRead2"), t("guideRead3")] },
+          ]}
+          footnote={t("guideFootnote")}
+        />
+      }
+    >
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">{t("loading")}</div>}
       {error && <div className="card p-6 text-sm text-signal-short">{t("loadError")}</div>}
 
@@ -276,21 +260,21 @@ function HeatmapPageInner() {
                 <span>{t("days")}</span>
               </label>
               {!narrow && (
-                <div className="ml-auto inline-flex rounded-md border border-border/40 p-0.5">
-                  {(["map", "table"] as const).map((v) => (
-                    <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}
-                      className={`rounded px-2.5 py-0.5 text-xs ${view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-                      {t(v)}
-                    </button>
-                  ))}
-                </div>
+                <Segmented
+                  className="ml-auto"
+                  size="sm"
+                  ariaLabel={t("title")}
+                  value={view}
+                  onChange={setView}
+                  options={[{ value: "map", label: t("map") }, { value: "table", label: t("table") }]}
+                />
               )}
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t("verdict")}</span>
               {VERDICTS.map((v) => (
-                <Chip key={v} on={verdicts.has(v)} onClick={() => toggle(verdicts, v, setVerdicts)} dot={TONE_DOT[VERDICT_TONE[v]]}>
+                <Chip key={v} active={verdicts.has(v)} onClick={() => toggle(verdicts, v, setVerdicts)} dot={TONE_DOT[VERDICT_TONE[v]]}>
                   {v.replace("_", " ")}
                 </Chip>
               ))}
@@ -298,7 +282,7 @@ function HeatmapPageInner() {
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="mr-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{t("sector")}</span>
               {GICS_SECTORS.map((s) => (
-                <Chip key={s} on={sectors.has(s)} onClick={() => toggle(sectors, s, setSectors)}>{s}</Chip>
+                <Chip key={s} active={sectors.has(s)} onClick={() => toggle(sectors, s, setSectors)}>{s}</Chip>
               ))}
               {(verdicts.size > 0 || sectors.size > 0) && (
                 <button type="button" onClick={() => { setVerdicts(new Set()); setSectors(new Set()); }}
@@ -356,6 +340,6 @@ function HeatmapPageInner() {
           </p>
         </>
       )}
-    </div>
+    </ScreenerFrame>
   );
 }

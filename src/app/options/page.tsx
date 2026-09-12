@@ -18,8 +18,7 @@ import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import GuideCard from "@/components/ui/GuideCard";
 import Sparkline from "@/components/ui/Sparkline";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
-import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
-import { LastUpdated } from "@/components/common/LastUpdated";
+import { ScreenerFrame } from "@/components/shared/ScreenerFrame";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import type { FilterDef } from "@/components/shared/ColumnFilters";
@@ -315,35 +314,32 @@ export default function OptionsScreenerPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-[1200px] space-y-4">
-      <ScreenerTabs />
-      <header className="flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h1 className="text-lg font-bold text-foreground">{ts("title")}</h1>
-          <p className="text-sm text-muted-foreground">{ts("subtitle")}</p>
-          <LastUpdated at={screenerAsOf} className="mt-1 inline-block" />
-        </div>
-        <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
-      </header>
-
+    <ScreenerFrame
+      active="options"
+      title={ts("title")}
+      subtitle={ts("subtitle")}
+      asOf={screenerAsOf}
+      scope={<WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />}
+      guide={
       <GuideCard
-        title={tg("screenerTitle")}
-        intro={tg("screenerIntro")}
-        sections={[
-          {
-            title: tg("sellTitle"),
-            tone: "long",
-            steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`sellSteps.${k}`)),
-          },
-          {
-            title: tg("buyTitle"),
-            tone: "short",
-            steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`buySteps.${k}`)),
-          },
-        ]}
-        footnote={tg("screenerFootnote")}
-      />
-
+          title={tg("screenerTitle")}
+          intro={tg("screenerIntro")}
+          sections={[
+            {
+              title: tg("sellTitle"),
+              tone: "long",
+              steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`sellSteps.${k}`)),
+            },
+            {
+              title: tg("buyTitle"),
+              tone: "short",
+              steps: ["s1", "s2", "s3", "s4", "s5"].map((k) => tg(`buySteps.${k}`)),
+            },
+          ]}
+          footnote={tg("screenerFootnote")}
+        />
+      }
+    >
       {isLoading ? (
         <div className="card p-8 text-center text-sm text-muted-foreground" role="status">
           {t("loading")}
@@ -361,6 +357,6 @@ export default function OptionsScreenerPage() {
         />
       )}
       <p className="text-xs text-muted-foreground">{t("delayedNote")}</p>
-    </div>
+    </ScreenerFrame>
   );
 }

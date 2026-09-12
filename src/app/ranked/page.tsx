@@ -11,8 +11,7 @@ import GuideCard from "@/components/ui/GuideCard";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import { useSwingMap, SwingCell } from "@/components/shared/SwingLevels";
 import { InfoTip } from "@/components/shared/InfoTip";
-import { LastUpdated } from "@/components/common/LastUpdated";
-import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
+import { ScreenerFrame } from "@/components/shared/ScreenerFrame";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { WatchlistPicklist, watchlistTickerSet, ALL_WATCHLISTS } from "@/components/shared/WatchlistPicklist";
 import { type FilterDef } from "@/components/shared/ColumnFilters";
@@ -223,51 +222,52 @@ export default function RankedBookPage() {
   ];
 
   return (
-    <div className="space-y-4 max-w-[1100px] mx-auto">
-      <ScreenerTabs />
-      <div>
-        <div className="flex items-baseline justify-between gap-3">
-          <h1 className="text-lg font-semibold">Ranked Book</h1>
-          <LastUpdated at={data?.as_of} />
-        </div>
-        <p className="text-xs text-muted-foreground mt-1 max-w-3xl">
+    <ScreenerFrame
+      active="ranked"
+      className="max-w-[1100px]"
+      title="Ranked Book"
+      subtitle={
+        <>
           Your watchlist names scored against each other on six factors and ranked best → worst.{" "}
           <span className="text-foreground/80">How to read it:</span> the <strong className="text-foreground/80">Verdict</strong> is
           the system&rsquo;s final call; <strong className="text-foreground/80">Factor rank</strong> is where the quant
           model alone places the name (they can differ). Sort by probability of profit or conviction.
-        </p>
-      </div>
-
+        </>
+      }
+      asOf={data?.as_of}
+      scope={<WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />}
+      guide={
       <GuideCard
-        title="How the Ranked Book works"
-        intro="Every US watchlist stock is scored against every other stock on six factors, blended into one composite z-score. The top quintile is the Long bucket, the bottom quintile is Short. Highest-conviction names rank first."
-        sections={[
-          {
-            title: "The six factors",
-            tone: "plain",
-            steps: [
-              "Momentum — 12-1 month price trend (last year's return, skipping the most recent month).",
-              "Forecast — the ML ensemble's predicted 3-month return.",
-              "Quality — Piotroski F-score, a 9-point fundamental-health checklist.",
-              "Value — DCF margin of safety (intrinsic value vs price).",
-              "Moat — confidence in the company's competitive moat.",
-              "Low volatility — GARCH volatility forecast, scored inverted (calmer = better).",
-            ],
-          },
-          {
-            title: "How the score is built",
-            tone: "plain",
-            steps: [
-              "Each factor becomes a cross-sectional z-score: how many standard deviations a name sits above/below the universe average, capped at ±3 so outliers can't dominate.",
-              "The composite is the equal-weighted average of a name's available z-scores (a stock needs at least 3 of the 6 factors to be ranked).",
-              "Sorted by composite: top 20% = Long, bottom 20% = Short, the middle 60% = Neutral.",
-              "The Verdict column is separate — it arbitrates the rank with price action, sentiment, the ensemble and FinVibe Thoughts, and is NOT changed by your weights.",
-            ],
-          },
-        ]}
-        footnote="Recomputed nightly after the quant refresh. US-listed names only. The Verdict column is the system's arbitrated call and is computed separately from this rank."
-      />
-
+          title="How the Ranked Book works"
+          intro="Every US watchlist stock is scored against every other stock on six factors, blended into one composite z-score. The top quintile is the Long bucket, the bottom quintile is Short. Highest-conviction names rank first."
+          sections={[
+            {
+              title: "The six factors",
+              tone: "plain",
+              steps: [
+                "Momentum — 12-1 month price trend (last year's return, skipping the most recent month).",
+                "Forecast — the ML ensemble's predicted 3-month return.",
+                "Quality — Piotroski F-score, a 9-point fundamental-health checklist.",
+                "Value — DCF margin of safety (intrinsic value vs price).",
+                "Moat — confidence in the company's competitive moat.",
+                "Low volatility — GARCH volatility forecast, scored inverted (calmer = better).",
+              ],
+            },
+            {
+              title: "How the score is built",
+              tone: "plain",
+              steps: [
+                "Each factor becomes a cross-sectional z-score: how many standard deviations a name sits above/below the universe average, capped at ±3 so outliers can't dominate.",
+                "The composite is the equal-weighted average of a name's available z-scores (a stock needs at least 3 of the 6 factors to be ranked).",
+                "Sorted by composite: top 20% = Long, bottom 20% = Short, the middle 60% = Neutral.",
+                "The Verdict column is separate — it arbitrates the rank with price action, sentiment, the ensemble and FinVibe Thoughts, and is NOT changed by your weights.",
+              ],
+            },
+          ]}
+          footnote="Recomputed nightly after the quant refresh. US-listed names only. The Verdict column is the system's arbitrated call and is computed separately from this rank."
+        />
+      }
+    >
       {isLoading && <div className="card p-6 text-sm text-muted-foreground">Computing cross-sectional ranking…</div>}
       {error && <div className="card p-6 text-sm text-signal-short">Failed to load ranking.</div>}
 
@@ -283,11 +283,7 @@ export default function RankedBookPage() {
             <span>factors: {data.factors.join(", ")}</span>
           </div>
 
-          {/* watchlist scope */}
-          <div className="flex flex-wrap items-center gap-3">
-            <WatchlistPicklist groups={watchlistGroups} value={watchlist} onChange={setWatchlist} />
-            <span className="text-[11px] text-muted-foreground">Click a column header to sort · use the filters to narrow.</span>
-          </div>
+          <p className="text-[11px] text-muted-foreground">Click a column header to sort · use the filters to narrow.</p>
 
           {/* legend (kept above the table — InfoTip cards would be clipped inside the scroll container) */}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground bg-muted/30 border border-border/30 rounded-lg px-3 py-2">
@@ -342,6 +338,6 @@ export default function RankedBookPage() {
           <p className="text-xs text-muted-foreground">{data.method}</p>
         </>
       )}
-    </div>
+    </ScreenerFrame>
   );
 }

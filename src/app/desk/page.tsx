@@ -24,7 +24,6 @@ import { useQuery } from "@tanstack/react-query";
 import { optionsApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import type { FilterDef } from "@/components/shared/ColumnFilters";
-import { ScreenerTabs } from "@/components/shared/ScreenerTabs";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { LastUpdated } from "@/components/common/LastUpdated";
 import GuideCard from "@/components/ui/GuideCard";
@@ -555,7 +554,6 @@ export default function OptionDeskPage() {
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-4 p-4 lg:p-6">
-      <ScreenerTabs />
 
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
