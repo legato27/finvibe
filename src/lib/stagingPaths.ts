@@ -175,6 +175,20 @@ export const PATH_FAMILIES: PathFamily[] = [
     refreshAfter: 1 * HOUR,
     sMaxAge: 900,
   },
+  {
+    // One composed row per S&P 500 / Nasdaq-100 / book name: day change and
+    // returns (market tier) plus every signal the box has (signals tier).
+    // The market tier goes wrong at the speed of a price, so the window is
+    // the option chain's, not the ranked book's; the box's own cache already
+    // refreshes it once a minute in session, so the edge holds it that long.
+    pattern: /^\/api\/heatmap\/?$/,
+    label: "heatmap",
+    maxAge: 3 * DAY,
+    refreshAfter: 1 * MINUTE,
+    sMaxAge: 60,
+    // Reads Postgres, Redis and once a minute a 5 MB Polygon snapshot.
+    timeoutMs: 45_000,
+  },
 
   // ── FX ───────────────────────────────────────────────────────────────
   {

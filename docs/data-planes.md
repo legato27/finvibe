@@ -43,7 +43,8 @@ at. Instead the proxy writes each successful response through to
 `dgx_response_snapshot` as it passes (019), and reads it back on failure.
 The allowlist and its windows are `PATH_FAMILIES`; the shape is one row per
 request path. This is what now covers the dashboard, `/detail`, `/info`,
-FX, the screeners, the desk, chains, price history, events and sentiment.
+FX, the screeners, the desk, the heatmap, chains, price history, events and
+sentiment.
 
 Two special cases sit alongside it:
 
