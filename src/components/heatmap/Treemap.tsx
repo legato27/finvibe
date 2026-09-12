@@ -12,77 +12,12 @@
  */
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { useRouter } from "next/navigation";
-import { hierarchy, treemap, treemapSquarify, hsl as d3hsl, lab as d3lab, scaleLinear, interpolateLab } from "d3";
+import { hierarchy, treemap, treemapSquarify } from "d3";
 import {
-  type GroupKey, type HeatmapRow, type Metric, type SizeKey, type Tone,
+  type GroupKey, type HeatmapRow, type Metric, type SizeKey,
   STRATEGY_LABEL, fmtCap, groupOf, sizeOf,
 } from "@/lib/heatmap";
-
-// ── Theme tokens → colours ────────────────────────────────────────────────
-
-type Palette = Record<Tone | "divMid" | "seqLo" | "seqHi" | "ink" | "inkOnDark", string>;
-
-function readToken(name: string): string {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-  const m = raw.match(/^([\d.]+)\s+([\d.]+)%\s+([\d.]+)%$/);
-  if (!m) return raw || "#888888";
-  return d3hsl(Number(m[1]), Number(m[2]) / 100, Number(m[3]) / 100).formatHex();
-}
-
-function readPalette(): Palette {
-  // The signal tokens are tuned as TEXT colours: green-800 on the light
-  // ground, green-400 on the dark one. As a fill over half the viewport the
-  // dark-theme steps are far too bright, so in dark mode every signal tone is
-  // pulled down towards the ground before it becomes a tile. Light mode is
-  // used as-is — the deep steps read as fills already.
-  const dark = document.documentElement.classList.contains("dark");
-  const fill = (name: string) => {
-    const c = readToken(name);
-    return dark ? d3lab(c).darker(1).formatHex() : c;
-  };
-  return {
-    long: fill("--signal-long"),
-    "long-strong": fill("--signal-long-strong"),
-    short: fill("--signal-short"),
-    "short-strong": fill("--signal-short-strong"),
-    neutral: fill("--signal-neutral"),
-    conflict: fill("--signal-conflict"),
-    caution: fill("--signal-caution"),
-    divMid: readToken("--border"),
-    seqLo: readToken("--muted"),
-    seqHi: readToken("--primary"),
-    ink: readToken("--foreground"),
-    inkOnDark: "#ffffff",
-  };
-}
-
-function useThemeVersion(): number {
-  const [v, setV] = useState(0);
-  useEffect(() => {
-    const obs = new MutationObserver(() => setV((n) => n + 1));
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-  return v;
-}
-
-function colorFor(metric: Metric, pal: Palette): (v: number | string) => string {
-  if (metric.kind === "cat") return (v) => pal[metric.tone(String(v))];
-  if (metric.kind === "div") {
-    const mid = metric.mid ?? (metric.lo + metric.hi) / 2;
-    const s = scaleLinear<string>().domain([metric.lo, mid, metric.hi])
-      .range([pal.short, pal.divMid, pal.long]).interpolate(interpolateLab).clamp(true);
-    return (v) => s(Number(v));
-  }
-  const s = scaleLinear<string>().domain([metric.lo, metric.hi])
-    .range([pal.seqLo, pal.seqHi]).interpolate(interpolateLab).clamp(true);
-  return (v) => s(Number(v));
-}
-
-function inkFor(bg: string, pal: Palette): string {
-  const l = d3lab(bg)?.l ?? 50;
-  return l > 62 ? "#13151c" : pal.inkOnDark;
-}
+import { colorFor, inkFor, usePalette } from "@/components/heatmap/palette";
 
 const pct = (d: number) => (v: number) => `${v >= 0 ? "+" : ""}${v.toFixed(d)}%`;
 
@@ -205,7 +140,7 @@ export function Treemap({
   const router = useRouter();
   const hostRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(0);
-  const themeVersion = useThemeVersion();
+  const pal = usePalette();
   const [hover, setHover] = useState<{ r: HeatmapRow; x: number; y: number } | null>(null);
 
   useEffect(() => {
@@ -217,7 +152,6 @@ export function Treemap({
     return () => ro.disconnect();
   }, []);
 
-  const pal = useMemo(() => (typeof window === "undefined" ? null : readPalette()), [themeVersion]); // eslint-disable-line react-hooks/exhaustive-deps
   const color = useMemo(() => (pal ? colorFor(metric, pal) : null), [metric, pal]);
   const groups = useMemo(() => layout(rows, group, size, width, height), [rows, group, size, width, height]);
 
@@ -306,8 +240,7 @@ export function Treemap({
 }
 
 export function Legend({ metric }: { metric: Metric }) {
-  const themeVersion = useThemeVersion();
-  const pal = useMemo(() => (typeof window === "undefined" ? null : readPalette()), [themeVersion]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pal = usePalette();
   if (!pal) return null;
   const color = colorFor(metric, pal);
   if (metric.kind === "cat") {

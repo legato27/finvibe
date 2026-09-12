@@ -259,6 +259,8 @@ export const modelsApi = {
 export const heatmapApi = {
   /** One composed row per S&P 500 / Nasdaq-100 / book name — see docs/heatmap-design.md. */
   get: () => api.get("/api/heatmap", { timeout: 60_000 }).then((r) => r.data),
+  /** Eleven GICS rows rolled up from the same composition — the dashboard card. */
+  sectors: () => api.get("/api/heatmap/sectors", { timeout: 60_000 }).then((r) => r.data),
 };
 
 export const jobsApi = {

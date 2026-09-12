@@ -10,7 +10,8 @@
  * treemap, the table view and the tooltip share the metric table in
  * src/lib/heatmap.ts so they never disagree about a number.
  */
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
@@ -71,7 +72,22 @@ function useIsNarrow(px = 640): boolean {
 }
 
 export default function HeatmapPage() {
+  // useSearchParams needs a Suspense boundary for the static shell.
+  return (
+    <Suspense fallback={null}>
+      <HeatmapPageInner />
+    </Suspense>
+  );
+}
+
+const UNIVERSES: Universe[] = ["both", "spx", "ndx", "book"];
+
+function HeatmapPageInner() {
   const t = useTranslations("heatmap");
+  // Deep links from the dashboard sector card: /heatmap?sector=Energy&universe=spx
+  const params = useSearchParams();
+  const initialSector = params.get("sector");
+  const initialUniverse = params.get("universe");
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<HeatmapResponse>({
     queryKey: ["heatmap"],
@@ -84,12 +100,16 @@ export default function HeatmapPage() {
   const [watchlist, setWatchlist] = useState<string>(ALL_WATCHLISTS);
   const wlSet = watchlistTickerSet(watchlistGroups, watchlist);
 
-  const [universe, setUniverse] = useState<Universe>("both");
+  const [universe, setUniverse] = useState<Universe>(
+    UNIVERSES.includes(initialUniverse as Universe) ? (initialUniverse as Universe) : "both",
+  );
   const [group, setGroup] = useState<GroupKey>("sector");
   const [size, setSize] = useState<SizeKey>("cap");
   const [metricKey, setMetricKey] = useState<string>("chg_1d");
   const [verdicts, setVerdicts] = useState<Set<string>>(new Set());
-  const [sectors, setSectors] = useState<Set<string>>(new Set());
+  const [sectors, setSectors] = useState<Set<string>>(
+    () => new Set(initialSector && (GICS_SECTORS as readonly string[]).includes(initialSector) ? [initialSector] : []),
+  );
   const [capBand, setCapBand] = useState("");
   const [ivMin, setIvMin] = useState("");
   const [earnDays, setEarnDays] = useState("");

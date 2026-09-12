@@ -181,7 +181,7 @@ export const PATH_FAMILIES: PathFamily[] = [
     // The market tier goes wrong at the speed of a price, so the window is
     // the option chain's, not the ranked book's; the box's own cache already
     // refreshes it once a minute in session, so the edge holds it that long.
-    pattern: /^\/api\/heatmap\/?$/,
+    pattern: /^\/api\/heatmap(\/sectors)?\/?$/,
     label: "heatmap",
     maxAge: 3 * DAY,
     refreshAfter: 1 * MINUTE,

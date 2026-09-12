@@ -14,6 +14,7 @@ import { VixGauge } from "@/components/dashboard/VixGauge";
 import { SwarmIndicator } from "@/components/dashboard/SwarmIndicator";
 import { BusinessCycleWheel } from "@/components/dashboard/BusinessCycleWheel";
 import { SectorRotationHeatmap } from "@/components/dashboard/SectorRotationHeatmap";
+import { SectorHeatmapCard } from "@/components/dashboard/SectorHeatmapCard";
 import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
 import { GexCard } from "@/components/dashboard/GexCard";
 import { BreadthStrip } from "@/components/dashboard/BreadthStrip";
@@ -90,6 +91,10 @@ export function DashboardView() {
 
       {/* 6 — Rotation & your watchlist: where the leadership is */}
       <Section title={t("sectionRotationTitle")} intro={t("sectionRotationIntro")}>
+        {/* Sector-level view of the market heatmap: one tile per GICS sector,
+            sized by cap, coloured by cap-weighted change. Each tile deep-links
+            into /heatmap with the sector pre-selected. */}
+        <SectorHeatmapCard />
         <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
           <SectorRotationHeatmap />
           <WatchlistGlance />

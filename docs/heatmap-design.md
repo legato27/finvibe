@@ -164,4 +164,8 @@ the user's own lists, as the ranked book does it.
 - Enrich the whole index or ship with the hatch.
 - Nasdaq-100 weights by cap, or maintain a browser-emulating Invesco fetch.
 - Refresh cadence: 60 s on the box, 5 min at the edge, manual refresh in UI.
-- Second surface: a sector-level card on the dashboard once the endpoint exists.
+- ~~Second surface: a sector-level card on the dashboard once the endpoint exists.~~
+  Built: `GET /api/heatmap/sectors` (one row per GICS sector, ~2 KB, same
+  cache as the full composition) and `SectorHeatmapCard` in the dashboard's
+  Rotation section. Tiles deep-link to `/heatmap?sector=<GICS name>`; the
+  page also accepts `?universe=spx|ndx|both|book`.

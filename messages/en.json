@@ -356,7 +356,16 @@
     "sectionRotationTitle": "Rotation & your watchlist",
     "sectionRotationIntro": "Where the leadership is",
     "sectionWireTitle": "Crypto, news & the wire",
-    "sectionWireIntro": "Context and catalysts"
+    "sectionWireIntro": "Context and catalysts",
+    "sectorHeatmap": "Sector Heatmap",
+    "sectorHeatmapInfo": "Every S&P 500 and Nasdaq-100 name rolled up into its GICS sector. Tile area is the sector's total market cap; colour is the cap-weighted change over the chosen window, so the biggest names move the colour most. The small line is the count of names and how many rose or fell today. Click a sector to open the full heatmap filtered to it.",
+    "sectorHeatmapWindow": "Return window",
+    "sectorHeatmapOpen": "Open heatmap",
+    "sectorHeatmapLoading": "Loading sectors…",
+    "sectorHeatmapError": "Sector heatmap unavailable.",
+    "sectorHeatmapMarket": "Cap-weighted {window}:",
+    "sectorHeatmapNames": "{count} names",
+    "sectorHeatmapAsOf": "Prices"
   },
   "errors": {
     "loadFailed": "Failed to load",
