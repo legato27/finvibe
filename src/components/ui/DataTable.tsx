@@ -79,6 +79,7 @@ export default function DataTable<Row>({
   stickyHeader = false,
   toolbar,
   countLabel,
+  rowClassName,
 }: {
   caption: string;
   columns: Column<Row>[];
@@ -100,6 +101,8 @@ export default function DataTable<Row>({
   toolbar?: ReactNode;
   /** "12 names" — shown at the right of the toolbar */
   countLabel?: (n: number) => string;
+  /** extra classes for one row, e.g. a tint on a baseline or total row */
+  rowClassName?: (row: Row) => string | undefined;
 }) {
   const [sort, setSort] = useState(defaultSort ?? null);
   const [filterState, setFilterState] = useState<FilterState>({});
@@ -171,7 +174,7 @@ export default function DataTable<Row>({
       <tr
         key={rowKey(row)}
         onClick={href ? navTo(row) : undefined}
-        className={`border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40 focus-within:bg-muted/40 ${href ? "cursor-pointer" : ""}`}
+        className={`border-b border-border/60 transition-colors last:border-0 hover:bg-muted/40 focus-within:bg-muted/40 ${href ? "cursor-pointer" : ""} ${rowClassName?.(row) ?? ""}`}
       >
         {cols.map((c, i) => (
           <td
@@ -196,7 +199,7 @@ export default function DataTable<Row>({
       <div
         key={rowKey(row)}
         onClick={href ? navTo(row) : undefined}
-        className={`card p-3 ${href ? "cursor-pointer active:bg-muted/40" : ""}`}
+        className={`card p-3 ${href ? "cursor-pointer active:bg-muted/40" : ""} ${rowClassName?.(row) ?? ""}`}
       >
         <div className="mb-2 text-sm font-semibold text-foreground">
           {first && (href ? <Link href={href} className="hover:underline">{first.cell(row)}</Link> : first.cell(row))}

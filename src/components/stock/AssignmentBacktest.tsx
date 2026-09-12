@@ -244,6 +244,7 @@ export default function AssignmentBacktest({
         columns={columns}
         rows={cohorts}
         rowKey={(r) => r.key}
+        rowClassName={(r) => (r.key === "all" ? "bg-muted/40" : undefined)}
       />
 
       {/* The finding, stated — a table of four rows should not require the
