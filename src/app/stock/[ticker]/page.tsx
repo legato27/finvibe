@@ -1,10 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { stocksApi, sentimentApi } from "@/lib/api";
+import { useTranslations } from "next-intl";
+import { stocksApi } from "@/lib/api";
 import { verdictToAction, verdictConviction } from "@/lib/signals";
-import { useCatalogStock, useLLMAnalysis } from "@/lib/supabase/hooks";
+import {
+  useCatalogStock, useLLMAnalysis, useUser, useWatchlistNamesForTicker, useHoldingsForTicker,
+} from "@/lib/supabase/hooks";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { PriceActionAnalysis } from "@/components/stock/PriceActionAnalysis";
 import { SentimentPanel } from "@/components/stock/SentimentPanel";
@@ -13,68 +17,76 @@ import { DcfScenarios } from "@/components/stock/DcfScenarios";
 import { ModelCards } from "@/components/stock/ModelCards";
 import OptionsChainTab from "@/components/stock/OptionsChainTab";
 import { StockHeroHeader } from "@/components/stock/StockHeroHeader";
+import { StockEvents } from "@/components/stock/StockEvents";
+import { PortfolioAnalysis } from "@/components/stock/PortfolioAnalysis";
+import { TransactionHistory } from "@/components/stock/TransactionHistory";
+import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
+import { YourExposure, type Position } from "@/components/stock/YourExposure";
+import { SectionNav } from "@/components/stock/SectionNav";
 import VerdictCard from "@/components/ui/VerdictCard";
+import Panel, { PanelUnavailable } from "@/components/ui/Panel";
+import Disclosure from "@/components/ui/Disclosure";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
-import {
-  Brain, Loader2,
-  ChevronDown, ChevronUp, LineChart, Newspaper, Cpu, DollarSign,
-} from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
 
-type Tab = "chart" | "analysis" | "options" | "quant" | "news";
+// Old `?tab=` links land on the matching section.
+const TAB_TO_SECTION: Record<string, string> = {
+  chart: "chart", analysis: "thoughts", options: "options", quant: "models", news: "sentiment",
+};
 
+/**
+ * One stock page. Left column is the argument: chart and levels, why the
+ * system ranks it here, the thoughts, then the heavy sections collapsed.
+ * Right column is you and the world: your exposure, dated events, the news.
+ * When the ticker is held, the position sections appear in the left column
+ * under the thoughts; nothing on the old portfolio page is lost.
+ */
 export default function StockDetailPage() {
+  const t = useTranslations("stock");
   const params = useParams();
   const searchParams = useSearchParams();
   const ticker = (params.ticker as string)?.toUpperCase();
   const [descExpanded, setDescExpanded] = useState(false);
-  const initialTab = (["chart", "analysis", "options", "quant", "news"] as Tab[]).includes(
-    searchParams.get("tab") as Tab,
-  )
-    ? (searchParams.get("tab") as Tab)
-    : "chart";
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [generatingThoughts, setGeneratingThoughts] = useState(false);
 
-  // ── Data fetching ──────────────────────────────────────
-  const {
-    data: liveDetail,
-    isLoading: detailLoading,
-    isError: detailFailed,
-  } = useQuery({
+  // Deep links: `#options` or the legacy `?tab=options` open that section.
+  // The scroll waits for the page to have rendered (the spinner is gone).
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [scrollTarget, setScrollTarget] = useState<string | null>(null);
+  useEffect(() => {
+    const fromTab = TAB_TO_SECTION[searchParams.get("tab") ?? ""];
+    const fromHash = typeof window !== "undefined" ? window.location.hash.replace("#", "") : "";
+    const target = fromHash || fromTab;
+    if (!target) return;
+    setOpenSection(target);
+    setScrollTarget(target);
+  }, [searchParams]);
+
+  // ── Market data ──────────────────────────────────────────
+  const { data: liveDetail, isLoading: detailLoading, isError: detailFailed } = useQuery({
     queryKey: ["stock-detail", ticker],
     queryFn: () => stocksApi.detail(ticker),
     enabled: !!ticker,
     staleTime: 60_000,
   });
-
   // Supabase-native, always available. Only consulted when the detail call
-  // fails outright — the proxy stages /detail, so this is the second line:
-  // a name nobody has opened since the last outage has no captured copy.
+  // fails outright — the proxy stages /detail, so this is the second line.
   const { data: catalog } = useCatalogStock(ticker);
-
   const { data: stockInfo } = useQuery({
     queryKey: ["stock-info", ticker],
     queryFn: () => stocksApi.info(ticker),
     enabled: !!ticker,
     staleTime: 300_000,
   });
-
-  const [generatingThoughts, setGeneratingThoughts] = useState(false);
   const { data: thoughtsData } = useQuery({
     queryKey: ["stock-thoughts", ticker],
     queryFn: () => stocksApi.thoughts(ticker),
     enabled: !!ticker,
     staleTime: 60_000,
     retry: false,
-    // Poll every 8s while generating until thoughts arrive
     refetchInterval: generatingThoughts ? 8_000 : false,
   });
-
   const { data: supabaseLlm } = useLLMAnalysis(ticker);
-
-  // The unified verdict normally arrives inside `detail`. When detail is the
-  // catalog shim it does not, so it is fetched from its own endpoint — which
-  // is staged, and which nothing in the app called before this. Conditional
-  // so a healthy page still makes one request for it, not two.
   const { data: standaloneVerdict } = useQuery({
     queryKey: ["stock-verdict", ticker],
     queryFn: () => stocksApi.verdict(ticker),
@@ -82,9 +94,6 @@ export default function StockDetailPage() {
     staleTime: 5 * 60_000,
     retry: 1,
   });
-
-  // Price Action (PAM) — shared by the chart overlays and the analysis panel
-  // (same queryKey → react-query dedupes to a single request)
   const { data: priceAction } = useQuery({
     queryKey: ["price-action", ticker],
     queryFn: () => stocksApi.priceAction(ticker),
@@ -93,8 +102,6 @@ export default function StockDetailPage() {
     retry: 2,
     refetchOnWindowFocus: true,
   });
-
-  // Refresh live price on mount — updates DB so detail query stays fresh
   const qc = useQueryClient();
   useQuery({
     queryKey: ["stock-price-refresh", ticker],
@@ -109,211 +116,197 @@ export default function StockDetailPage() {
     retry: 2,
   });
 
+  // ── You: position across every portfolio, lists carrying the name ──
+  const { data: user } = useUser();
+  const { data: lots } = useHoldingsForTicker(user ? ticker : null);
+  const { data: listNames = [] } = useWatchlistNamesForTicker(user ? ticker : null);
+  const position = useMemo<Position | null>(() => {
+    if (!lots?.length) return null;
+    const totalShares = lots.reduce((s, h) => s + h.shares, 0);
+    const avgCost = lots.reduce((s, h) => s + h.shares * h.cost_basis, 0) / totalShares;
+    return { totalShares, avgCost, lotCount: lots.length, portfolioIds: [...new Set(lots.map((h) => h.portfolio_id))] };
+  }, [lots]);
+
+  useEffect(() => {
+    if (!scrollTarget || detailLoading) return;
+    const id = window.setTimeout(() => {
+      document.getElementById(scrollTarget)?.scrollIntoView({ block: "start" });
+      setScrollTarget(null);
+    }, 400);
+    return () => window.clearTimeout(id);
+  }, [scrollTarget, detailLoading]);
+
   if (detailLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+      <div className="flex items-center justify-center py-20" role="status">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-hidden="true" />
       </div>
     );
   }
 
-  /**
-   * The detail call is the page's gate, and it used to be an absolute one:
-   * anything that made it undefined — including a 502 from a box that was
-   * simply down — rendered "not found in watchlist" over a name whose
-   * verdict, thoughts, price action and model results were all present in
-   * Supabase and ready to serve.
-   *
-   * So the gate now distinguishes the two answers it was conflating. A
-   * genuinely absent name still gets the original card. A FAILED call falls
-   * through to the catalog row, which is enough to render the page and let
-   * every staged tab answer for itself.
-   */
+  // A FAILED detail call falls through to the catalog row; a genuinely
+  // absent name gets the not-found card. The two used to be conflated.
   const detail =
     liveDetail ??
     (detailFailed && catalog
       ? {
-          ticker,
-          name: catalog.name,
-          sector: catalog.sector,
-          industry: catalog.industry,
-          last_price: catalog.last_price,
-          intrinsic_value: catalog.intrinsic_value,
-          margin_of_safety: catalog.margin_of_safety,
-          moat_rating: catalog.moat_rating,
-          verdict: standaloneVerdict ?? null,
-          // Neither is mirrored in Supabase; the cards that read them handle
-          // absence already and render their own empty state.
-          description: null,
-          dcf_detail: null,
-          llm: null,
+          ticker, name: catalog.name, sector: catalog.sector, industry: catalog.industry,
+          last_price: catalog.last_price, intrinsic_value: catalog.intrinsic_value,
+          margin_of_safety: catalog.margin_of_safety, moat_rating: catalog.moat_rating,
+          verdict: standaloneVerdict ?? null, description: null, dcf_detail: null, llm: null,
         }
       : null);
 
   if (!detail) {
     return (
-      <div className="card p-12 text-center text-muted-foreground max-w-[800px] mx-auto">
-        <Brain className="w-12 h-12 mx-auto mb-3 opacity-30" />
-        {detailFailed ? (
-          <>
-            <p className="text-sm">Live data for {ticker} is unavailable right now.</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              The analysis backend is not reachable and FinVibe has no stored
-              copy of this name. Names already in the catalog still open.
-            </p>
-          </>
-        ) : (
-          <>
-            <p className="text-sm">Stock {ticker} not found in watchlist.</p>
-            <p className="text-xs text-muted-foreground/60 mt-1">
-              Add it to a watchlist first to see detailed analysis.
-            </p>
-          </>
-        )}
+      <div className="mx-auto max-w-[800px]">
+        <PanelUnavailable
+          label={ticker}
+          reason={detailFailed ? t("unavailableBody") : t("notFoundBody")}
+          aside={<Link href="/watchlist" className="text-signal hover:underline">{t("openWatchlist")}</Link>}
+        />
+        <p className="mt-3 text-center text-sm text-muted-foreground">{detailFailed ? t("unavailableTitle", { ticker }) : t("notFoundTitle", { ticker })}</p>
       </div>
     );
   }
 
-  // ── Merge data sources ─────────────────────────────────
   const llm = detail.llm || supabaseLlm || {};
   const thoughts = thoughtsData?.thoughts || supabaseLlm?.thoughts_json || null;
   const thoughtsGeneratedAt = thoughtsData?.generated_at || supabaseLlm?.thoughts_generated_at || null;
-  const verdict = thoughts?.verdict;
-
-  const description =
-    detail.description || stockInfo?.description || llm.description || llm.llm_description || null;
+  const unifiedAction = detail.verdict?.state ? verdictToAction(detail.verdict.state) : undefined;
+  const description = detail.description || stockInfo?.description || llm.description || llm.llm_description || null;
   const isLongDesc = (description?.length || 0) > 200;
+  const currentPrice: number = stockInfo?.current_price || detail.last_price || 0;
 
-  const currentPrice = stockInfo?.current_price || detail.last_price;
-
-  const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: "chart", label: "Chart", icon: <LineChart className="w-3.5 h-3.5" /> },
-    { id: "analysis", label: "FinVibe's Thoughts", icon: <Brain className="w-3.5 h-3.5" /> },
-    { id: "options", label: "Options", icon: <DollarSign className="w-3.5 h-3.5" /> },
-    { id: "quant", label: "Quant Models", icon: <Cpu className="w-3.5 h-3.5" /> },
-    { id: "news", label: "Sentiment & News", icon: <Newspaper className="w-3.5 h-3.5" /> },
+  const sections = [
+    { id: "chart", label: t("sectionChart") },
+    { id: "why", label: t("sectionWhy") },
+    { id: "thoughts", label: t("sectionThoughts") },
+    ...(position ? [{ id: "position", label: t("sectionPosition") }] : []),
+    { id: "options", label: t("sectionOptions") },
+    { id: "models", label: t("sectionModels") },
+    { id: "sentiment", label: t("sectionSentiment") },
   ];
 
   return (
-    <div className="space-y-4 max-w-[1200px] mx-auto">
-      {/* ═══════════════════════════════════════════════════
-          HERO
-          ═══════════════════════════════════════════════════ */}
+    <div className="mx-auto max-w-[1400px] space-y-4">
       <StockHeroHeader
         ticker={ticker}
-        backHref="/watchlist"
+        backHref={position ? "/portfolio" : "/watchlist"}
         detail={detail}
         stockInfo={stockInfo}
         currentPrice={currentPrice}
-        verdict={detail.verdict?.state ? verdictToAction(detail.verdict.state) : thoughts?.verdict}
+        verdict={unifiedAction ?? thoughts?.verdict}
         conviction={detail.verdict?.state ? verdictConviction(detail.verdict.state, detail.verdict.confidence) : thoughts?.conviction}
         llm={llm}
       />
 
-      {/* ═══════════════════════════════════════════════════
-          UNIFIED VERDICT — the one arbitrated signal, with evidence
-          ═══════════════════════════════════════════════════ */}
-      <VerdictCard verdict={detail.verdict} />
+      <SectionNav sections={sections} ariaLabel={t("sectionsLabel")} />
 
-      {/* ═══════════════════════════════════════════════════
-          DESCRIPTION
-          ═══════════════════════════════════════════════════ */}
-      {description && (
-        <div className="card px-5 py-3">
-          <p className={`text-sm text-muted-foreground leading-relaxed ${
-            !descExpanded && isLongDesc ? "line-clamp-2" : ""
-          }`}>
-            {description}
-          </p>
-          {isLongDesc && (
-            <button
-              onClick={() => setDescExpanded(!descExpanded)}
-              className="flex items-center gap-1 text-xs text-signal hover:underline mt-1 transition-colors"
-            >
-              {descExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-              {descExpanded ? "Less" : "More"}
-            </button>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+        {/* ── Left: the argument ── */}
+        <div className="min-w-0 space-y-4">
+          <section id="chart" className="scroll-mt-24 space-y-4">
+            <PriceChart ticker={ticker} priceAction={priceAction} currentPrice={currentPrice} />
+            <PriceActionAnalysis ticker={ticker} />
+          </section>
+
+          <section id="why" className="scroll-mt-24 space-y-4">
+            <VerdictCard verdict={detail.verdict} />
+            {description && (
+              <Panel label={t("about")} as="div">
+                <p className={`text-sm leading-relaxed text-muted-foreground ${!descExpanded && isLongDesc ? "line-clamp-2" : ""}`}>{description}</p>
+                {isLongDesc && (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    aria-expanded={descExpanded}
+                    className="mt-1 flex items-center gap-1 text-xs text-signal hover:underline"
+                  >
+                    {descExpanded ? <ChevronUp className="h-3 w-3" aria-hidden="true" /> : <ChevronDown className="h-3 w-3" aria-hidden="true" />}
+                    {descExpanded ? t("less") : t("more")}
+                  </button>
+                )}
+              </Panel>
+            )}
+          </section>
+
+          <section id="thoughts" className="scroll-mt-24 space-y-4">
+            <DcfScenarios dcf={detail.dcf_detail} />
+            <FinVibeThoughts
+              ticker={ticker}
+              thoughts={thoughts}
+              generatedAt={thoughtsGeneratedAt}
+              quantUpdatedAt={detail.quant_updated_at ?? null}
+              isGenerating={generatingThoughts && !thoughts}
+              onGenerate={() => setGeneratingThoughts(true)}
+              onGenerateDone={() => setGeneratingThoughts(false)}
+              llmIntrinsicValue={llm.intrinsic_value ?? llm.llm_intrinsic_value ?? thoughtsData?.llm_intrinsic_value}
+              llmMarginOfSafety={llm.margin_of_safety ?? llm.llm_margin_of_safety ?? thoughtsData?.llm_margin_of_safety}
+            />
+          </section>
+
+          {/* ── Held only: what to do with the position ── */}
+          {position && currentPrice > 0 && (
+            <section id="position" className="scroll-mt-24 space-y-4">
+              <Disclosure label={t("positionAdvice")} open={openSection === "position" || openSection == null}>
+                <PortfolioAnalysis
+                  ticker={ticker}
+                  currentPrice={currentPrice}
+                  position={{ shares: position.totalShares, avgCost: position.avgCost }}
+                  stockInfo={stockInfo}
+                  thoughts={thoughts}
+                  verdictAction={unifiedAction}
+                  thoughtsGeneratedAt={thoughtsGeneratedAt}
+                  quantUpdatedAt={detail.quant_updated_at ?? null}
+                  thoughtsData={thoughtsData}
+                  isGenerating={generatingThoughts && !thoughts}
+                  onGenerate={() => setGeneratingThoughts(true)}
+                  onGenerateDone={() => setGeneratingThoughts(false)}
+                />
+              </Disclosure>
+              <Disclosure label={t("positionOptions")}>
+                <OptionsStrategyRecommendation
+                  ticker={ticker}
+                  currentPrice={currentPrice}
+                  stockInfo={stockInfo}
+                  thoughts={thoughts}
+                  verdictAction={unifiedAction}
+                  position={{ shares: position.totalShares, avgCost: position.avgCost }}
+                />
+              </Disclosure>
+              <Disclosure label={t("transactions")} qualifier={t("lots", { count: position.lotCount })}>
+                <TransactionHistory ticker={ticker} portfolioId={position.portfolioIds[0]} lots={lots ?? []} />
+              </Disclosure>
+            </section>
           )}
-        </div>
-      )}
 
-      {/* ═══════════════════════════════════════════════════
-          TABS
-          ═══════════════════════════════════════════════════ */}
-      <div role="tablist" aria-label="Stock analysis sections"
-           className="flex gap-1 bg-muted/50 p-1 rounded-lg border border-border/30">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-            aria-controls={activeTab === tab.id ? `tabpanel-${tab.id}` : undefined}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-md font-mono text-sm font-semibold transition-all flex-1 justify-center ${
-              activeTab === tab.id
-                ? "bg-signal/15 text-signal border border-signal/40"
-                : "text-muted-foreground hover:text-foreground/80 hover:bg-accent/50 border border-transparent"
-            }`}
-          >
-            {tab.icon}
-            <span className="hidden sm:inline">{tab.label}</span>
-            <span className="sr-only sm:hidden">{tab.label}</span>
-          </button>
-        ))}
-      </div>
+          <Disclosure id="options" label={t("sectionOptions")} qualifier={t("chainQualifier")} open={openSection === "options"}>
+            <OptionsChainTab ticker={ticker} />
+          </Disclosure>
 
-      {/* ═══════════════════════════════════════════════════
-          TAB CONTENT
-          ═══════════════════════════════════════════════════ */}
+          <Disclosure id="models" label={t("sectionModels")} qualifier={t("modelsQualifier")} open={openSection === "models"}>
+            <ModelCards ticker={ticker} />
+          </Disclosure>
 
-      {activeTab === "chart" && (
-        <div role="tabpanel" id="tabpanel-chart" className="space-y-4">
-          <PriceChart ticker={ticker} priceAction={priceAction} currentPrice={currentPrice} />
-          <PriceActionAnalysis ticker={ticker} />
-        </div>
-      )}
-
-      {activeTab === "analysis" && (
-        <div role="tabpanel" id="tabpanel-analysis" className="space-y-4">
-          <DcfScenarios dcf={detail.dcf_detail} />
-          <FinVibeThoughts
-            ticker={ticker}
-            thoughts={thoughts}
-            generatedAt={thoughtsGeneratedAt}
-            quantUpdatedAt={detail.quant_updated_at ?? null}
-            isGenerating={generatingThoughts && !thoughts}
-            onGenerate={() => setGeneratingThoughts(true)}
-            onGenerateDone={() => setGeneratingThoughts(false)}
-            llmIntrinsicValue={
-              llm.intrinsic_value ?? llm.llm_intrinsic_value ?? thoughtsData?.llm_intrinsic_value
-            }
-            llmMarginOfSafety={
-              llm.margin_of_safety ?? llm.llm_margin_of_safety ?? thoughtsData?.llm_margin_of_safety
-            }
-          />
-        </div>
-      )}
-
-      {activeTab === "options" && (
-        <div role="tabpanel" id="tabpanel-options">
-          <OptionsChainTab ticker={ticker} />
-        </div>
-      )}
-
-      {activeTab === "quant" && (
-        <div role="tabpanel" id="tabpanel-quant">
-          <ModelCards ticker={ticker} />
-        </div>
-      )}
-
-      {activeTab === "news" && (
-        <div role="tabpanel" id="tabpanel-news" className="space-y-4">
-          <div className="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-4">
+          <section id="sentiment" className="scroll-mt-24">
             <SentimentPanel ticker={ticker} />
-            <RealtimeNewsFeed tickers={[ticker]} />
-          </div>
+          </section>
         </div>
-      )}
+
+        {/* ── Right: you and the world ── */}
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-[104px]">
+          <YourExposure signedIn={!!user} position={position} currentPrice={currentPrice} listNames={listNames} />
+          <StockEvents ticker={ticker} />
+          <RealtimeNewsFeed tickers={[ticker]} />
+          <Panel label={t("viaMcp")} reading={t("viaMcpNote")} as="div">
+            <code className="block whitespace-pre-wrap font-mono text-[11.5px] text-muted-foreground">
+              get_stock_verdict {"{"} ticker: &quot;{ticker}&quot; {"}"}{"\n"}get_stock_info {"{"} ticker: &quot;{ticker}&quot; {"}"}
+            </code>
+            <Link href="/mcp" className="mt-2 inline-flex text-xs text-signal hover:underline">{t("viaMcpLink")} →</Link>
+          </Panel>
+        </aside>
+      </div>
     </div>
   );
 }

@@ -1,12 +1,15 @@
 "use client";
 import Link from "next/link";
-import { ArrowLeft, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, ArrowUpRight } from "lucide-react";
+import { BackLink } from "@/components/stock/BackLink";
+import { WatchlistStar } from "@/components/shared/WatchlistStar";
 import { useTranslations } from "next-intl";
 import { formatMoS } from "@/lib/valuation";
 import { moatStyle } from "@/lib/signals";
 
 interface Props {
   ticker: string;
+  /** Where the back arrow goes when the reader did not arrive from inside the app. */
   backHref: string;
   detail: any;
   stockInfo: any;
@@ -57,20 +60,17 @@ export function StockHeroHeader({
         ? `$${stockInfo.fifty_two_week_low.toFixed(0)}–$${stockInfo.fifty_two_week_high.toFixed(0)}` : null,
     },
     { label: t('betaShort'), value: stockInfo?.beta ? stockInfo.beta.toFixed(2) : null },
-  ].filter(({ value }) => value !== null);
+  ];
 
   return (
     <div className="card p-5">
       <div className="flex items-start gap-4">
-        <Link href={backHref} aria-label="Back to watchlist"
-              className="text-muted-foreground hover:text-signal mt-1 transition-colors">
-          <ArrowLeft className="w-5 h-5" aria-hidden="true" />
-        </Link>
+        <BackLink fallback={backHref} className="mt-1" />
 
         <div className="flex-1 min-w-0">
           {/* Row 1: Ticker + name + badges */}
           <div className="flex items-center gap-3 flex-wrap">
-            <h1 className="text-2xl font-bold font-mono text-signal">{ticker}</h1>
+            <h1 className="text-2xl font-bold font-mono text-foreground">{ticker}</h1>
             <span className="text-lg text-foreground/80 truncate">{detail?.name || "—"}</span>
             {moatStyle(detail?.moat_rating).show && (
               <span className={`text-[10px] px-2 py-0.5 rounded border ${moatStyle(detail?.moat_rating).badgeClass}`}>
@@ -92,6 +92,12 @@ export function StockHeroHeader({
                 {detail?.sector || stockInfo?.sector}
               </span>
             )}
+            <span className="ml-auto flex items-center gap-2">
+              <WatchlistStar ticker={ticker} />
+              <Link href="/desk" className="inline-flex items-center gap-1 rounded-control border border-border px-2.5 py-1 text-xs font-bold text-foreground hover:border-foreground/40">
+                {t('openDesk')}<ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+              </Link>
+            </span>
           </div>
 
           {/* Row 2: Price + verdict */}
@@ -130,18 +136,16 @@ export function StockHeroHeader({
           </div>
 
           {/* Row 3: Key numbers */}
-          {stats.length > 0 && (
-            <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-border/30">
-              {stats.map(({ label, value, sub, color }, i) => (
-                <div key={`${label}-${sub || i}`} className="text-center min-w-[60px]">
-                  <div className="text-[10px] text-muted-foreground">
-                    {label}{sub ? <span className="text-signal ml-0.5">({sub})</span> : null}
-                  </div>
-                  <div className={`font-mono text-sm font-semibold ${color || "text-foreground"}`}>{value}</div>
+          <div className="mt-3 grid grid-cols-4 gap-x-3 gap-y-2 border-t border-border pt-3 sm:grid-cols-8">
+            {stats.map(({ label, value, sub, color }, i) => (
+              <div key={`${label}-${sub || i}`} className="min-w-0">
+                <div className="stat-label truncate">
+                  {label}{sub ? <span className="ml-0.5 normal-case tracking-normal text-dim">({sub})</span> : null}
                 </div>
-              ))}
-            </div>
-          )}
+                <div className={`nums font-mono text-sm font-bold ${value == null ? "text-dim" : color || "text-foreground"}`}>{value ?? "—"}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>

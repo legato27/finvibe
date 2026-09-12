@@ -1135,3 +1135,63 @@ export function useDeleteOptionsTrade() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
   });
 }
+
+/**
+ * Every lot of one ticker across all of the user's portfolios. RLS scopes the
+ * table to the signed-in user, so no portfolio filter is needed; signed-out
+ * callers get an empty list. Prices joined the same way as usePortfolioHoldings.
+ */
+export function useHoldingsForTicker(ticker: string | null) {
+  return useQuery({
+    queryKey: ["holdings-for-ticker", ticker],
+    queryFn: async (): Promise<HoldingWithPrice[]> => {
+      if (!ticker) return [];
+      const { data: holdings, error } = await supabase
+        .from("portfolio_holdings")
+        .select("*")
+        .eq("ticker", ticker)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!holdings?.length) return [];
+      const { data: stocks } = await supabase
+        .from("stock_catalog")
+        .select("ticker, name, last_price, last_price_updated_at, sector")
+        .eq("ticker", ticker)
+        .limit(1);
+      const stock = stocks?.[0];
+      return holdings.map((h: any) => ({
+        ...h,
+        currency: (h.currency || "USD").toUpperCase(),
+        name: stock?.name || undefined,
+        current_price: stock?.last_price || undefined,
+        last_price_updated_at: stock?.last_price_updated_at || undefined,
+        sector: stock?.sector || undefined,
+      }));
+    },
+    enabled: !!ticker,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * Names of the user's watchlists that carry one ticker. A narrow read, so a
+ * page that only needs "which lists is this on" does not start the price
+ * refresh and enrich sweeps that useWatchlists runs for the watchlist page.
+ * Signed out (RLS) or with no lists it resolves to an empty array.
+ */
+export function useWatchlistNamesForTicker(ticker: string | null) {
+  return useQuery({
+    queryKey: ["watchlist-names-for-ticker", ticker],
+    queryFn: async (): Promise<string[]> => {
+      if (!ticker) return [];
+      const { data, error } = await supabase
+        .from("watchlists")
+        .select("name, watchlist_items!inner(stock_catalog!inner(ticker))")
+        .eq("watchlist_items.stock_catalog.ticker", ticker);
+      if (error) throw error;
+      return (data ?? []).map((w: any) => w.name as string);
+    },
+    enabled: !!ticker,
+    staleTime: 60_000,
+  });
+}

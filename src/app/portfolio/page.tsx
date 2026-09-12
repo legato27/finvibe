@@ -650,7 +650,7 @@ export default function PortfolioPage() {
                         <tr
                           key={pos.ticker}
                           className="hover:bg-accent/50 transition-colors cursor-pointer group"
-                          onClick={() => router.push(`/portfolio/stock/${pos.ticker}`)}
+                          onClick={() => router.push(`/stock/${pos.ticker}`)}
                         >
                           <td className="px-3 py-2.5">
                             <div className="flex items-center gap-1.5">
