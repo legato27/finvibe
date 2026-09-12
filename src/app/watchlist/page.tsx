@@ -5,9 +5,12 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding, useRenameWatchlist } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
+import Freshness from "@/components/ui/Freshness";
 import { type VerdictJson } from "@/components/ui/VerdictBadge";
 import { type PamSummary } from "@/components/shared/PamBadge";
-import WatchlistTable, { type WatchRow, type OptStrategy } from "@/components/watchlist/WatchlistTable";
+import DataTable from "@/components/ui/DataTable";
+import { useWatchlistColumns, groupLabelFor, GROUP_KEYS, type GroupKey, type WatchRow, type OptStrategy } from "@/components/watchlist/watchlistColumns";
+import { Layers } from "lucide-react";
 import { Plus, Trash2, X, List, Search, FolderPlus, Pencil, Check, RefreshCw } from "lucide-react";
 import { stocksApi, modelsApi } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -85,8 +88,8 @@ function AddToPortfolioModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 backdrop-blur-sm" onClick={onClose}>
-      <div className="card w-full max-w-md mx-4 p-0 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="card-header border-b border-border/40">
+      <div role="dialog" aria-modal="true" className="card mx-4 w-full max-w-md p-0 shadow-float" onClick={(e) => e.stopPropagation()}>
+        <div className="card-header m-0 border-b border-border px-4 py-3">
           <div>
             <span className="card-title">{tw("addToPortfolioTitle")}</span>
             <div className="text-xs text-muted-foreground mt-0.5">
@@ -106,7 +109,7 @@ function AddToPortfolioModal({
                 <select
                   value={effectivePortfolioId ?? ""}
                   onChange={(e) => setSelectedPortfolioId(Number(e.target.value))}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
+                  className="w-full px-3 py-2 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                 >
                   {portfolios?.map((p: any) => (
                     <option key={p.id} value={p.id}>{p.name}{p.is_default ? tp("defaultSuffix") : ""}</option>
@@ -126,7 +129,7 @@ function AddToPortfolioModal({
                   value={newPortfolioName}
                   onChange={(e) => setNewPortfolioName(e.target.value)}
                   placeholder={tp("newPortfolioNamePh")}
-                  className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
+                  className="w-full px-3 py-2 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   autoFocus
                 />
                 <button
@@ -150,7 +153,7 @@ function AddToPortfolioModal({
                 value={shares}
                 onChange={(e) => setShares(e.target.value)}
                 placeholder="0"
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal font-mono"
+                className="w-full px-3 py-3 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-mono"
               />
             </div>
             <div>
@@ -162,7 +165,7 @@ function AddToPortfolioModal({
                 value={costBasis}
                 onChange={(e) => setCostBasis(e.target.value)}
                 placeholder="0.00"
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal font-mono"
+                className="w-full px-3 py-3 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring font-mono"
               />
             </div>
           </div>
@@ -174,7 +177,7 @@ function AddToPortfolioModal({
                 type="date"
                 value={acquiredDate}
                 onChange={(e) => setAcquiredDate(e.target.value)}
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
+                className="w-full px-3 py-3 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
             </div>
             <div>
@@ -184,7 +187,7 @@ function AddToPortfolioModal({
                 value={broker}
                 onChange={(e) => setBroker(e.target.value)}
                 placeholder={tp("brokerExamples")}
-                className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
+                className="w-full px-3 py-3 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
               />
               <datalist id="modal-broker-list">
                 {["Tiger Brokers","Moomoo","Interactive Brokers","Saxo Bank","DBS Vickers","OCBC Securities","UOB Kay Hian","Webull","Robinhood","Fidelity","Charles Schwab"].map((b) => (
@@ -200,7 +203,7 @@ function AddToPortfolioModal({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={tp("notesExamples")}
-              className="w-full px-3 py-3 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
+              className="w-full px-3 py-3 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
           </div>
 
@@ -210,7 +213,7 @@ function AddToPortfolioModal({
           <button
             onClick={handleSubmit}
             disabled={submitting || success}
-            className="w-full py-3 text-sm font-medium bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50"
+            className="w-full rounded-control bg-primary py-3 text-sm font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {submitting ? tp("adding") : success ? tp("added") : tw("addToPortfolio")}
           </button>
@@ -238,8 +241,13 @@ export default function WatchlistPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState(false);
   const [portfolioModal, setPortfolioModal] = useState<{ ticker: string; name: string | null; price: number | null } | null>(null);
+  const [groupBy, setGroupBy] = useState<GroupKey>("none");
 
   const activeWatchlist = watchlists?.find((w: any) => w.id === activeId) || watchlists?.[0];
+  const columns = useWatchlistColumns({
+    onAddToPortfolio: (r) => setPortfolioModal({ ticker: r.ticker, name: r.name, price: r.price }),
+    onRemove: (r) => { if (activeWatchlist) removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: r.stockId }); },
+  });
 
   // Gather all tickers from active watchlist for batch LLM analysis fetch
   const activeTickers = useMemo(() => {
@@ -391,7 +399,7 @@ export default function WatchlistPage() {
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-lg font-bold">{t("title")}</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("title")}</h1>
         <div className="text-muted-foreground animate-pulse">{t("loading")}</div>
       </div>
     );
@@ -400,7 +408,7 @@ export default function WatchlistPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">{t("title")}</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("title")}</h1>
         <div className="flex items-center gap-2">
           {activeTickers.length > 0 && (
             <button
@@ -417,7 +425,7 @@ export default function WatchlistPage() {
           )}
           <button
             onClick={() => setShowNewList(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
           >
             <Plus className="w-3.5 h-3.5" /> {t("newWatchlist")}
           </button>
@@ -432,7 +440,7 @@ export default function WatchlistPage() {
             value={newListName}
             onChange={(e) => setNewListName(e.target.value)}
             placeholder={t("namePlaceholder")}
-            className="flex-1 px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-signal"
+            className="flex-1 px-3 py-1.5 rounded-control border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             autoFocus
           />
           <button
@@ -456,34 +464,36 @@ export default function WatchlistPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
         {/* Watchlist sidebar */}
         <div className="card p-2 space-y-0.5">
-          {watchlists?.map((wl: any) => (
-            <button
-              key={wl.id}
-              onClick={() => setActiveId(wl.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                activeWatchlist?.id === wl.id
-                  ? "bg-signal/20 text-signal"
-                  : "text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <List className="w-4 h-4" />
-                <span>{wl.name}</span>
-                <span className="text-[10px] text-muted-foreground/60">({wl.watchlist_items?.length || 0})</span>
-              </div>
-              {!wl.is_default && (
+          {watchlists?.map((wl: any) => {
+            const on = activeWatchlist?.id === wl.id;
+            return (
+              <div
+                key={wl.id}
+                className={`flex items-center gap-1 rounded-control pr-1 transition-colors ${on ? "bg-signal-bg text-signal" : "text-muted-foreground hover:bg-accent"}`}
+              >
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(t("deletePrompt", { name: wl.name }))) deleteWatchlist.mutate(wl.id);
-                  }}
-                  className="text-muted-foreground/50 hover:text-signal-short"
+                  type="button"
+                  onClick={() => setActiveId(wl.id)}
+                  aria-current={on ? "true" : undefined}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-control px-3 py-2 text-left text-sm"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <List className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{wl.name}</span>
+                  <span className="nums font-mono text-[10px] text-dim">({wl.watchlist_items?.length || 0})</span>
                 </button>
-              )}
-            </button>
-          ))}
+                {!wl.is_default && (
+                  <button
+                    type="button"
+                    onClick={() => { if (confirm(t("deletePrompt", { name: wl.name }))) deleteWatchlist.mutate(wl.id); }}
+                    aria-label={`${tc("delete")} ${wl.name}`}
+                    className="rounded-md p-1.5 text-dim hover:text-signal-short"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         {/* Active watchlist content */}
@@ -522,7 +532,7 @@ export default function WatchlistPage() {
                       <span className="card-title">{activeWatchlist.name}</span>
                       <button
                         onClick={() => { setNameDraft(activeWatchlist.name); setEditingName(true); }}
-                        className="text-muted-foreground/40 hover:text-signal opacity-0 group-hover/name:opacity-100 transition-opacity"
+                        className="text-dim transition-colors hover:text-signal"
                         aria-label="Rename watchlist"
                         title="Rename"
                       >
@@ -530,12 +540,7 @@ export default function WatchlistPage() {
                       </button>
                     </span>
                   )}
-                  {activeTickers.length > 0 && (
-                    <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-signal-long animate-pulse" />
-                      {tc("live")}
-                    </span>
-                  )}
+                  {activeTickers.length > 0 && <Freshness note="60s" />}
                 </div>
                 <div className="flex items-center gap-2">
                   {showSearch ? (
@@ -547,7 +552,7 @@ export default function WatchlistPage() {
                   ) : (
                     <button
                       onClick={() => setShowSearch(true)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors"
+                      className="inline-flex items-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
                     >
                       <Plus className="w-3.5 h-3.5" /> {t("addStock")}
                     </button>
@@ -561,12 +566,34 @@ export default function WatchlistPage() {
                   {t("noStocksYet")}
                 </div>
               ) : (
-                <WatchlistTable
+                <DataTable
+                  caption={t("title")}
+                  columns={columns}
                   rows={rows}
-                  onAddToPortfolio={(r) =>
-                    setPortfolioModal({ ticker: r.ticker, name: r.name, price: r.price })
+                  rowKey={(r) => String(r.id)}
+                  rowHref={(r) => `/stock/${r.ticker}`}
+                  defaultSort={{ key: "ticker", dir: "asc" }}
+                  emptyText={t("noMatch")}
+                  search={(r) => `${r.ticker} ${r.name ?? ""}`}
+                  searchPlaceholder={t("quickSearchPh")}
+                  groupBy={groupLabelFor(groupBy)}
+                  stickyHeader
+                  countLabel={(n) => t("resultCount", { count: n })}
+                  toolbar={
+                    <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span className="hidden sm:inline">{t("groupBy")}</span>
+                      <select
+                        value={groupBy}
+                        onChange={(e) => setGroupBy(e.target.value as GroupKey)}
+                        className="rounded-control border border-border bg-card px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      >
+                        {GROUP_KEYS.map((k) => (
+                          <option key={k} value={k}>{t(k === "none" ? "groupNone" : `group${k[0].toUpperCase()}${k.slice(1)}`)}</option>
+                        ))}
+                      </select>
+                    </label>
                   }
-                  onRemove={(r) => removeStock.mutate({ watchlistId: activeWatchlist.id, stockId: r.stockId })}
                 />
               )}
             </>

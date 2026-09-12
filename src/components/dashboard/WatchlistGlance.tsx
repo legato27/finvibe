@@ -147,10 +147,10 @@ function AuthenticatedWatchlist() {
           const mosPositive = (stock.margin_of_safety ?? 0) > 0;
 
           return (
-            <div
+            <Link
               key={item.id}
-              className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-accent transition-colors cursor-pointer"
-              onClick={() => router.push(`/stock/${stock.ticker}`)}
+              href={`/stock/${stock.ticker}`}
+              className="flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-accent"
             >
               <div className="flex items-center gap-2 min-w-0">
                 <div className="min-w-0">
@@ -194,7 +194,7 @@ function AuthenticatedWatchlist() {
                   </span>
                 )}
               </div>
-            </div>
+            </Link>
           );
         })}
       </div>

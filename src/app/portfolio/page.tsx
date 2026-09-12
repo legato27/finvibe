@@ -2,6 +2,9 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import Stat from "@/components/ui/Stat";
+import Freshness from "@/components/ui/Freshness";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { stocksApi } from "@/lib/api";
 import {
@@ -299,7 +302,7 @@ export default function PortfolioPage() {
   if (portfoliosLoading) {
     return (
       <div className="space-y-4">
-        <h1 className="text-lg font-bold">{t("title")}</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("title")}</h1>
         <div className="flex items-center gap-2 text-muted-foreground animate-pulse">
           <Loader2 className="w-4 h-4 animate-spin" /> {t("loading")}
         </div>
@@ -307,10 +310,108 @@ export default function PortfolioPage() {
     );
   }
 
+  type PositionRow = (typeof positions)[number];
+  const holdingColumns: Column<PositionRow>[] = [
+    {
+      key: "ticker", header: t("columnTicker"), sortable: true, sortValue: (r) => r.ticker,
+      cell: (r) => (
+        <span className="flex items-center gap-1.5">
+          <span className="font-mono font-bold text-foreground">{r.ticker}</span>
+          <span className="rounded-full border border-signal-caution/30 bg-signal-caution/10 px-1 font-mono text-[9px] text-signal-caution">{r.currency}</span>
+        </span>
+      ),
+    },
+    {
+      key: "name", header: t("columnName"), sortable: true, sortValue: (r) => r.name?.toLowerCase(), hideBelow: "md",
+      cell: (r) => <span className="block max-w-[180px] truncate text-muted-foreground">{r.name || "—"}</span>,
+    },
+    {
+      key: "shares", header: t("columnShares"), sortable: true, sortValue: (r) => r.totalShares, align: "right",
+      cell: (r) => (
+        <span className="nums font-mono">
+          {r.totalShares % 1 === 0 ? r.totalShares : r.totalShares.toFixed(4).replace(/\.?0+$/, "")}
+          {r.lotIds.length > 1 && <span className="ml-1 text-[9px] text-dim">{t("lots", { count: r.lotIds.length })}</span>}
+        </span>
+      ),
+    },
+    {
+      key: "avgCost", header: t("columnAvgCost"), sortable: true, sortValue: (r) => r.avgCostBasis, align: "right", hideBelow: "sm",
+      cell: (r) => <span className="nums font-mono">{mask(formatCurrency(r.avgCostBasis, r.currency))}</span>,
+    },
+    {
+      key: "price", header: t("columnPrice"), sortable: true, sortValue: (r) => r.current_price ?? null, align: "right",
+      cell: (r) => {
+        const price = r.current_price || 0;
+        const stale = r.last_price_updated_at ? Date.now() - new Date(r.last_price_updated_at).getTime() > 24 * 3600_000 : true;
+        return (
+          <span className="nums inline-flex items-center justify-end gap-1 font-mono">
+            {price > 0 ? formatCurrency(price, r.currency) : "—"}
+            {stale && price > 0 && <span title={t("priceStale")}><Clock className="h-3 w-3 text-signal-caution" aria-label={t("priceStale")} /></span>}
+          </span>
+        );
+      },
+    },
+    {
+      key: "mktValue", header: t("columnMktValue"), sortable: true, align: "right", hideBelow: "sm",
+      sortValue: (r) => { const p = r.current_price || 0; const v = r.totalShares * p; return r.currency !== defaultCurrency ? toDefault(v, r.currency) ?? v : v; },
+      cell: (r) => {
+        const price = r.current_price || 0; if (!(price > 0)) return "—";
+        const v = r.totalShares * price; const conv = r.currency !== defaultCurrency;
+        return (
+          <span className="nums flex flex-col items-end font-mono">
+            <span>{mask(formatCurrency(v, r.currency, { decimals: 0 }))}</span>
+            {conv && !hideBalances && <span className="text-[9px] text-dim">≈ {formatCurrency(toDefault(v, r.currency), defaultCurrency, { decimals: 0 })}</span>}
+          </span>
+        );
+      },
+    },
+    {
+      key: "gainLoss", header: t("gainLoss"), sortable: true, align: "right",
+      sortValue: (r) => { const p = r.current_price || 0; return p > 0 ? r.totalShares * (p - r.avgCostBasis) : null; },
+      cell: (r) => {
+        const price = r.current_price || 0; if (!(price > 0)) return "—";
+        const gl = r.totalShares * (price - r.avgCostBasis);
+        const glDefault = r.currency !== defaultCurrency ? toDefault(gl, r.currency) : gl;
+        const pct = r.avgCostBasis > 0 ? ((price - r.avgCostBasis) / r.avgCostBasis) * 100 : 0;
+        return (
+          <span className={`nums flex flex-col items-end font-mono font-semibold ${gl > 0 ? "text-signal-long" : gl < 0 ? "text-signal-short" : "text-muted-foreground"}`}>
+            <span>{hideBalances ? "••••" : glDefault == null ? "—" : `${gl >= 0 ? "+" : "−"}${formatCurrency(Math.abs(glDefault), defaultCurrency, { decimals: 0 })}`}</span>
+            <span className="text-[10px] sm:hidden">{pct >= 0 ? "+" : ""}{pct.toFixed(1)}%</span>
+          </span>
+        );
+      },
+    },
+    {
+      key: "return", header: t("columnReturn"), sortable: true, align: "right", hideBelow: "sm",
+      sortValue: (r) => { const p = r.current_price || 0; return p > 0 && r.avgCostBasis > 0 ? ((p - r.avgCostBasis) / r.avgCostBasis) * 100 : null; },
+      cell: (r) => {
+        const price = r.current_price || 0; if (!(price > 0 && r.avgCostBasis > 0)) return "—";
+        const pct = ((price - r.avgCostBasis) / r.avgCostBasis) * 100;
+        return <span className={`nums font-mono font-semibold ${pct > 0 ? "text-signal-long" : pct < 0 ? "text-signal-short" : "text-muted-foreground"}`}>{pct >= 0 ? "+" : ""}{pct.toFixed(1)}%</span>;
+      },
+    },
+    {
+      key: "actions", header: <span className="sr-only">{tc("delete")}</span>, ariaLabel: tc("delete"), align: "right",
+      cell: (r) => (
+        <button
+          type="button"
+          onClick={() => {
+            const msg = r.lotIds.length > 1 ? t("deleteAllLotsPrompt", { count: r.lotIds.length, ticker: r.ticker }) : t("deleteTickerPrompt", { ticker: r.ticker });
+            if (confirm(msg)) deleteHolding.mutate(r.lotIds);
+          }}
+          aria-label={`${tc("delete")} ${r.ticker}`}
+          className="rounded-md p-1.5 text-dim hover:bg-signal-short-bg hover:text-signal-short"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">{t("title")}</h1>
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("title")}</h1>
         <div className="flex items-center gap-2">
           <button
             onClick={toggleHideBalances}
@@ -341,7 +442,7 @@ export default function PortfolioPage() {
           {activePortfolio && (
             <button
               onClick={() => setShowForm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-signal/20 text-signal rounded-lg hover:bg-signal/30 transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-control bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground hover:opacity-90"
             >
               <Plus className="w-3.5 h-3.5" /> {t("addInvestment")}
             </button>
@@ -381,33 +482,35 @@ export default function PortfolioPage() {
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
         {/* Portfolio sidebar */}
         <div className="card p-2 space-y-0.5">
-          {portfolios?.map((p: any) => (
-            <button
-              key={p.id}
-              onClick={() => setActiveId(p.id)}
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                activePortfolio?.id === p.id
-                  ? "bg-signal/20 text-signal"
-                  : "text-muted-foreground hover:bg-accent"
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <FolderOpen className="w-4 h-4" />
-                <span>{p.name}</span>
-              </div>
-              {!p.is_default && (
+          {portfolios?.map((p: any) => {
+            const on = activePortfolio?.id === p.id;
+            return (
+              <div
+                key={p.id}
+                className={`flex items-center gap-1 rounded-control pr-1 transition-colors ${on ? "bg-signal-bg text-signal" : "text-muted-foreground hover:bg-accent"}`}
+              >
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm(t("deletePrompt", { name: p.name }))) deletePortfolio.mutate(p.id);
-                  }}
-                  className="text-muted-foreground/30 hover:text-signal-short"
+                  type="button"
+                  onClick={() => setActiveId(p.id)}
+                  aria-current={on ? "true" : undefined}
+                  className="flex min-w-0 flex-1 items-center gap-2 rounded-control px-3 py-2 text-left text-sm"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <FolderOpen className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="truncate">{p.name}</span>
                 </button>
-              )}
-            </button>
-          ))}
+                {!p.is_default && (
+                  <button
+                    type="button"
+                    onClick={() => { if (confirm(t("deletePrompt", { name: p.name }))) deletePortfolio.mutate(p.id); }}
+                    aria-label={`${tc("delete")} ${p.name}`}
+                    className="rounded-md p-1.5 text-dim hover:text-signal-short"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            );
+          })}
           {(!portfolios || portfolios.length === 0) && (
             <div className="px-3 py-4 text-center text-muted-foreground text-xs">
               {t("noPortfoliosYet")}
@@ -418,53 +521,33 @@ export default function PortfolioPage() {
         {/* Main content */}
         <div className="space-y-4">
           {/* Summary cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="card p-3">
-              <div className="stat-label flex items-center justify-between">
-                <span>{t("totalValue")}</span>
-                <span className="text-[9px] text-muted-foreground/70 font-mono">{defaultCurrency}</span>
-              </div>
-              <div className="stat-value text-lg">
-                {mask(formatCurrency(totalValue, defaultCurrency, { decimals: 0 }))}
-              </div>
-              {/* Says which holdings the total is NOT counting. Without this
-                  the same figure appears whether every lot converted or
-                  half of them silently dropped out. */}
-              {unconverted > 0 && (
-                <div
-                  className="text-[10px] text-signal-caution mt-0.5"
-                  title="FX rates are unavailable, so holdings in another currency cannot be converted and are left out of the totals."
-                >
-                  excludes {unconverted} holding{unconverted === 1 ? "" : "s"} — no FX rate
-                </div>
-              )}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="card">
+              <Stat
+                label={<span className="flex items-center justify-between gap-2"><span>{t("totalValue")}</span><span className="font-mono text-[9px] text-dim">{defaultCurrency}</span></span>}
+                value={mask(formatCurrency(totalValue, defaultCurrency, { decimals: 0 }))}
+                sub={unconverted > 0 ? (
+                  <span className="text-signal-caution" title="FX rates are unavailable, so holdings in another currency cannot be converted and are left out of the totals.">
+                    excludes {unconverted} holding{unconverted === 1 ? "" : "s"} — no FX rate
+                  </span>
+                ) : undefined}
+                size="sm"
+              />
             </div>
-            <div className="card p-3">
-              <div className="stat-label">{t("totalCost")}</div>
-              <div className="stat-value text-lg">
-                {mask(formatCurrency(totalCost, defaultCurrency, { decimals: 0 }))}
-              </div>
+            <div className="card">
+              <Stat label={t("totalCost")} value={mask(formatCurrency(totalCost, defaultCurrency, { decimals: 0 }))} size="sm" />
             </div>
-            <div className="card p-3">
-              <div className="stat-label">{t("gainLoss")}</div>
-              <div className={`text-lg font-bold font-mono flex items-center gap-1 ${
-                totalGainLoss >= 0 ? "text-signal-long" : "text-signal-short"
-              }`}>
-                {totalGainLoss >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                {hideBalances
-                  ? "••••"
-                  : `${totalGainLoss >= 0 ? "+" : ""}${formatCurrency(Math.abs(totalGainLoss), defaultCurrency, { decimals: 0 })}`}
-                <span className="text-xs ml-1">
-                  ({totalReturnPct >= 0 ? "+" : ""}{totalReturnPct.toFixed(1)}%)
-                </span>
-              </div>
+            <div className="card">
+              <Stat
+                label={t("gainLoss")}
+                value={hideBalances ? "••••" : `${totalGainLoss >= 0 ? "+" : "−"}${formatCurrency(Math.abs(totalGainLoss), defaultCurrency, { decimals: 0 })}`}
+                sub={`${totalReturnPct >= 0 ? "+" : ""}${totalReturnPct.toFixed(1)}%`}
+                tone={totalGainLoss >= 0 ? "long" : "short"}
+                size="sm"
+              />
             </div>
-            <div className="card p-3">
-              <div className="stat-label">{t("positions")}</div>
-              <div className="stat-value text-lg">{positionCount}</div>
-              {lotCount > positionCount && (
-                <div className="text-[10px] text-muted-foreground">{t("lots", { count: lotCount })}</div>
-              )}
+            <div className="card">
+              <Stat label={t("positions")} value={positionCount} sub={lotCount > positionCount ? t("lots", { count: lotCount }) : undefined} size="sm" />
             </div>
           </div>
 
@@ -595,148 +678,28 @@ export default function PortfolioPage() {
 
           {/* Holdings table */}
           <div className="card">
-            <div className="card-header flex items-center justify-between">
-              <span className="card-title">{activePortfolio?.name || "Holdings"}</span>
-              {positions.length ? (
-                <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <span className="w-1.5 h-1.5 rounded-full bg-signal-long animate-pulse" />
-                  Auto-refresh 60s
-                </span>
-              ) : null}
+            <div className="card-header">
+              <span className="card-title">{activePortfolio?.name || t("holdings")}</span>
+              {positions.length ? <Freshness note="60s" /> : null}
             </div>
             {holdingsLoading ? (
-              <div className="py-12 flex items-center justify-center">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+              <div className="flex items-center justify-center py-12" role="status">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" aria-hidden="true" />
               </div>
             ) : !positions.length ? (
-              <div className="py-12 text-center text-muted-foreground text-sm">
-                <Briefcase className="w-8 h-8 mx-auto mb-2 opacity-40" />
-                No investments yet. Click &quot;Add Investment&quot; to track your positions.
+              <div className="py-12 text-center text-sm text-muted-foreground">
+                <Briefcase className="mx-auto mb-2 h-8 w-8 opacity-40" aria-hidden="true" />
+                {t("noInvestmentsYet")}
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-[10px] uppercase tracking-wider text-muted-foreground border-b border-border/30">
-                      <th className="text-left px-3 py-2">Ticker</th>
-                      <th className="text-left px-3 py-2 hidden md:table-cell">Name</th>
-                      <th className="text-right px-3 py-2">Shares</th>
-                      <th className="text-right px-3 py-2 hidden sm:table-cell">Avg Cost</th>
-                      <th className="text-right px-3 py-2">Price</th>
-                      <th className="text-right px-3 py-2 hidden sm:table-cell">Mkt Value</th>
-                      <th className="text-right px-3 py-2">Gain/Loss</th>
-                      <th className="text-right px-3 py-2 hidden sm:table-cell">Return</th>
-                      <th className="px-3 py-2 w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/20">
-                    {positions.map((pos) => {
-                      const price = pos.current_price || 0;
-                      const mktValue = pos.totalShares * price;
-                      const costTotal = pos.totalShares * pos.avgCostBasis;
-                      const gainLoss = price > 0 ? mktValue - costTotal : 0;
-                      const returnPct = pos.avgCostBasis > 0 && price > 0
-                        ? ((price - pos.avgCostBasis) / pos.avgCostBasis) * 100
-                        : 0;
-                      const isStale = pos.last_price_updated_at
-                        ? (Date.now() - new Date(pos.last_price_updated_at).getTime()) > 24 * 60 * 60 * 1000
-                        : true;
-                      const nativeCcy = pos.currency;
-                      const showConversion = nativeCcy !== defaultCurrency;
-                      const mktValueDefault = showConversion ? toDefault(mktValue, nativeCcy) : mktValue;
-                      const gainLossDefault = showConversion ? toDefault(gainLoss, nativeCcy) : gainLoss;
-
-                      return (
-                        <tr
-                          key={pos.ticker}
-                          className="hover:bg-accent/50 transition-colors cursor-pointer group"
-                          onClick={() => router.push(`/stock/${pos.ticker}`)}
-                        >
-                          <td className="px-3 py-2.5">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono font-bold text-signal">{pos.ticker}</span>
-                              <span className="text-[9px] text-signal-caution/80 bg-signal-caution/10 border border-signal-caution/30 px-1 rounded font-mono">
-                                {nativeCcy}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-muted-foreground truncate max-w-[180px] hidden md:table-cell">
-                            {pos.name || "—"}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
-                            {pos.totalShares % 1 === 0 ? pos.totalShares : pos.totalShares.toFixed(4).replace(/\.?0+$/, "")}
-                            {pos.lotIds.length > 1 && (
-                              <span className="ml-1 text-[9px] text-muted-foreground/60">{pos.lotIds.length} lots</span>
-                            )}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
-                            {mask(formatCurrency(pos.avgCostBasis, nativeCcy))}
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80">
-                            <div className="flex items-center justify-end gap-1">
-                              {price > 0 ? formatCurrency(price, nativeCcy) : "—"}
-                              {isStale && price > 0 && (
-                                <span title="Price may be stale (>24h)"><Clock className="w-3 h-3 text-signal-caution" /></span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2.5 text-right font-mono text-foreground/80 hidden sm:table-cell">
-                            {price > 0 ? (
-                              <div className="flex flex-col items-end">
-                                <span>{mask(formatCurrency(mktValue, nativeCcy, { decimals: 0 }))}</span>
-                                {showConversion && !hideBalances && (
-                                  <span className="text-[9px] text-muted-foreground/70">
-                                    ≈ {formatCurrency(mktValueDefault, defaultCurrency, { decimals: 0 })}
-                                  </span>
-                                )}
-                              </div>
-                            ) : "—"}
-                          </td>
-                          <td className={`px-3 py-2.5 text-right font-mono font-semibold ${
-                            gainLoss > 0 ? "text-signal-long" : gainLoss < 0 ? "text-signal-short" : "text-muted-foreground"
-                          }`}>
-                            {price > 0 ? (
-                              <div className="flex flex-col items-end">
-                                <span>
-                                  {hideBalances
-                                    ? "••••"
-                                    : gainLossDefault == null
-                                      ? "—"
-                                      : `${gainLoss >= 0 ? "+" : ""}${formatCurrency(Math.abs(gainLossDefault), defaultCurrency, { decimals: 0 })}`}
-                                </span>
-                                <span className="text-[10px] sm:hidden">{returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%</span>
-                              </div>
-                            ) : "—"}
-                          </td>
-                          <td className={`px-3 py-2.5 text-right font-mono font-semibold hidden sm:table-cell ${
-                            returnPct > 0 ? "text-signal-long" : returnPct < 0 ? "text-signal-short" : "text-muted-foreground"
-                          }`}>
-                            {price > 0 ? (
-                              <>
-                                {returnPct >= 0 ? "+" : ""}{returnPct.toFixed(1)}%
-                              </>
-                            ) : "—"}
-                          </td>
-                          <td className="px-3 py-2.5">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const msg = pos.lotIds.length > 1
-                                  ? `Delete all ${pos.lotIds.length} lots of ${pos.ticker}?`
-                                  : `Delete ${pos.ticker}?`;
-                                if (confirm(msg)) deleteHolding.mutate(pos.lotIds);
-                              }}
-                              className="text-muted-foreground/30 hover:text-signal-short opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable
+                caption={activePortfolio?.name || t("holdings")}
+                columns={holdingColumns}
+                rows={positions}
+                rowKey={(r) => r.ticker}
+                rowHref={(r) => `/stock/${r.ticker}`}
+                defaultSort={{ key: "mktValue", dir: "desc" }}
+              />
             )}
           </div>
         </div>

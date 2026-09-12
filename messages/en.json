@@ -843,7 +843,10 @@
     "unrealisedPnl": "Unrealised P&L",
     "unrealizedPnL": "Unrealized P&L",
     "useExistingInstead": "Use existing portfolio instead",
-    "yourPosition": "Your Position"
+    "yourPosition": "Your Position",
+    "noInvestmentsYet": "No investments yet. Click “Add Investment” to track your positions.",
+    "priceStale": "Price may be stale (>24h)",
+    "deleteTickerPrompt": "Delete {ticker}?"
   },
   "priceAction": {
     "title": "Price Action (PAM)",
