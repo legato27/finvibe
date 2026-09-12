@@ -10,6 +10,9 @@ interface FinVibeThoughtsProps {
   ticker: string;
   thoughts: any | null;
   generatedAt: string | null;
+  /** When the quant models last ran. Newer than `generatedAt` means this
+   *  narrative was written against numbers that have since been replaced. */
+  quantUpdatedAt?: string | null;
   isGenerating?: boolean;
   onGenerate?: () => void;
   onGenerateDone?: () => void;
@@ -43,6 +46,7 @@ export function FinVibeThoughts({
   ticker,
   thoughts,
   generatedAt,
+  quantUpdatedAt = null,
   isGenerating = false,
   onGenerate,
   onGenerateDone,
@@ -115,6 +119,9 @@ export function FinVibeThoughts({
 
   const verdict = thoughts.verdict || "hold";
   const conviction = thoughts.conviction || "medium";
+  const modelsAheadOfThoughts = Boolean(
+    quantUpdatedAt && generatedAt && new Date(quantUpdatedAt) > new Date(generatedAt),
+  );
 
   return (
     <div className="card p-5">
@@ -126,6 +133,17 @@ export function FinVibeThoughts({
           {generatedAt && (
             <span className="text-[10px] text-muted-foreground/60">
               {t('updatedDate', { date: new Date(generatedAt).toLocaleDateString() })}
+            </span>
+          )}
+          {/* The sweep refreshes a name every few days; a quant run happens
+              nightly. So the narrative routinely predates the numbers rendered
+              beside it, with nothing on the card saying so. */}
+          {modelsAheadOfThoughts && (
+            <span
+              title={t('thoughtsBehindModelsTip')}
+              className="text-[10px] px-1.5 py-0.5 rounded border border-signal-caution/40 bg-signal-caution-bg text-signal-caution"
+            >
+              {t('thoughtsBehindModels', { date: new Date(quantUpdatedAt!).toLocaleDateString() })}
             </span>
           )}
         </div>

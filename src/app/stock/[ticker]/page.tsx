@@ -280,6 +280,7 @@ export default function StockDetailPage() {
             ticker={ticker}
             thoughts={thoughts}
             generatedAt={thoughtsGeneratedAt}
+            quantUpdatedAt={detail.quant_updated_at ?? null}
             isGenerating={generatingThoughts && !thoughts}
             onGenerate={() => setGeneratingThoughts(true)}
             onGenerateDone={() => setGeneratingThoughts(false)}

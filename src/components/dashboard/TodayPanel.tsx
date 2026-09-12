@@ -26,6 +26,11 @@ const IMPACT_COLOR: Record<string, string> = {
   neutral: "text-muted-foreground",
 };
 
+// Shared by the scored chips and the missing-input chips, so a component that
+// drops out keeps the name it had when it was counted.
+const componentLabel = (key: string) =>
+  key.replace(/_/g, " ").replace("vix term", "VIX term").replace("vix", "VIX");
+
 export function TodayPanel() {
   const t = useTranslations("dashboard");
   // Share the ["macro_dashboard"] cache entry with DashboardView/RegimeAgreement
@@ -48,6 +53,12 @@ export function TodayPanel() {
   const rs = REGIME_STYLE[today.regime_color] || REGIME_STYLE.yellow;
   const score = today.risk_score;
   const normalized = Math.max(0, Math.min(100, (score + 100) / 2));
+  // A component whose input was not cached when the panel was built is left OUT
+  // of score_components rather than scored as a neutral 0 — `inputs_missing`
+  // names it. Rendering it as an absent chip is the whole point: without this
+  // the panel shows a partial score that looks exactly like a complete one, and
+  // the panel caches for 30 minutes, so that reading can stand for half an hour.
+  const missingInputs: string[] = Array.isArray(today.inputs_missing) ? today.inputs_missing : [];
 
   return (
     <div className={`rounded-xl border ${rs.border} ${rs.bg} p-4 sm:p-5 space-y-4`}>
@@ -93,7 +104,6 @@ export function TodayPanel() {
       <div className="flex gap-1.5 flex-wrap">
         {Object.entries(today.score_components || {}).map(([key, val]) => {
           const v = val as number;
-          const label = key.replace(/_/g, " ").replace("vix term", "VIX term").replace("vix", "VIX");
           return (
             <span
               key={key}
@@ -103,11 +113,25 @@ export function TodayPanel() {
                 "text-muted-foreground border-border bg-muted/30"
               }`}
             >
-              {label} {v > 0 ? "+" : ""}{v}
+              {componentLabel(key)} {v > 0 ? "+" : ""}{v}
             </span>
           );
         })}
+        {missingInputs.map((key) => (
+          <span
+            key={key}
+            className="text-[10px] px-2 py-0.5 rounded-full border border-dashed border-warning/40 bg-warning/5 text-warning font-mono"
+          >
+            {componentLabel(key)} {t("inputMissing")}
+          </span>
+        ))}
       </div>
+      {missingInputs.length > 0 && (
+        <div className="flex items-start gap-1.5 -mt-2 text-[10px] text-warning/90">
+          <AlertTriangle className="w-3 h-3 flex-shrink-0 mt-px" />
+          <span>{t("inputsMissingNote", { count: missingInputs.length })}</span>
+        </div>
+      )}
 
       {/* ── Two columns: Positioning + Signals ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

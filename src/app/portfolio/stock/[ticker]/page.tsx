@@ -192,6 +192,7 @@ export default function PortfolioStockPage() {
           thoughts={thoughts}
           verdictAction={unifiedAction}
           thoughtsGeneratedAt={thoughtsGeneratedAt}
+          quantUpdatedAt={detail?.quant_updated_at ?? null}
           thoughtsData={thoughtsData}
           isGenerating={generatingThoughts && !thoughts}
           onGenerate={() => setGeneratingThoughts(true)}

@@ -22,6 +22,8 @@ interface PortfolioAnalysisProps {
   /** Arbitrated unified verdict mapped to buy/hold/avoid; preferred over thoughts.verdict. */
   verdictAction?: "buy" | "hold" | "avoid";
   thoughtsGeneratedAt: string | null;
+  /** Last quant run, so the card can flag a narrative written before it. */
+  quantUpdatedAt?: string | null;
   thoughtsData: any;
   isGenerating: boolean;
   onGenerate: () => void;
@@ -233,6 +235,7 @@ export function PortfolioAnalysis({
   thoughts,
   verdictAction,
   thoughtsGeneratedAt,
+  quantUpdatedAt = null,
   thoughtsData,
   isGenerating,
   onGenerate,
@@ -255,6 +258,7 @@ export function PortfolioAnalysis({
         ticker={ticker}
         thoughts={thoughts}
         generatedAt={thoughtsGeneratedAt}
+        quantUpdatedAt={quantUpdatedAt}
         isGenerating={isGenerating}
         onGenerate={onGenerate}
         onGenerateDone={onGenerateDone}
