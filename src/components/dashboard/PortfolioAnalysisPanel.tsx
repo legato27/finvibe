@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import ReactMarkdownRaw from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -69,6 +70,7 @@ export function PortfolioAnalysisPanel({
   totalCost: number;
 }) {
   const t = useTranslations("dashboard");
+  const confirm = useConfirm();
   const { data: analyses, isLoading } = usePortfolioAnalyses(portfolioId);
   const save = useSavePortfolioAnalysis();
   const del = useDeletePortfolioAnalysis();
@@ -201,8 +203,8 @@ export function PortfolioAnalysisPanel({
             onToggle={() =>
               setExpandedId(expandedId === latest.id ? -1 : latest.id)
             }
-            onDelete={() => {
-              if (confirm(t("confirmDelete"))) del.mutate(latest.id);
+            onDelete={async () => {
+              if (await confirm(t("confirmDelete"), { destructive: true })) del.mutate(latest.id);
             }}
           />
         ) : !isLoading && !running ? (
@@ -225,8 +227,8 @@ export function PortfolioAnalysisPanel({
                   onToggle={() =>
                     setExpandedId(expandedId === a.id ? null : a.id)
                   }
-                  onDelete={() => {
-                    if (confirm(t("confirmDelete"))) del.mutate(a.id);
+                  onDelete={async () => {
+                    if (await confirm(t("confirmDelete"), { destructive: true })) del.mutate(a.id);
                   }}
                 />
               ))}

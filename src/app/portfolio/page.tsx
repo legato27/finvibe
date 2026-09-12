@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import Stat from "@/components/ui/Stat";
 import Freshness from "@/components/ui/Freshness";
@@ -130,6 +131,7 @@ function TickerInput({
 export default function PortfolioPage() {
   const t = useTranslations("portfolio");
   const tc = useTranslations("common");
+  const confirm = useConfirm();
   const hideBalances = useAppStore((s) => s.hideBalances);
   const toggleHideBalances = useAppStore((s) => s.toggleHideBalances);
   // Mask any already-formatted monetary string when balances are hidden.
@@ -395,9 +397,9 @@ export default function PortfolioPage() {
       cell: (r) => (
         <button
           type="button"
-          onClick={() => {
+          onClick={async () => {
             const msg = r.lotIds.length > 1 ? t("deleteAllLotsPrompt", { count: r.lotIds.length, ticker: r.ticker }) : t("deleteTickerPrompt", { ticker: r.ticker });
-            if (confirm(msg)) deleteHolding.mutate(r.lotIds);
+            if (await confirm(msg, { destructive: true })) deleteHolding.mutate(r.lotIds);
           }}
           aria-label={`${tc("delete")} ${r.ticker}`}
           className="rounded-md p-1.5 text-dim hover:bg-signal-short-bg hover:text-signal-short"
@@ -501,7 +503,7 @@ export default function PortfolioPage() {
                 {!p.is_default && (
                   <button
                     type="button"
-                    onClick={() => { if (confirm(t("deletePrompt", { name: p.name }))) deletePortfolio.mutate(p.id); }}
+                    onClick={async () => { if (await confirm(t("deletePrompt", { name: p.name }), { destructive: true })) deletePortfolio.mutate(p.id); }}
                     aria-label={`${tc("delete")} ${p.name}`}
                     className="rounded-md p-1.5 text-dim hover:text-signal-short"
                   >

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import {
   AlertCircle,
   Check,
@@ -29,6 +30,7 @@ interface NewToken extends TokenRow {
 export function McpTokensCard() {
   const t = useTranslations("settings");
   const tc = useTranslations("common");
+  const confirm = useConfirm();
   const [tokens, setTokens] = useState<TokenRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -82,7 +84,7 @@ export function McpTokensCard() {
   }
 
   async function revoke(id: number) {
-    if (!confirm(t("tokens.revokeConfirm"))) {
+    if (!(await confirm(t("tokens.revokeConfirm"), { destructive: true, confirmLabel: tc("confirm") }))) {
       return;
     }
     try {

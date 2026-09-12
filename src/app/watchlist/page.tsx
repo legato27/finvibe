@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { useWatchlists, useCreateWatchlist, useDeleteWatchlist, useAddStock, useRemoveStock, useLLMAnalysisBatch, usePortfolios, useCreatePortfolio, useAddHolding, useRenameWatchlist } from "@/lib/supabase/hooks";
 import { StockSearch } from "@/components/shared/StockSearch";
 import Freshness from "@/components/ui/Freshness";
@@ -226,6 +227,7 @@ function AddToPortfolioModal({
 export default function WatchlistPage() {
   const t = useTranslations("watchlist");
   const tc = useTranslations("common");
+  const confirm = useConfirm();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: watchlists, isLoading } = useWatchlists();
@@ -484,7 +486,7 @@ export default function WatchlistPage() {
                 {!wl.is_default && (
                   <button
                     type="button"
-                    onClick={() => { if (confirm(t("deletePrompt", { name: wl.name }))) deleteWatchlist.mutate(wl.id); }}
+                    onClick={async () => { if (await confirm(t("deletePrompt", { name: wl.name }), { destructive: true })) deleteWatchlist.mutate(wl.id); }}
                     aria-label={`${tc("delete")} ${wl.name}`}
                     className="rounded-md p-1.5 text-dim hover:text-signal-short"
                   >

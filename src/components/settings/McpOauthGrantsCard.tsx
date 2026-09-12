@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { AlertCircle, Loader2, Trash2 } from "lucide-react";
 
 interface Grant {
@@ -18,6 +19,8 @@ interface Grant {
 
 export function McpOauthGrantsCard() {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
+  const confirm = useConfirm();
   const [grants, setGrants] = useState<Grant[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -45,15 +48,15 @@ export function McpOauthGrantsCard() {
   }, []);
 
   async function revokeTokens(g: Grant) {
-    if (
-      !confirm(
-        t("grants.revokeConfirm", {
-          name: g.client_name,
-          count: g.active_tokens,
-          plural: g.active_tokens === 1 ? "" : "s",
-        }),
-      )
-    ) {
+    const ok = await confirm(
+      t("grants.revokeConfirm", {
+        name: g.client_name,
+        count: g.active_tokens,
+        plural: g.active_tokens === 1 ? "" : "s",
+      }),
+      { destructive: true, confirmLabel: tc("confirm") },
+    );
+    if (!ok) {
       return;
     }
     setBusyId(g.client_id);
@@ -72,9 +75,7 @@ export function McpOauthGrantsCard() {
   }
 
   async function deleteClient(g: Grant) {
-    if (
-      !confirm(t("grants.deleteConfirm", { name: g.client_name }))
-    ) {
+    if (!(await confirm(t("grants.deleteConfirm", { name: g.client_name }), { destructive: true }))) {
       return;
     }
     setBusyId(g.client_id);

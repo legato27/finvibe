@@ -3,17 +3,19 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { Loader2, AlertCircle, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function SignOutEverywhereCard() {
   const t = useTranslations("settings");
+  const confirm = useConfirm();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
   async function signOutEverywhere() {
-    if (!confirm(t("signOutEverywhereConfirm"))) {
+    if (!(await confirm(t("signOutEverywhereConfirm"), { destructive: true, confirmLabel: t("signOutEverywhere") }))) {
       return;
     }
     setBusy(true);
