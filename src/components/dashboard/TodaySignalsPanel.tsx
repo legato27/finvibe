@@ -10,6 +10,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { stocksApi } from "@/lib/api";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import { ArrowUpRight } from "lucide-react";
 
 interface Digest {
   new_pam_triggers: Array<{
@@ -24,7 +26,7 @@ interface Digest {
 export function TodaySignalsPanel() {
   const t = useTranslations("verdict");
   const td = useTranslations("dashboard");
-  const { data, isLoading } = useQuery<Digest>({
+  const { data, isLoading, isError } = useQuery<Digest>({
     queryKey: ["signals-today"],
     queryFn: () => stocksApi.signalsToday(),
     staleTime: 5 * 60_000,
@@ -32,21 +34,23 @@ export function TodaySignalsPanel() {
     retry: 1,
   });
 
-  if (isLoading || !data) return null;
+  const aside = (
+    <Link href="/desk" className="inline-flex items-center gap-0.5 text-[11px] text-signal hover:underline">
+      {td("openDesk")}<ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+    </Link>
+  );
+  if (isLoading) return <PanelPending label={td("todaySignals")} text={td("loadingGeneric")} className="h-full" />;
+  if (isError || !data) return <PanelUnavailable label={td("todaySignals")} reason={td("notAvailableReason")} aside={aside} className="h-full" />;
   const empty =
     !data.new_pam_triggers.length && !data.verdict_changes.length && !data.conflicts.length;
 
   return (
-    <section aria-label={td("todaySignals")} className="card">
-      <div className="card-header">
-        <h2 className="card-title">{td("todaySignals")}</h2>
-      </div>
-
+    <Panel label={td("todaySignals")} qualifier={td("todaySignalsQualifier")} aside={aside} className="h-full">
       {empty && <p className="text-sm text-muted-foreground">{td("todaySignalsEmpty")}</p>}
 
       {data.new_pam_triggers.length > 0 && (
         <div className="mb-3">
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="stat-label mb-1.5">
             {td("newSetups")}
           </h3>
           <ul className="space-y-1">
@@ -80,7 +84,7 @@ export function TodaySignalsPanel() {
 
       {data.verdict_changes.length > 0 && (
         <div className="mb-3">
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="stat-label mb-1.5">
             {td("verdictChanges")}
           </h3>
           <ul className="space-y-1">
@@ -101,7 +105,7 @@ export function TodaySignalsPanel() {
 
       {data.conflicts.length > 0 && (
         <div>
-          <h3 className="mb-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <h3 className="stat-label mb-1.5">
             {td("conflictsToReview")}
           </h3>
           <ul className="space-y-1">
@@ -118,6 +122,6 @@ export function TodaySignalsPanel() {
           </ul>
         </div>
       )}
-    </section>
+    </Panel>
   );
 }

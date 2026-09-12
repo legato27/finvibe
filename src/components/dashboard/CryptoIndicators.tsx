@@ -1,4 +1,5 @@
 "use client";
+import { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingDown, TrendingUp, Bitcoin, Coins } from "lucide-react";
@@ -73,25 +74,13 @@ export function CryptoIndicators() {
     staleTime: 60_000 * 30,
   });
 
-  if (isLoading) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("cryptoLoading")}</div>
-      </div>
-    );
-  }
+  if (isLoading) return <PanelPending label={t("cryptoTitle")} text={t("cryptoLoading")} className="h-full" />;
 
   const btc = data?.["BTC-USD"];
   const eth = data?.["ETH-USD"];
   const sol = data?.["SOL-USD"];
 
-  if (error || !btc) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm">{t("cryptoUnavailable")}</div>
-      </div>
-    );
-  }
+  if (error || !btc) return <PanelUnavailable label={t("cryptoTitle")} reason={t("cryptoUnavailable")} className="h-full" />;
 
   const hasFng = fng && !fng.error;
 

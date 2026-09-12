@@ -56,3 +56,33 @@ export default function Panel({
     </Tag>
   );
 }
+
+/** A panel that is still loading. Same shape as the real thing, so the page
+ *  does not jump when the data lands. */
+export function PanelPending({ label, text, className = "" }: { label: ReactNode; text: string; className?: string }) {
+  return (
+    <Panel label={label} className={className} as="div">
+      <div role="status" className="animate-pulse py-6 text-center text-sm text-muted-foreground">{text}</div>
+    </Panel>
+  );
+}
+
+/** A panel whose data did not come back. It keeps its place and says why:
+ *  a dashboard that silently drops cards changes shape from day to day. */
+export function PanelUnavailable({
+  label,
+  reason,
+  aside,
+  className = "",
+}: {
+  label: ReactNode;
+  reason: ReactNode;
+  aside?: ReactNode;
+  className?: string;
+}) {
+  return (
+    <Panel label={label} aside={aside} className={className} as="div" reading={reason}>
+      <div className="nums font-mono text-3xl font-bold text-dim" aria-hidden="true">—</div>
+    </Panel>
+  );
+}

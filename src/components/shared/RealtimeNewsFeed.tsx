@@ -1,4 +1,5 @@
 "use client";
+import { PanelPending } from "@/components/ui/Panel";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
 import { sentimentApi } from "@/lib/api";
@@ -45,16 +46,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
     staleTime: 4 * 60 * 1000,
   });
 
-  if (isLoading) {
-    return (
-      <div className="card">
-        <div className="card-header">
-          <span className="card-title">{t("newsAndSentiment")}</span>
-        </div>
-        <div className="text-muted-foreground text-sm animate-pulse py-4 text-center">{t("loadingFeed")}</div>
-      </div>
-    );
-  }
+  if (isLoading) return <PanelPending label={t("newsAndSentiment")} text={t("loadingFeed")} />;
 
   return (
     <div className="card h-full">
@@ -63,7 +55,7 @@ export function RealtimeNewsFeed({ tickers }: { tickers?: string[] }) {
         <span className="text-xs text-muted-foreground">{t("articlesCount", { count: feed.length })}</span>
       </div>
 
-      <div className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+      <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1">
         {feed.length === 0 && (
           <div className="text-muted-foreground text-sm py-4 text-center">
             {tickers && tickers.length > 0

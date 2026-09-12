@@ -1,4 +1,5 @@
 "use client";
+import { PanelPending } from "@/components/ui/Panel";
 import { useTranslations } from "next-intl";
 import { RadialBarChart, RadialBar, ResponsiveContainer, PolarAngleAxis } from "recharts";
 import { useAppStore } from "@/store/useAppStore";
@@ -67,13 +68,7 @@ export function VixGauge() {
     staleTime: 60_000 * 5,
   });
 
-  if (!vix) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("vixLoading")}</div>
-      </div>
-    );
-  }
+  if (!vix) return <PanelPending label={t("vix")} text={t("vixLoading")} className="h-full" />;
 
   const value = Math.min(vix.current, VIX_MAX);
   const pct = (value / VIX_MAX) * 100;

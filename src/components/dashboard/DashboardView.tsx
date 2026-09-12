@@ -4,33 +4,37 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { useAppStore } from "@/store/useAppStore";
 import { macroApi } from "@/lib/api";
-import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
+import { TodayCall } from "@/components/dashboard/TodayCall";
 import { TodayPanel } from "@/components/dashboard/TodayPanel";
-import { TodaySignalsPanel } from "@/components/dashboard/TodaySignalsPanel";
-import { RegimeAgreement } from "@/components/dashboard/RegimeAgreement";
-import { MacroTape } from "@/components/dashboard/MacroTape";
-import { WatchlistGlance } from "@/components/dashboard/WatchlistGlance";
-import { VixGauge } from "@/components/dashboard/VixGauge";
-import { SwarmIndicator } from "@/components/dashboard/SwarmIndicator";
-import { BusinessCycleWheel } from "@/components/dashboard/BusinessCycleWheel";
-import { SectorRotationHeatmap } from "@/components/dashboard/SectorRotationHeatmap";
-import { SectorHeatmapCard } from "@/components/dashboard/SectorHeatmapCard";
-import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
-import { GexCard } from "@/components/dashboard/GexCard";
 import { BreadthStrip } from "@/components/dashboard/BreadthStrip";
+import { VixGauge } from "@/components/dashboard/VixGauge";
+import { GexCard } from "@/components/dashboard/GexCard";
+import { BusinessCycleWheel } from "@/components/dashboard/BusinessCycleWheel";
+import { SwarmIndicator } from "@/components/dashboard/SwarmIndicator";
+import { MacroTape } from "@/components/dashboard/MacroTape";
+import { TodaySignalsPanel } from "@/components/dashboard/TodaySignalsPanel";
+import { WatchlistGlance } from "@/components/dashboard/WatchlistGlance";
+import { SectorHeatmapCard } from "@/components/dashboard/SectorHeatmapCard";
+import { SectorRotationHeatmap } from "@/components/dashboard/SectorRotationHeatmap";
+import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
+import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 
+/**
+ * Today. The call strip first; everything under it is evidence, in the
+ * order a reader would ask for it: regime and positioning, then vol, then
+ * crowd and macro, then what fired and your own list, then rotation, then
+ * the wire. No card returns null — a panel with no data keeps its place
+ * and says why, so the page has the same shape on a bad-data day.
+ */
 export function DashboardView() {
   const t = useTranslations("dashboard");
   const { setVix, setBusinessCycle, setSectorRotation, setSwarm } = useAppStore();
 
-  // NOTE: RegimeAgreement and TodayPanel observe the SAME ["macro_dashboard"]
-  // query key with a bare `macroApi.dashboard` queryFn. React Query dedupes by
-  // key and runs only one queryFn per fetch, so we must NOT put the store-
-  // population side-effects inside this queryFn — if another observer's queryFn
-  // wins the fetch, those side-effects never run and Swarm/Cycle/Rotation/VIX
-  // hang on their loading state. Populate the store from `data` in an effect
-  // instead, so it fires whenever the shared query resolves.
+  // NOTE: TodayCall and TodayPanel observe the SAME ["macro_dashboard"] query
+  // key. React Query dedupes by key and runs only one queryFn per fetch, so
+  // the store-population side-effects live in an effect on `data`, not in a
+  // queryFn that might not be the one that runs.
   const { data } = useQuery({
     queryKey: ["macro_dashboard"],
     queryFn: macroApi.dashboard,
@@ -47,79 +51,49 @@ export function DashboardView() {
   }, [data, setVix, setBusinessCycle, setSectorRotation, setSwarm]);
 
   return (
-    <div className="space-y-5 p-2 sm:p-0">
-      <div className="-mx-2 sm:-mx-0 -mt-2 sm:-mt-2">
-        <MarketTickerTape />
+    <div className="space-y-4">
+      <header className="flex flex-wrap items-end justify-between gap-2">
+        <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("pageTitle")}</h1>
+        <p className="font-mono text-xs text-muted-foreground">{t("pageSubtitle")}</p>
+      </header>
+
+      <TodayCall />
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2"><TodayPanel /></div>
+        <BreadthStrip />
       </div>
 
-      {/* 1 — Today's read: arbitrated regime, risk score, positioning */}
-      <Section title={t("sectionTodayTitle")} intro={t("sectionTodayIntro")}>
-        <RegimeAgreement />
-        <TodayPanel />
-      </Section>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <VixGauge />
+        <GexCard />
+        <BusinessCycleWheel />
+      </div>
 
-      {/* 2 — Risk & volatility: the options trader's read (VIX + dealer gamma).
-          items-start so each card hugs its content — no forced min-heights, no
-          stretch padding, no dead space. Density by content, not by box. */}
-      <Section title={t("sectionRiskVolTitle")} intro={t("sectionRiskVolIntro")}>
-        {/* VixGauge draws a recharts gauge that needs a real height; GexCard
-            fills the matched height via flex-1, so the pair stays tidy. */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="h-[320px]"><VixGauge /></div>
-          <div className="h-[320px]"><GexCard /></div>
-        </div>
-      </Section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <SwarmIndicator />
+        <div className="lg:col-span-2"><MacroTape /></div>
+      </div>
 
-      {/* 3 — Today's signals & changes: what flipped overnight */}
-      <Section title={t("sectionSignalsTitle")} intro={t("sectionSignalsIntro")}>
-        <TodaySignalsPanel />
-      </Section>
+      <div id="signals" className="grid scroll-mt-20 grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2"><TodaySignalsPanel /></div>
+        <WatchlistGlance />
+      </div>
 
-      {/* 4 — Crowd & breadth: how fragile is this tape */}
-      <Section title={t("sectionCrowdTitle")} intro={t("sectionCrowdIntro")}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-          <SwarmIndicator />
-          <BreadthStrip />
-          <BusinessCycleWheel />
-        </div>
-      </Section>
+      <SectorHeatmapCard />
 
-      {/* 5 — Macro tape (cross-asset sparklines) */}
-      <Section title={t("sectionMovingTitle")} intro={t("sectionMovingIntro")}>
-        <MacroTape />
-      </Section>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2"><SectorRotationHeatmap /></div>
+        <CryptoIndicators />
+      </div>
 
-      {/* 6 — Rotation & your watchlist: where the leadership is */}
-      <Section title={t("sectionRotationTitle")} intro={t("sectionRotationIntro")}>
-        {/* Sector-level view of the market heatmap: one tile per GICS sector,
-            sized by cap, coloured by cap-weighted change. Each tile deep-links
-            into /heatmap with the sector pre-selected. */}
-        <SectorHeatmapCard />
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
-          <SectorRotationHeatmap />
-          <WatchlistGlance />
-        </div>
-      </Section>
+      <RealtimeNewsFeed />
 
-      {/* 7 — Crypto, news & the wire: three packed columns fill the width */}
-      <Section title={t("sectionWireTitle")} intro={t("sectionWireIntro")}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-          <CryptoIndicators />
-          <RealtimeNewsFeed />
-        </div>
-      </Section>
+      {/* The one surface not in our skin: TradingView's tape, kept for the
+          affiliate link, at the bottom where it cannot dilute the call. */}
+      <div className="overflow-hidden rounded-panel border border-border">
+        <MarketTickerTape />
+      </div>
     </div>
-  );
-}
-
-function Section({ title, intro, children }: { title: string; intro: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-2 sm:space-y-3">
-      <header>
-        <h2 className="text-sm sm:text-base font-semibold text-foreground">{title}</h2>
-        <p className="text-xs text-muted-foreground">{intro}</p>
-      </header>
-      {children}
-    </section>
   );
 }

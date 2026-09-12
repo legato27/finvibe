@@ -1,4 +1,5 @@
 "use client";
+import { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
@@ -25,19 +26,14 @@ const REGIME_KEY_MAP: Record<string, string> = {
 
 export function GexCard() {
   const t = useTranslations("dashboard");
-  const { data: gex } = useQuery({
+  const { data: gex, isLoading } = useQuery({
     queryKey: ["gex"],
     queryFn: macroApi.gex,
     staleTime: 60_000 * 5,
   });
 
-  if (!gex || gex.error) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("gexLoading")}</div>
-      </div>
-    );
-  }
+  if (isLoading) return <PanelPending label={t("gexTitle")} text={t("gexLoading")} className="h-full" />;
+  if (!gex || gex.error) return <PanelUnavailable label={t("gexTitle")} reason={t("notAvailableReason")} className="h-full" />;
 
   const tone = REGIME_TONE[gex.regime] || NEUTRAL_TONE;
   const isPositive = gex.net_gex > 0;

@@ -2,7 +2,8 @@
 import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
-import { BarChart3 } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import Stat from "@/components/ui/Stat";
 import { InfoTip } from "@/components/shared/InfoTip";
 
 const SIGNAL_KEY_MAP: Record<string, string> = {
@@ -10,87 +11,48 @@ const SIGNAL_KEY_MAP: Record<string, string> = {
   broad_weakness: "breadthSigBroadWeakness",
   narrowing: "breadthSigNarrowing",
 };
+const SIGNAL_PILL: Record<string, string> = {
+  broad_strength: "text-signal-long bg-signal-long-bg",
+  broad_weakness: "text-signal-short bg-signal-short-bg",
+  narrowing: "text-signal-caution bg-signal-caution-bg",
+};
+
+const tone = (v: number | null | undefined, hi: number, lo: number) =>
+  v == null ? "muted" : v > hi ? "long" : v > lo ? "caution" : "short";
 
 export function BreadthStrip() {
   const t = useTranslations("dashboard");
-  const { data: breadth } = useQuery({
+  const { data: breadth, isLoading } = useQuery({
     queryKey: ["breadth"],
     queryFn: macroApi.breadth,
     staleTime: 60_000 * 5,
   });
 
-  if (!breadth || breadth.error) {
-    return null; // silent fail — strip just doesn't show
-  }
+  const label = (
+    <span className="flex items-center gap-1">
+      {t("breadthTitle")} <InfoTip tip={t("breadthInfo")} />
+    </span>
+  );
+  if (isLoading) return <PanelPending label={label} text={t("loadingGeneric")} />;
+  if (!breadth || breadth.error) return <PanelUnavailable label={label} reason={t("notAvailableReason")} />;
 
-  const signalColor = breadth.signal === "broad_strength" ? "text-signal-long bg-signal-long/10"
-    : breadth.signal === "broad_weakness" ? "text-signal-short bg-signal-short/10"
-    : breadth.signal === "narrowing" ? "text-signal-caution bg-signal-caution/10"
-    : "text-muted-foreground bg-muted";
-
-  const signalLabel = breadth.signal && SIGNAL_KEY_MAP[breadth.signal]
-    ? t(SIGNAL_KEY_MAP[breadth.signal])
-    : t("breadthSigNeutral");
+  const signalLabel = breadth.signal && SIGNAL_KEY_MAP[breadth.signal] ? t(SIGNAL_KEY_MAP[breadth.signal]) : t("breadthSigNeutral");
+  const pill = SIGNAL_PILL[breadth.signal] ?? "text-muted-foreground bg-muted";
+  const chg = (v: number | null | undefined) => (v == null ? undefined : `${v >= 0 ? "+" : ""}${v}% ${t("breadthVsYesterday")}`);
 
   return (
-    <div className="card h-full">
-      <div className="flex items-center justify-between px-3 pt-2">
-        <div className="flex items-center gap-1.5">
-          <BarChart3 className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
-            {t("breadthTitle")}
-            <InfoTip tip={t("breadthInfo")} />
-          </span>
-        </div>
-        <span className={`text-[10px] font-medium px-2 py-0.5 rounded ${signalColor}`}>
-          {signalLabel}
-        </span>
+    <Panel
+      label={label}
+      qualifier={breadth.sample_size ? t("breadthSample", { n: breadth.sample_size }) : undefined}
+      aside={<span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${pill}`}>{signalLabel}</span>}
+      reading={breadth.description}
+    >
+      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+        <Stat label={t("breadthPctAbove50")} value={breadth.pct_above_50dma != null ? `${breadth.pct_above_50dma}%` : "—"} sub={chg(breadth.pct_above_50dma_chg)} tone={tone(breadth.pct_above_50dma, 60, 40)} />
+        <Stat label={t("breadthPctAbove200")} value={breadth.pct_above_200dma != null ? `${breadth.pct_above_200dma}%` : "—"} sub={chg(breadth.pct_above_200dma_chg)} tone={tone(breadth.pct_above_200dma, 60, 40)} />
+        <Stat label={t("breadthAdRatio")} value={breadth.adv_dec_ratio ?? "—"} sub={breadth.advances != null ? `${breadth.advances}▲ ${breadth.declines}▼` : undefined} tone={tone(breadth.adv_dec_ratio, 1.2, 0.8)} />
+        <Stat label={t("breadthNhNl")} value={breadth.new_highs_lows ?? "—"} tone={breadth.new_highs_lows == null ? "muted" : breadth.new_highs_lows > 0 ? "long" : breadth.new_highs_lows < 0 ? "short" : "caution"} />
       </div>
-      <div className="flex divide-x divide-border/30">
-        <div className="flex-1 text-center px-2 py-2">
-          <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-            {t("breadthPctAbove50")} <InfoTip size={10} tip={t("breadthPctAbove50Tip")} />
-          </div>
-          <div className={`text-lg font-bold font-mono ${breadth.pct_above_50dma == null ? "text-muted-foreground" : breadth.pct_above_50dma > 60 ? "text-signal-long" : breadth.pct_above_50dma > 40 ? "text-signal-caution" : "text-signal-short"}`}>
-            {breadth.pct_above_50dma != null ? `${breadth.pct_above_50dma}%` : "—"}
-          </div>
-          {breadth.pct_above_50dma_chg != null && (
-            <div className={`text-[10px] font-mono ${breadth.pct_above_50dma_chg >= 0 ? "text-signal-long" : "text-signal-short"}`}>
-              {breadth.pct_above_50dma_chg >= 0 ? "+" : ""}{breadth.pct_above_50dma_chg}%
-            </div>
-          )}
-        </div>
-        <div className="flex-1 text-center px-2 py-2">
-          <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-            {t("breadthPctAbove200")} <InfoTip size={10} tip={t("breadthPctAbove200Tip")} />
-          </div>
-          <div className={`text-lg font-bold font-mono ${breadth.pct_above_200dma == null ? "text-muted-foreground" : breadth.pct_above_200dma > 60 ? "text-signal-long" : breadth.pct_above_200dma > 40 ? "text-signal-caution" : "text-signal-short"}`}>
-            {breadth.pct_above_200dma != null ? `${breadth.pct_above_200dma}%` : "—"}
-          </div>
-          {breadth.pct_above_200dma_chg != null && (
-            <div className={`text-[10px] font-mono ${breadth.pct_above_200dma_chg >= 0 ? "text-signal-long" : "text-signal-short"}`}>
-              {breadth.pct_above_200dma_chg >= 0 ? "+" : ""}{breadth.pct_above_200dma_chg}%
-            </div>
-          )}
-        </div>
-        <div className="flex-1 text-center px-2 py-2">
-          <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-            {t("breadthAdRatio")} <InfoTip size={10} tip={t("breadthAdRatioTip")} />
-          </div>
-          <div className={`text-lg font-bold font-mono ${breadth.adv_dec_ratio == null ? "text-muted-foreground" : breadth.adv_dec_ratio > 1.2 ? "text-signal-long" : breadth.adv_dec_ratio > 0.8 ? "text-signal-caution" : "text-signal-short"}`}>
-            {breadth.adv_dec_ratio ?? "—"}
-          </div>
-        </div>
-        <div className="flex-1 text-center px-2 py-2">
-          <div className="text-[10px] text-muted-foreground flex items-center justify-center gap-0.5">
-            {t("breadthNhNl")} <InfoTip size={10} tip={t("breadthNhNlTip")} />
-          </div>
-          <div className={`text-lg font-bold font-mono ${breadth.new_highs_lows == null ? "text-muted-foreground" : breadth.new_highs_lows > 0 ? "text-signal-long" : breadth.new_highs_lows < 0 ? "text-signal-short" : "text-signal-caution"}`}>
-            {breadth.new_highs_lows ?? "—"}
-          </div>
-        </div>
-      </div>
-      <p className="text-[10px] text-muted-foreground px-3 pb-2 italic">{breadth.description}</p>
-    </div>
+    </Panel>
   );
 }

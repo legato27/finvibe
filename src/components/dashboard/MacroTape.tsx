@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 
 interface Instrument {
   key: string;
@@ -55,7 +56,7 @@ const INSTRUMENT_TIP_KEYS: Record<string, string> = {
 
 export function MacroTape() {
   const t = useTranslations("dashboard");
-  const { data } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ["macro_tape"],
     queryFn: async () => {
       const res = await fetch("/api/macro/macro-tape");
@@ -66,19 +67,17 @@ export function MacroTape() {
   });
 
   const instruments: Instrument[] = data?.instruments || [];
-  if (instruments.length === 0) return null;
+  const label = (
+    <span className="flex items-center gap-1">
+      {t("macroTapeTitle")} <InfoTip tip={t("macroTapeInfo")} />
+    </span>
+  );
+  if (isLoading) return <PanelPending label={label} text={t("loadingGeneric")} className="h-full" />;
+  if (instruments.length === 0) return <PanelUnavailable label={label} reason={t("notAvailableReason")} className="h-full" />;
 
   return (
-    <div className="card">
-      <div className="flex items-center justify-between px-3 pt-2 pb-1">
-        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1">
-          {t("macroTapeTitle")}
-          <InfoTip tip={t("macroTapeInfo")} />
-        </span>
-        <span className="text-[9px] text-muted-foreground">{t("macroTapeSubtitle")}</span>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-px bg-border/20">
+    <Panel label={label} qualifier={t("macroTapeSubtitle")} className="h-full">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-control border border-border bg-border sm:grid-cols-3">
         {instruments.map((inst) => {
           const up1d = inst.change_1d >= 0;
           const up1m = inst.change_1m >= 0;
@@ -116,6 +115,6 @@ export function MacroTape() {
           );
         })}
       </div>
-    </div>
+    </Panel>
   );
 }

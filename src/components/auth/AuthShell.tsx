@@ -1,8 +1,8 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Wordmark } from "@/components/shared/Navbar";
 
 /* ── Split-screen auth layout: terminal-brand panel (left) + form (right).
      Both halves are built on the skin tokens, so the brand panel follows the
@@ -39,9 +39,8 @@ export function AuthShell({
           aria-hidden
         />
 
-        <Link href="/" className="relative inline-flex w-fit">
-          <Image src="/vibefin-logo.svg" alt="VibeFin" width={170} height={68} priority className="dark:hidden" />
-          <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={170} height={68} priority className="hidden dark:block" />
+        <Link href="/" className="relative inline-flex w-fit rounded-md">
+          <Wordmark />
         </Link>
 
         <div className="relative space-y-8 max-w-md">
@@ -96,10 +95,8 @@ export function AuthShell({
       {/* ── Form side ── */}
       <main className="flex items-center justify-center p-6 sm:p-10 bg-background">
         <div className="w-full max-w-sm">
-          {/* Mobile logo — theme-aware */}
-          <Link href="/" className="lg:hidden flex justify-center mb-8">
-            <Image src="/vibefin-logo.svg" alt="VibeFin" width={170} height={68} priority className="dark:hidden" />
-            <Image src="/vibefin-logo-dark.svg" alt="VibeFin" width={170} height={68} priority className="hidden dark:block" />
+          <Link href="/" className="mb-8 flex justify-center lg:hidden">
+            <Wordmark />
           </Link>
 
           <h1 className="text-xl font-bold text-foreground">{title}</h1>

@@ -1,4 +1,5 @@
 "use client";
+import { PanelPending } from "@/components/ui/Panel";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useAppStore } from "@/store/useAppStore";
@@ -121,13 +122,7 @@ export function BusinessCycleWheel() {
     return key.replace(/_/g, " ").replace(/\b(pct|yoy)\b/gi, "").trim();
   };
 
-  if (!cycle) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("cycleDetecting")}</div>
-      </div>
-    );
-  }
+  if (!cycle) return <PanelPending label={t("cycleTitle")} text={t("cycleDetecting")} className="h-full" />;
 
   const currentState = (cycle.state ?? "Expansion") as CycleState;
   const currentVisual = STATE_VISUAL[currentState] ?? STATE_VISUAL.Expansion;

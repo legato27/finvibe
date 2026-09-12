@@ -3,7 +3,8 @@ import { useTranslations } from "next-intl";
 import { useQuery } from "@tanstack/react-query";
 import { macroApi } from "@/lib/api";
 import { InfoTip } from "@/components/shared/InfoTip";
-import { Shield, TrendingUp, TrendingDown, Minus, AlertTriangle, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus, AlertTriangle, Zap } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 
 const REGIME_STYLE: Record<string, { color: string; bg: string; border: string }> = {
   green:  { color: "text-signal-long", bg: "bg-signal-long/10", border: "border-signal-long/30" },
@@ -42,13 +43,9 @@ export function TodayPanel() {
     staleTime: 60_000,
   });
 
-  if (isLoading || !today || today.error) {
-    return (
-      <div className="card flex items-center justify-center py-8">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("buildingTodayView")}</div>
-      </div>
-    );
-  }
+  const label = t("todayPanelTitle");
+  if (isLoading) return <PanelPending label={label} text={t("buildingTodayView")} className="h-full" />;
+  if (!today || today.error) return <PanelUnavailable label={label} reason={t("notAvailableReason")} className="h-full" />;
 
   const rs = REGIME_STYLE[today.regime_color] || REGIME_STYLE.yellow;
   const score = today.risk_score;
@@ -61,30 +58,17 @@ export function TodayPanel() {
   const missingInputs: string[] = Array.isArray(today.inputs_missing) ? today.inputs_missing : [];
 
   return (
-    <div className={`rounded-panel border ${rs.border} ${rs.bg} p-4 sm:p-5 space-y-4`}>
-      {/* ── Header: Regime + Score ── */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Shield className={`w-6 h-6 ${rs.color}`} />
-          <div>
-            <div className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">
-              {t("today")} &middot; {today.date}
-            </div>
-            <div className={`text-xl font-black ${rs.color}`}>
-              {today.regime}
-            </div>
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[10px] text-muted-foreground flex items-center gap-0.5 justify-end">
-            {t("riskScore")} <InfoTip size={10} tip={t("riskScoreTip")} />
-          </div>
-          <div className={`text-3xl font-black font-mono ${rs.color}`}>
-            {score > 0 ? "+" : ""}{score.toFixed(0)}
-          </div>
-        </div>
-      </div>
-
+    <Panel
+      label={label}
+      qualifier={today.date}
+      aside={
+        <span className={`nums font-mono text-lg font-bold ${rs.color}`} title={t("riskScoreTip")}>
+          {score > 0 ? "+" : ""}{score.toFixed(0)}
+        </span>
+      }
+      className="h-full"
+      bodyClassName="space-y-4"
+    >
       {/* Score bar */}
       <div className="relative h-2.5 bg-muted rounded-full overflow-hidden">
         <div className="absolute left-1/2 top-0 bottom-0 w-px bg-muted-foreground/30 z-10" />
@@ -184,6 +168,6 @@ export function TodayPanel() {
           </div>
         </div>
       </div>
-    </div>
+    </Panel>
   );
 }

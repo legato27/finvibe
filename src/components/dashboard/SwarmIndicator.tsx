@@ -1,4 +1,7 @@
 "use client";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { PanelPending } from "@/components/ui/Panel";
 import { useTranslations } from "next-intl";
 import { useAppStore } from "@/store/useAppStore";
 import { InfoTip } from "@/components/shared/InfoTip";
@@ -107,13 +110,7 @@ export function SwarmIndicator() {
   const t = useTranslations("dashboard");
   const swarm = useAppStore((s) => s.macro.swarm);
 
-  if (!swarm) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("swarmComputing")}</div>
-      </div>
-    );
-  }
+  if (!swarm) return <PanelPending label={t("swarmTitle")} text={t("swarmComputing")} className="h-full" />;
 
   const cfg = SIGNAL_VISUAL[swarm.signal_type as SignalKey] || SIGNAL_VISUAL.Neutral;
   const score = swarm.swarm_score;
@@ -133,8 +130,13 @@ export function SwarmIndicator() {
           {t("swarmTitle")}
           <InfoTip tip={t("swarmInfo")} />
         </span>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${cfg.badge}`}>
-          {t(cfg.labelKey)}
+        <span className="flex items-center gap-2">
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cfg.badge}`}>
+            {t(cfg.labelKey)}
+          </span>
+          <Link href="/ranked" className="inline-flex items-center gap-0.5 text-[11px] text-signal hover:underline">
+            {t("openScreener")}<ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
         </span>
       </div>
 

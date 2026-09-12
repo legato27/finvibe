@@ -1,4 +1,7 @@
 "use client";
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { PanelPending } from "@/components/ui/Panel";
 import { useTranslations } from "next-intl";
 import { useAppStore } from "@/store/useAppStore";
 import { useQuery } from "@tanstack/react-query";
@@ -52,11 +55,7 @@ export function SectorRotationHeatmap() {
   });
 
   if (!sectorRotation || sectorRotation.length === 0) {
-    return (
-      <div className="card h-full flex items-center justify-center">
-        <div className="text-muted-foreground text-sm animate-pulse">{t("sectorLoading")}</div>
-      </div>
-    );
+    return <PanelPending label={t("sectorRotation")} text={t("sectorLoading")} className="h-full" />;
   }
 
   // Build forecast lookup: sector name → expected return
@@ -88,6 +87,9 @@ export function SectorRotationHeatmap() {
             </span>
           )}
           <span className="text-xs text-muted-foreground">{t("sectorRsRank")}</span>
+          <Link href="/heatmap?group=sector" className="inline-flex items-center gap-0.5 text-[11px] text-signal hover:underline">
+            {t("sectorHeatmapOpen")}<ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </Link>
         </div>
       </div>
 
