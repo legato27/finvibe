@@ -23,6 +23,7 @@
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { optionsApi } from "@/lib/api";
 import {
   usePortfolios,
@@ -30,6 +31,8 @@ import {
   usePortfolioHoldingCounts,
 } from "@/lib/supabase/hooks";
 import { Layers, TriangleAlert } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import DataTable, { type Column } from "@/components/ui/DataTable";
 
 interface Resistance {
   spot: number | null;
@@ -53,27 +56,16 @@ interface DeskRow {
   resistance?: Resistance;
 }
 
-const SOURCE_LABEL: Record<string, string> = {
-  hvn: "volume shelf",
-  gamma_wall: "call OI wall",
-  max_pain: "max pain",
-};
+const SOURCE_KEYS = ["hvn", "gamma_wall", "max_pain"] as const;
+type SourceKey = (typeof SOURCE_KEYS)[number];
+const isSourceKey = (s: string | null | undefined): s is SourceKey =>
+  (SOURCE_KEYS as readonly string[]).includes(s ?? "");
 
 const usd = (v: number | null | undefined, d = 2) =>
   v == null ? "—" : `$${v.toFixed(d)}`;
 
-/** How long ago the catalog last wrote this price, for the Spot cell's title. */
-function spotAgeLabel(iso: string | null | undefined): string {
-  if (!iso) return "Live price from your portfolio";
-  const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
-  if (!Number.isFinite(mins) || mins < 0) return "Live price from your portfolio";
-  if (mins < 60) return `Live price, updated ${mins}m ago`;
-  const hours = Math.round(mins / 60);
-  if (hours < 48) return `Price updated ${hours}h ago`;
-  return `Price updated ${Math.round(hours / 24)}d ago`;
-}
-
 export default function CoveredCallBook() {
+  const t = useTranslations("deskPanels.coveredCallBook");
   const { data: portfolios } = usePortfolios();
   const { data: counts } = usePortfolioHoldingCounts();
   const [portfolioId, setPortfolioId] = useState<number | null>(null);
@@ -99,7 +91,7 @@ export default function CoveredCallBook() {
   }, [portfolios, counts]);
 
   const activeId = portfolioId ?? preferredId;
-  const { data: holdings } = usePortfolioHoldings(activeId);
+  const { data: holdings, isLoading: holdingsLoading, error: holdingsError } = usePortfolioHoldings(activeId);
 
   // Only meaningful once an explicit choice has been made: landing here on the
   // preferred portfolio means nothing anywhere qualifies.
@@ -149,160 +141,201 @@ export default function CoveredCallBook() {
     .filter((r) => r.contracts >= 1)
     .sort((a, b) => (b.contracts || 0) - (a.contracts || 0));
 
+  type CcRow = (typeof rows)[number];
+
   const blocked = rows.filter((r) => r.floorIsBasis);
 
-  return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Layers className="h-4 w-4 text-signal" />
-            Covered calls on what you hold
-          </h2>
-          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            Your cost basis stays in your browser — it is read from your portfolio with your own
-            session and joined to the desk&apos;s resistance levels here, never sent upstream. Only
-            lots of 100+ shares can be written against.
-          </p>
-        </div>
-        {portfolios && portfolios.length > 1 ? (
-          <label className="flex flex-col text-[11px] uppercase tracking-wide text-muted-foreground">
-            Portfolio
-            <select
-              value={activeId ?? ""}
-              onChange={(e) => setPortfolioId(Number(e.target.value))}
-              className="mt-1 rounded border border-border bg-background px-2 py-1 text-sm text-foreground"
+  /** How long ago the catalog last wrote this price, for the Spot cell's title. */
+  const spotAgeLabel = (iso: string | null | undefined): string => {
+    if (!iso) return t("spot.live");
+    const mins = Math.round((Date.now() - new Date(iso).getTime()) / 60_000);
+    if (!Number.isFinite(mins) || mins < 0) return t("spot.live");
+    if (mins < 60) return t("spot.minutesAgo", { mins });
+    const hours = Math.round(mins / 60);
+    if (hours < 48) return t("spot.hoursAgo", { hours });
+    return t("spot.daysAgo", { days: Math.round(hours / 24) });
+  };
+
+  const columns: Column<CcRow>[] = [
+    {
+      key: "ticker",
+      header: t("col.ticker"),
+      sortable: true,
+      sortValue: (r) => r.ticker,
+      cell: (r) => (
+        <span>
+          <span className="font-mono font-bold">{r.ticker}</span>
+          {r.unrealised != null ? (
+            <span
+              className={`ml-2 text-[11px] ${r.unrealised >= 0 ? "text-signal-long" : "text-signal-short"}`}
             >
-              {portfolios.map((p: { id: number; name: string }) => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-      </header>
+              {r.unrealised >= 0 ? "+" : ""}
+              {(r.unrealised * 100).toFixed(1)}%
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      key: "shares",
+      header: t("col.shares"),
+      sortable: true,
+      align: "right",
+      hideBelow: "md",
+      sortValue: (r) => r.shares,
+      cell: (r) => <span className="nums">{r.shares}</span>,
+    },
+    {
+      key: "basis",
+      header: t("col.basis"),
+      ariaLabel: t("aria.basis"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.cost_basis,
+      cell: (r) => <span className="nums">{usd(r.cost_basis)}</span>,
+    },
+    {
+      key: "spot",
+      header: t("col.spot"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.spot,
+      cell: (r) =>
+        r.spotIsLive ? (
+          <span className="nums text-muted-foreground" title={spotAgeLabel(r.last_price_updated_at)}>
+            {usd(r.spot)}
+          </span>
+        ) : (
+          <span className="nums text-signal-caution" title={t("spot.storedTitle")}>
+            {usd(r.spot)}
+            <span className="ml-1 text-[10px]">{t("spot.stored")}</span>
+          </span>
+        ),
+    },
+    {
+      key: "resistance",
+      header: t("col.resistance"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.resistance,
+      cell: (r) =>
+        r.resistance == null ? (
+          <span className="text-muted-foreground" title={r.res?.hvn_note ?? t("noLevel")}>
+            —
+          </span>
+        ) : (
+          <span className="nums">
+            {usd(r.resistance)}
+            <span className="ml-1 text-[10px] text-muted-foreground">
+              {isSourceKey(r.res?.resistance_source) ? t(`source.${r.res!.resistance_source as SourceKey}`) : ""}
+            </span>
+          </span>
+        ),
+    },
+    {
+      key: "target",
+      header: t("col.minStrike"),
+      ariaLabel: t("aria.minStrike"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.target,
+      cell: (r) =>
+        r.target == null ? (
+          <span className="nums font-semibold">—</span>
+        ) : r.floorIsBasis ? (
+          <span className="nums font-semibold text-signal-caution" title={t("floorIsBasis")}>
+            {usd(r.target)}
+          </span>
+        ) : (
+          <span className="nums font-semibold">{usd(r.target)}</span>
+        ),
+    },
+    {
+      key: "contracts",
+      header: t("col.contracts"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.contracts,
+      cell: (r) => <span className="nums text-muted-foreground">{r.contracts}</span>,
+    },
+  ];
+
+  const label = (
+    <>
+      <Layers className="h-3.5 w-3.5 text-signal" aria-hidden="true" />
+      {t("label")}
+    </>
+  );
+
+  const aside =
+    portfolios && portfolios.length > 1 ? (
+      <label className="flex items-center gap-2">
+        <span className="stat-label">{t("portfolio")}</span>
+        <select
+          value={activeId ?? ""}
+          onChange={(e) => setPortfolioId(Number(e.target.value))}
+          className="rounded-control border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        >
+          {portfolios.map((p: { id: number; name: string }) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </label>
+    ) : undefined;
+
+  if (holdingsError) {
+    return <PanelUnavailable label={label} aside={aside} reason={t("unavailable")} />;
+  }
+  if (holdingsLoading) {
+    return <PanelPending label={label} text={t("loading")} />;
+  }
+
+  return (
+    <Panel
+      label={label}
+      qualifier={rows.length > 0 ? t("qualifier", { count: rows.length }) : undefined}
+      aside={aside}
+      reading={rows.length > 0 ? t("reading") : undefined}
+    >
+      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{t("lead")}</p>
 
       {!holdings?.length ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          No holdings in this portfolio. Covered calls need shares you already own.
+          {t("noHoldings")}
           {elsewhere.length > 0 ? (
             <>
               {" "}
-              Your shares are in{" "}
-              {elsewhere.map((p: { name: string }) => p.name).join(", ")} — switch
-              with the selector above.
+              {t("holdingsElsewhere", {
+                names: elsewhere.map((p: { name: string }) => p.name).join(", "),
+              })}
             </>
           ) : null}
         </p>
       ) : rows.length === 0 ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">
-          No position reaches 100 shares, which is the minimum for one contract.
-        </p>
+        <p className="py-6 text-center text-sm text-muted-foreground">{t("noLots")}</p>
       ) : (
         <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] text-sm">
-              <caption className="sr-only">Covered call candidates from your holdings</caption>
-              <thead>
-                <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <th scope="col" className="py-2 pr-3 text-left font-medium">Ticker</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Shares</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Basis</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Spot</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Resistance</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Min strike</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Contracts</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-b border-border/60 last:border-0">
-                    <td className="py-2 pr-3">
-                      <span className="font-mono font-bold">{r.ticker}</span>
-                      {r.unrealised != null ? (
-                        <span
-                          className={`ml-2 text-[11px] ${
-                            r.unrealised >= 0 ? "text-signal-long" : "text-signal-short"
-                          }`}
-                        >
-                          {r.unrealised >= 0 ? "+" : ""}
-                          {(r.unrealised * 100).toFixed(1)}%
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="nums py-2 pr-3 text-right">{r.shares}</td>
-                    <td className="nums py-2 pr-3 text-right">{usd(r.cost_basis)}</td>
-                    <td className="nums py-2 pr-3 text-right text-muted-foreground">
-                      {r.spotIsLive ? (
-                        <span title={spotAgeLabel(r.last_price_updated_at)}>{usd(r.spot)}</span>
-                      ) : (
-                        <span
-                          className="text-signal-caution"
-                          title="No live price for this name — this is the desk's stored daily spot, which can be a session or more behind."
-                        >
-                          {usd(r.spot)}
-                          <span className="ml-1 text-[10px]">stored</span>
-                        </span>
-                      )}
-                    </td>
-                    <td className="nums py-2 pr-3 text-right">
-                      {r.resistance == null ? (
-                        <span
-                          className="text-muted-foreground"
-                          title={r.res?.hvn_note ?? "no level above spot in the stored data"}
-                        >
-                          —
-                        </span>
-                      ) : (
-                        <>
-                          {usd(r.resistance)}
-                          <span className="ml-1 text-[10px] text-muted-foreground">
-                            {SOURCE_LABEL[r.res?.resistance_source ?? ""] ?? ""}
-                          </span>
-                        </>
-                      )}
-                    </td>
-                    <td className="nums py-2 pr-3 text-right font-semibold">
-                      {r.target == null ? (
-                        "—"
-                      ) : r.floorIsBasis ? (
-                        <span
-                          className="text-signal-caution"
-                          title="Resistance sits below your cost basis — writing at resistance would lock in a loss. Your basis is the floor."
-                        >
-                          {usd(r.target)}
-                        </span>
-                      ) : (
-                        usd(r.target)
-                      )}
-                    </td>
-                    <td className="nums py-2 pr-3 text-right text-muted-foreground">
-                      {r.contracts}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable<CcRow>
+            caption={t("tableCaption")}
+            columns={columns}
+            rows={rows}
+            rowKey={(r) => String(r.id)}
+            rowHref={(r) => `/stock/${r.ticker}`}
+          />
 
           {blocked.length > 0 ? (
-            <p className="mt-3 flex items-start gap-2 rounded border border-signal-caution/40 bg-signal-caution-bg p-2.5 text-xs text-signal-caution">
-              <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" />
+            <p className="mt-3 flex items-start gap-2 rounded-control border border-signal-caution/40 bg-signal-caution-bg p-2.5 text-xs text-signal-caution">
+              <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               <span>
-                <strong>{blocked.map((b) => b.ticker).join(", ")}</strong>: resistance sits below
-                your cost basis. Writing at the resistance level would cap you out at a loss, so the
-                basis becomes the floor — and a strike that far above spot may pay almost nothing.
-                Holding the shares uncovered is often the better trade here.
+                {t.rich("blocked", {
+                  strong: (chunks) => <strong>{chunks}</strong>,
+                  tickers: blocked.map((b) => b.ticker).join(", "),
+                })}
               </span>
             </p>
           ) : null}
-
-          <p className="mt-2 text-[11px] text-muted-foreground">
-            Resistance is the lowest of three independent reads — the nearest volume shelf, the
-            heaviest call open-interest strike above spot, and max pain. A dash means the price has
-            cleared all of them, which argues for a further strike rather than a closer one.
-          </p>
         </>
       )}
-    </section>
+    </Panel>
   );
 }

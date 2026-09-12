@@ -25,7 +25,11 @@ import { optionsApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
 import type { FilterDef } from "@/components/shared/ColumnFilters";
 import { WatchlistStar } from "@/components/shared/WatchlistStar";
-import { LastUpdated } from "@/components/common/LastUpdated";
+import Freshness from "@/components/ui/Freshness";
+import Segmented from "@/components/ui/Segmented";
+import Chip from "@/components/ui/Chip";
+import { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import { useTranslations } from "next-intl";
 import GuideCard from "@/components/ui/GuideCard";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 import { ShieldAlert, ShieldCheck, TrendingDown, Landmark } from "lucide-react";
@@ -134,9 +138,9 @@ const fmt = (v: number | null | undefined, d = 1, suffix = "") =>
   v == null ? "—" : `${v.toFixed(d)}${suffix}`;
 
 const TIER_STYLE: Record<Tier, { label: string; cls: string }> = {
-  qualified: { label: "Qualified", cls: "text-signal-long bg-signal-long-bg border-signal-long/40" },
-  watch: { label: "Watch", cls: "text-signal-neutral bg-signal-neutral-bg border-signal-neutral/40" },
-  rejected: { label: "Rejected", cls: "text-signal-short bg-signal-short-bg border-signal-short/40" },
+  qualified: { label: "tierQualified", cls: "text-signal-long bg-signal-long-bg border-signal-long/40" },
+  watch: { label: "tierWatch", cls: "text-signal-neutral bg-signal-neutral-bg border-signal-neutral/40" },
+  rejected: { label: "tierRejected", cls: "text-signal-short bg-signal-short-bg border-signal-short/40" },
 };
 
 /** Days until an earnings print, or null when we have no date. */
@@ -147,6 +151,7 @@ function daysToEarnings(iso: string | null): number | null {
 }
 
 export default function OptionDeskPage() {
+  const t = useTranslations("desk");
   const [strategy, setStrategy] = useState<Strategy>("csp");
   const [tierFilter, setTierFilter] = useState<Tier | "all">("all");
   const [collateral, setCollateral] = useState<number | null>(null);
@@ -168,36 +173,38 @@ export default function OptionDeskPage() {
   );
 
   const filters: FilterDef<DeskRow>[] = [
-    { key: "ticker", label: "Ticker", kind: "text", value: (r) => r.ticker },
-    { key: "sector", label: "Sector", kind: "select", value: (r) => r.sector ?? "" },
-    { key: "bucket", label: "Correlation bucket", kind: "select", value: (r) => r.correlation_bucket ?? "" },
-    { key: "tier", label: "Tier", kind: "select", value: (r) => r.tier },
-    { key: "score", label: "Score", kind: "number", value: (r) => Math.round(r.score * 100) },
-    { key: "ivp", label: "IV percentile", kind: "number", value: (r) => r.iv_percentile },
-    { key: "fscore", label: "F-Score", kind: "number", value: (r) => r.f_score },
-    { key: "ouz", label: "OU z-score", kind: "number", value: (r) => r.ou_z_score },
-    { key: "ann", label: "Annualized %", kind: "number", value: (r) => r.annualized_return_pct },
-    { key: "dte", label: "DTE", kind: "number", value: (r) => r.dte },
+    { key: "ticker", label: t("filter.ticker"), kind: "text", value: (r) => r.ticker },
+    { key: "sector", label: t("filter.sector"), kind: "select", value: (r) => r.sector ?? "" },
+    { key: "bucket", label: t("filter.bucket"), kind: "select", value: (r) => r.correlation_bucket ?? "" },
+    { key: "tier", label: t("filter.tier"), kind: "select", value: (r) => r.tier },
+    { key: "score", label: t("filter.score"), kind: "number", value: (r) => Math.round(r.score * 100) },
+    { key: "ivp", label: t("filter.ivp"), kind: "number", value: (r) => r.iv_percentile },
+    { key: "fscore", label: t("filter.fscore"), kind: "number", value: (r) => r.f_score },
+    { key: "ouz", label: t("filter.ouz"), kind: "number", value: (r) => r.ou_z_score },
+    { key: "ann", label: t("filter.ann"), kind: "number", value: (r) => r.annualized_return_pct },
+    { key: "dte", label: t("filter.dte"), kind: "number", value: (r) => r.dte },
   ];
 
   const columns: Column<DeskRow>[] = [
     {
       key: "ticker",
-      header: "Ticker",
+      header: t("col.ticker"),
       sortable: true,
       sortValue: (r) => r.ticker,
+      // max-w-0 on the cell lets the name truncate inside an auto-layout table.
+      className: "w-[210px] max-w-0",
       cell: (r) => (
-        <span>
+        <span className="flex items-center gap-1.5 whitespace-nowrap">
           <span className="font-mono font-bold">{r.ticker}</span>
           {r.is_etf ? (
             <span
-              className="ml-1.5 rounded border border-border px-1 py-px align-middle text-[9px] font-semibold uppercase tracking-wide text-muted-foreground"
-              title="Fund — no issuer solvency to gate on, and no F-Score or DCF to score. Judged on volatility, dislocation and yield only."
+              className="rounded border border-border px-1 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground"
+              title={t("fundTitle")}
             >
               ETF
             </span>
           ) : null}
-          <span className="ml-2 hidden text-xs text-muted-foreground lg:inline">{r.name}</span>
+          <span className="hidden min-w-0 truncate text-xs text-muted-foreground lg:inline" title={r.name ?? undefined}>{r.name}</span>
         </span>
       ),
     },
@@ -206,12 +213,12 @@ export default function OptionDeskPage() {
       // button cannot nest inside it.
       key: "watch",
       header: <span aria-hidden="true">★</span>,
-      ariaLabel: "Watchlist",
+      ariaLabel: t("aria.watchlist"),
       cell: (r) => <WatchlistStar ticker={r.ticker} />,
     },
     {
       key: "tier",
-      header: "Tier",
+      header: t("col.tier"),
       sortable: true,
       sortValue: (r) => ({ qualified: 0, watch: 1, rejected: 2 })[r.tier],
       cell: (r) => {
@@ -222,14 +229,14 @@ export default function OptionDeskPage() {
             className={`inline-block rounded border px-1.5 py-0.5 text-[11px] font-semibold ${s.cls}`}
             title={why ?? undefined}
           >
-            {s.label}
+            {t(s.label)}
           </span>
         );
       },
     },
     {
       key: "score",
-      header: "Score",
+      header: t("col.score"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.score,
@@ -247,10 +254,10 @@ export default function OptionDeskPage() {
                 .map(([k, v]) =>
                   na.includes(k)
                     ? `${k}: n/a for a fund`
-                    : `${k}: ${v == null ? "not measured" : v.toFixed(2)}`)
+                    : `${k}: ${v == null ? t("notMeasured") : v.toFixed(2)}`)
                 .join("\n") +
               `\n\n${Math.round(r.score_coverage * 100)}% of the applicable weight is informed` +
-              (thin ? " — too thin to qualify on" : "")
+              (thin ? t("tooThin") : "")
             }
           >
             {Math.round(r.score * 100)}
@@ -265,7 +272,7 @@ export default function OptionDeskPage() {
     },
     {
       key: "verdict",
-      header: "Verdict",
+      header: t("col.verdict"),
       sortable: true,
       sortValue: (r) => r.verdict ?? "",
       hideBelow: "lg",
@@ -274,8 +281,8 @@ export default function OptionDeskPage() {
     // ── the two hard gates, made visible ──────────────────────────────────
     {
       key: "solvency",
-      header: "Altman",
-      ariaLabel: "Altman Z solvency",
+      header: t("col.altman"),
+      ariaLabel: t("aria.altman"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.altman_z ?? r.altman_z_prime,
@@ -295,7 +302,7 @@ export default function OptionDeskPage() {
     },
     {
       key: "oi",
-      header: "Strike OI",
+      header: t("col.strikeOi"),
       sortable: true,
       align: "right",
       optional: true,
@@ -305,8 +312,8 @@ export default function OptionDeskPage() {
     // ── the scored inputs ─────────────────────────────────────────────────
     {
       key: "ivp",
-      header: "IV %ile",
-      ariaLabel: "IV percentile",
+      header: t("col.ivPct"),
+      ariaLabel: t("aria.ivPct"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.iv_percentile,
@@ -325,7 +332,7 @@ export default function OptionDeskPage() {
     },
     {
       key: "iv",
-      header: "ATM IV",
+      header: t("col.atmIv"),
       sortable: true,
       align: "right",
       optional: true,
@@ -334,21 +341,21 @@ export default function OptionDeskPage() {
     },
     {
       key: "fscore",
-      header: "F",
-      ariaLabel: "Piotroski F-Score",
+      header: t("col.f"),
+      ariaLabel: t("aria.f"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.f_score,
       cell: (r) => (
-        <span className="nums" title="Piotroski F-Score (0-9)">
+        <span className="nums" title={t("fScoreTitle")}>
           {r.f_score == null ? "—" : `${r.f_score}/9`}
         </span>
       ),
     },
     {
       key: "ouz",
-      header: "OU z",
-      ariaLabel: "Ornstein-Uhlenbeck z-score",
+      header: t("col.ouZ"),
+      ariaLabel: t("aria.ouZ"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.ou_z_score,
@@ -368,7 +375,7 @@ export default function OptionDeskPage() {
     // ── the trade ─────────────────────────────────────────────────────────
     {
       key: "strike",
-      header: isCsp ? "Put strike" : "Call strike",
+      header: isCsp ? t("col.putStrike") : t("col.callStrike"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.strike,
@@ -380,7 +387,7 @@ export default function OptionDeskPage() {
           return (
             <span
               className="text-muted-foreground"
-              title={isCsp ? undefined : "Use the gamma wall and your own cost basis"}
+              title={isCsp ? undefined : t("ccStrikeTitle")}
             >
               —
             </span>
@@ -392,12 +399,12 @@ export default function OptionDeskPage() {
             className="nums"
             title={
               fresh
-                ? "Targeted today from the recorded per-strike quote band, chosen for open interest near the target delta"
-                : "Inherited from the recommendation engine's last logged entry"
+                ? t("strikeFresh")
+                : t("strikeInherited")
             }
           >
             ${r.strike}
-            {!fresh ? <span className="ml-1 text-[10px] text-muted-foreground">logged</span> : null}
+            {!fresh ? <span className="ml-1 text-[10px] text-muted-foreground">{t("logged")}</span> : null}
           </span>
         );
       },
@@ -407,8 +414,8 @@ export default function OptionDeskPage() {
       : ([
           {
             key: "wall",
-            header: "Resistance",
-            ariaLabel: "Lowest resistance level above spot",
+            header: t("col.resistance"),
+            ariaLabel: t("aria.resistance"),
             sortable: true,
             align: "right",
             sortValue: (r: DeskRow) => r.resistance?.resistance ?? null,
@@ -445,7 +452,7 @@ export default function OptionDeskPage() {
           },
           {
             key: "maxpain",
-            header: "Max pain",
+            header: t("col.maxPain"),
             sortable: true,
             align: "right",
             optional: true,
@@ -456,7 +463,7 @@ export default function OptionDeskPage() {
         ] as Column<DeskRow>[])),
     {
       key: "dte",
-      header: "DTE",
+      header: t("col.dte"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.dte,
@@ -464,8 +471,8 @@ export default function OptionDeskPage() {
     },
     {
       key: "delta",
-      header: "Δ",
-      ariaLabel: "Delta",
+      header: t("col.delta"),
+      ariaLabel: t("aria.delta"),
       sortable: true,
       align: "right",
       optional: true,
@@ -474,7 +481,7 @@ export default function OptionDeskPage() {
     },
     {
       key: "prem",
-      header: "Premium",
+      header: t("col.premium"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.premium_est,
@@ -482,10 +489,8 @@ export default function OptionDeskPage() {
     },
     {
       key: "ann",
-      header: "Ann. %",
-      ariaLabel: isCsp
-        ? "Annualized return on cash collateral"
-        : "Annualized premium yield on the shares held",
+      header: t("col.annPct"),
+      ariaLabel: isCsp ? t("annAriaCsp") : t("annAriaCc"),
       sortable: true,
       align: "right",
       sortValue: (r) => r.annualized_return_pct,
@@ -508,7 +513,7 @@ export default function OptionDeskPage() {
     },
     {
       key: "be",
-      header: "Breakeven",
+      header: t("col.breakeven"),
       sortable: true,
       align: "right",
       optional: true,
@@ -528,7 +533,7 @@ export default function OptionDeskPage() {
     },
     {
       key: "earn",
-      header: "Earnings",
+      header: t("col.earnings"),
       sortable: true,
       align: "right",
       sortValue: (r) => daysToEarnings(r.next_earnings_date),
@@ -553,55 +558,25 @@ export default function OptionDeskPage() {
   const tiers = data?.tiers;
 
   return (
-    <div className="mx-auto max-w-[1600px] space-y-4 p-4 lg:p-6">
-
+    <div className="mx-auto max-w-[1600px] space-y-4">
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-bold">
-            <Landmark className="h-5 w-5 text-signal" />
-            Option desk
-          </h1>
-          <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-            Candidates for selling puts and covered calls, graded rather than filtered. Two hard
-            gates — solvency and liquidity — then a weighted score. Names that fail a gate stay on
-            the list with the reason, so a thin top tier explains itself.
-          </p>
+          <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("title")}</h1>
+          <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <LastUpdated at={deskAsOf} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Freshness at={deskAsOf} />
+          <Segmented
+            ariaLabel={t("strategyLabel")}
+            value={strategy}
+            onChange={setStrategy}
+            options={[
+              { value: "csp", label: <span className="flex flex-col items-start leading-tight"><span>{t("sellPuts")}</span><span className="text-[10px] font-normal opacity-70">{t("sellPutsCaption")}</span></span> },
+              { value: "covered_call", label: <span className="flex flex-col items-start leading-tight"><span>{t("coveredCalls")}</span><span className="text-[10px] font-normal opacity-70">{t("coveredCallsCaption")}</span></span> },
+            ]}
+          />
+        </div>
       </header>
-
-      {/* Strategy switch */}
-      <div className="flex flex-wrap gap-2">
-        {(
-          [
-            { id: "csp" as const, label: "Sell puts", icon: TrendingDown, caption: "Cash-secured, 7-45 DTE" },
-            { id: "covered_call" as const, label: "Covered calls", icon: ShieldCheck, caption: "Against shares you hold" },
-          ]
-        ).map(({ id, label, icon: Icon, caption }) => {
-          const active = strategy === id;
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setStrategy(id)}
-              aria-pressed={active}
-              className={`flex items-start gap-2.5 rounded-lg border px-3 py-2 text-left transition-colors ${
-                active
-                  ? "border-signal/40 bg-signal/10"
-                  : "border-border bg-card hover:border-signal/30 hover:bg-accent"
-              }`}
-            >
-              <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-signal" : "text-muted-foreground"}`} />
-              <span className="flex flex-col leading-tight">
-                <span className={`text-sm font-semibold ${active ? "text-signal" : "text-foreground"}`}>
-                  {label}
-                </span>
-                <span className="text-[11px] text-muted-foreground">{caption}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
 
       {/* Decision first, then evidence, then the manual — the ranked table
           below is for exploring, but most visits end at the book. */}
@@ -622,115 +597,42 @@ export default function OptionDeskPage() {
       <RecoTrackRecord strategy={strategy} />
 
       <GuideCard
-        title="How to read this desk"
-        intro={
-          "The edge being harvested is the volatility risk premium: implied vol usually prints above what the " +
-          "underlying goes on to realize. Everything here is in service of collecting that without being handed " +
-          "shares you did not want."
-        }
+        title={t("guide.title")}
+        intro={t("guide.intro")}
         sections={[
-          {
-            title: "The two hard gates",
-            tone: "plain",
-            steps: [
-              isCsp
-                ? "Solvency — a name is only excluded when Altman classifies it as Distress. Assignment means owning the shares, so the gate asks whether the company survives, not whether it is cheap."
-                : "Solvency — a name is only excluded when Altman classifies it as Distress. You already hold the shares here, so the gate is about whether to keep holding them; a distressed name is a reason to sell stock, not to sell calls against it.",
-              "Liquidity — strike open interest of at least 500 and an underlying above $10. Below that the quoted premium is not obtainable: on a $0.25 credit the spread can be 20-40% of the trade.",
-              "Altman's grey zone is uncertainty, not insolvency, so grey names stay on the list and are scored down instead.",
-            ],
-          },
-          {
-            title: "What moves the score",
-            tone: "long",
-            steps: [
-              "IV percentile (30%) — how rich this name's implied vol is against its OWN year. Below the 50th percentile earns nothing; you would be selling cheap.",
-              isCsp
-                ? "Piotroski F-Score (25%) — the willing-to-own test."
-                : "Piotroski F-Score (25%) — the willing-to-KEEP-holding test. You already own the shares; this asks whether the name deserves the position at all.",
-              isCsp
-                ? "OU z-score (20%) — how far below its statistical equilibrium the price sits. Positive z earns nothing: selling puts into strength is what gets run over."
-                : "OU z-score (20%) — signed for this side of the trade: it rewards names extended ABOVE their statistical equilibrium. An extended name pays richer call premium and has mean reversion working for the position, so the call is likelier to expire and leave you holding the shares. Selling calls on a name sitting below its mean caps the recovery you are waiting for, and earns nothing here.",
-              "Annualized return (15%), capped at 40% — uncapped, yield alone ranks a 150%-annualized penny stock above every quality signal.",
-              "Margin of safety (10%) — the smallest weight on purpose. The DCF behind it is missing for 37% of the universe and is unreliable on high-growth names.",
-              "Where an input is missing the weight is redistributed, not scored zero — a measurement gap should not read as a finding.",
-            ],
-          },
-          {
-            title: "Funds are judged differently",
-            tone: "plain",
-            steps: [
-              "ETFs are in the book now. A fund has no issuer to go bankrupt, so the solvency gate asks a different question: whether the fund's STRUCTURE survives being held.",
-              "Leveraged, inverse and option-overlay funds are rejected outright. A daily-reset 2X fund decays through volatility and a 0DTE covered-call fund has already sold the upside — assignment leaves you holding something engineered to grind down, so \"happy to own it\" can never be true.",
-              "F-Score and margin of safety are marked n/a rather than missing, and dropped from the denominator. A fund is scored on volatility premium, dislocation and yield alone, so it is not penalised for failing to be a company.",
-              "A greyed score with a percentage next to it means only that share of the applicable weight was actually measured — read it as a hint, not a rating.",
-            ],
-          },
-          {
-            title: "Before you write anything",
-            tone: "short",
-            steps: [
-              "Check the Earnings column. A print inside the contract's life is flagged red — that is the most reliable way to turn a premium grind into a gap loss.",
-              "For covered calls, resistance is the LOWEST of three independent reads: the nearest volume shelf above spot (where holders have basis and supply appears), the heaviest call open-interest strike (where dealer hedging pushes back), and max pain. Lowest, because a covered call is capped upside — being early is cheap and being late is what costs.",
-              "A dash in the Resistance column means the price has cleared all three. That is information, not a gap: there is no overhead supply, so a rally has nothing structural to get through. Sell further out, or do not sell the call at all.",
-              "Your strike must be above BOTH resistance and your own cost basis. The Covered calls panel joins your portfolio to these levels in your browser — your basis is never sent upstream.",
-              "Annualized figures assume a mid fill. The current market-data plan returns no bid/ask, so treat every return here as an upper bound rather than an expectation.",
-              "IV percentile is shown instead of IV rank throughout. Rank is a min/max statistic that one bad print flattens for a year.",
-            ],
-          },
+          { title: t("guide.gatesTitle"), tone: "plain", steps: [isCsp ? t("guide.gatesCsp1") : t("guide.gatesCc1"), t("guide.gates2"), t("guide.gates3")] },
+          { title: t("guide.scoreTitle"), tone: "long", steps: [t("guide.score1"), isCsp ? t("guide.scoreCsp2") : t("guide.scoreCc2"), isCsp ? t("guide.scoreCsp3") : t("guide.scoreCc3"), t("guide.score4"), t("guide.score5"), t("guide.score6")] },
+          { title: t("guide.fundsTitle"), tone: "plain", steps: [t("guide.funds1"), t("guide.funds2"), t("guide.funds3"), t("guide.funds4")] },
+          { title: t("guide.beforeTitle"), tone: "short", steps: [t("guide.before1"), t("guide.before2"), t("guide.before3"), t("guide.before4"), t("guide.before5"), t("guide.before6")] },
         ]}
-        footnote={
-          "Nothing on this page places an order. It reads persisted daily data — no live chain fetches, no broker connection."
-        }
+        footnote={t("guide.footnote")}
       />
 
       {/* Tier counts double as the tier filter. */}
       {tiers ? (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <button
-            type="button"
-            onClick={() => setTierFilter("all")}
-            aria-pressed={tierFilter === "all"}
-            className={`rounded border px-2 py-1 font-medium ${
-              tierFilter === "all" ? "border-signal/40 bg-signal/10 text-signal" : "border-border bg-card"
-            }`}
-          >
-            All {data?.universe_size ?? 0}
-          </button>
-          {(["qualified", "watch", "rejected"] as Tier[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTierFilter(t)}
-              aria-pressed={tierFilter === t}
-              className={`rounded border px-2 py-1 font-medium ${
-                tierFilter === t ? TIER_STYLE[t].cls : "border-border bg-card text-muted-foreground"
-              }`}
-            >
-              {TIER_STYLE[t].label} {tiers[t] ?? 0}
-            </button>
+        <div className="flex flex-wrap items-center gap-2 text-xs" role="group" aria-label={t("tierFilterLabel")}>
+          <Chip active={tierFilter === "all"} onClick={() => setTierFilter("all")}>{t("tierAll")} {data?.universe_size ?? 0}</Chip>
+          {(["qualified", "watch", "rejected"] as Tier[]).map((tier) => (
+            <Chip key={tier} active={tierFilter === tier} onClick={() => setTierFilter(tier)}>
+              {t(TIER_STYLE[tier].label)} {tiers[tier] ?? 0}
+            </Chip>
           ))}
           {data ? (
-            <span className="ml-auto flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <ShieldAlert className="h-3.5 w-3.5" />
-              Gates: {data.gates.solvency} · {data.gates.liquidity}
+            <span className="ml-auto flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground">
+              <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("gates", { solvency: data.gates.solvency, liquidity: data.gates.liquidity })}
             </span>
           ) : null}
         </div>
       ) : null}
 
-      {error ? (
-        <p className="rounded-lg border border-signal-short/40 bg-signal-short-bg p-3 text-sm text-signal-short">
-          Could not load the desk. The upstream analytics box may be unreachable — the screener tab
-          will still work from cached data.
-        </p>
-      ) : null}
+      {error ? <PanelUnavailable label={t("title")} reason={t("error")} /> : null}
 
       {isLoading ? (
-        <p className="p-6 text-sm text-muted-foreground">Loading the desk…</p>
+        <PanelPending label={t("title")} text={t("loading")} />
       ) : (
         <DataTable<DeskRow>
-          caption={`Option desk — ${isCsp ? "short put" : "covered call"} candidates`}
+          caption={isCsp ? t("tableCaptionCsp") : t("tableCaptionCc")}
           columns={columns}
           rows={rows}
           rowKey={(r) => r.ticker}

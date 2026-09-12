@@ -19,7 +19,12 @@
  *    "this did not qualify".
  */
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Wallet, TriangleAlert } from "lucide-react";
+import Panel from "@/components/ui/Panel";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import Stat from "@/components/ui/Stat";
+import Chip from "@/components/ui/Chip";
 
 export interface BookPosition {
   ticker: string;
@@ -62,6 +67,9 @@ export interface Book {
 const usd = (v: number) =>
   `$${v.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 
+const strong = (chunks: React.ReactNode) => <strong className="font-medium text-foreground">{chunks}</strong>;
+const lead = (chunks: React.ReactNode) => <span className="text-foreground">{chunks}</span>;
+
 export default function SizedBook({
   book,
   collateral,
@@ -71,6 +79,7 @@ export default function SizedBook({
   collateral: number | null;
   onCollateralChange: (v: number | null) => void;
 }) {
+  const t = useTranslations("deskPanels.sizedBook");
   const [draft, setDraft] = useState(collateral ? String(collateral) : "");
 
   const apply = () => {
@@ -80,158 +89,198 @@ export default function SizedBook({
 
   const unaffordable = (book?.skipped ?? []).filter((s) => s.unaffordable);
 
+  const columns: Column<BookPosition>[] = [
+    {
+      key: "ticker",
+      header: t("col.ticker"),
+      sortable: true,
+      sortValue: (p) => p.ticker,
+      cell: (p) => <span className="font-mono font-bold">{p.ticker}</span>,
+    },
+    {
+      key: "bucket",
+      header: t("col.bucket"),
+      ariaLabel: t("aria.bucket"),
+      sortable: true,
+      sortValue: (p) => p.bucket,
+      hideBelow: "md",
+      cell: (p) => (
+        <span className="text-xs text-muted-foreground">
+          {p.bucket}
+          {p.sector_raw && p.sector_raw !== p.bucket ? (
+            <span className="ml-1 opacity-60" title={t("vendorLabel", { label: p.sector_raw })}>
+              ({p.sector_raw})
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      key: "contracts",
+      header: t("col.contracts"),
+      sortable: true,
+      align: "right",
+      sortValue: (p) => p.contracts,
+      cell: (p) => <span className="nums font-semibold">{p.contracts}</span>,
+    },
+    {
+      key: "strike",
+      header: t("col.strike"),
+      sortable: true,
+      align: "right",
+      sortValue: (p) => p.strike,
+      cell: (p) => <span className="nums">${p.strike}</span>,
+    },
+    {
+      key: "dte",
+      header: t("col.dte"),
+      ariaLabel: t("aria.dte"),
+      sortable: true,
+      align: "right",
+      hideBelow: "lg",
+      sortValue: (p) => p.dte,
+      cell: (p) => <span className="nums text-muted-foreground">{p.dte ?? "—"}</span>,
+    },
+    {
+      key: "collateral",
+      header: t("col.collateral"),
+      sortable: true,
+      align: "right",
+      sortValue: (p) => p.collateral,
+      cell: (p) => (
+        <span className="nums">
+          {usd(p.collateral)}
+          <span className="ml-1 text-[10px] text-muted-foreground">
+            {(p.collateral_pct * 100).toFixed(0)}%
+          </span>
+        </span>
+      ),
+    },
+    {
+      key: "credit",
+      header: t("col.credit"),
+      sortable: true,
+      align: "right",
+      sortValue: (p) => p.credit_est,
+      cell: (p) => (
+        <span className="nums text-signal-long">{p.credit_est == null ? "—" : usd(p.credit_est)}</span>
+      ),
+    },
+  ];
+
+  const label = (
+    <>
+      <Wallet className="h-3.5 w-3.5 text-signal" aria-hidden="true" />
+      {t("label")}
+    </>
+  );
+
+  const aside = (
+    <div className="flex items-end gap-2">
+      <label className="flex flex-col gap-1">
+        <span className="stat-label">{t("collateral")}</span>
+        <input
+          type="text"
+          inputMode="numeric"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={apply}
+          onKeyDown={(e) => e.key === "Enter" && apply()}
+          placeholder={t("collateralPlaceholder")}
+          aria-label={t("collateralAria")}
+          className="nums w-32 rounded-control border border-border bg-background px-3 py-1.5 font-mono text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+        />
+      </label>
+      <button
+        type="button"
+        onClick={apply}
+        className="rounded-control bg-primary px-3 py-1.5 text-sm font-bold text-primary-foreground"
+      >
+        {t("sizeIt")}
+      </button>
+    </div>
+  );
+
+  const reading = book ? (
+    <>
+      <span className="block">
+        {t.rich("readingCaps", {
+          strong,
+          namePct: (book.caps.max_name_pct * 100).toFixed(0),
+          nameCap: usd(book.caps.name_cap_usd),
+          bucketPct: (book.caps.max_bucket_pct * 100).toFixed(0),
+          bucketCap: usd(book.caps.bucket_cap_usd),
+          maxPositions: book.caps.max_positions,
+        })}
+      </span>
+      <span className="mt-1 block text-xs text-muted-foreground">{t("readingCredit")}</span>
+    </>
+  ) : undefined;
+
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <header className="mb-3 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Wallet className="h-4 w-4 text-signal" />
-            What fits in the book
-          </h2>
-          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            A ranked list implies you can take all of it. You cannot — every cash-secured put ties
-            up strike × 100 until expiry, so the real question is which handful fit. Enter your
-            collateral and the desk allocates it breadth-first (every name gets its first contract
-            before any gets a second) under a per-name and per-correlation-bucket cap.
-          </p>
-        </div>
-        <div className="flex items-end gap-2">
-          <label className="flex flex-col text-[11px] uppercase tracking-wide text-muted-foreground">
-            Collateral
-            <input
-              type="text"
-              inputMode="numeric"
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onBlur={apply}
-              onKeyDown={(e) => e.key === "Enter" && apply()}
-              placeholder="100000"
-              aria-label="Collateral available, in dollars"
-              className="mt-1 w-36 rounded border border-border bg-background px-2 py-1 text-sm text-foreground tabular-nums"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={apply}
-            className="rounded border border-signal/40 bg-signal/10 px-3 py-1.5 text-sm font-medium text-signal"
-          >
-            Size it
-          </button>
-        </div>
-      </header>
+    <Panel
+      label={label}
+      qualifier={book ? t("qualifier", { count: book.n_positions }) : t("qualifierEmpty")}
+      aside={aside}
+      reading={reading}
+    >
+      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{t("lead")}</p>
 
       {!book ? (
-        <div className="rounded border border-dashed border-border p-4">
-          <p className="mb-3 text-sm text-muted-foreground">
-            Type the cash you are willing to tie up, then <strong>Size it</strong>. Nothing is
-            ordered and nothing is saved — this is a paper allocation you can re-run with different
-            numbers.
-          </p>
+        <div className="rounded-control border border-dashed border-border p-4">
+          <p className="mb-3 text-sm text-muted-foreground">{t.rich("howTo.intro", { strong })}</p>
           <ol className="mb-3 max-w-2xl list-decimal space-y-1.5 pl-5 text-sm text-muted-foreground">
-            <li>
-              <span className="text-foreground">Enter your collateral.</span> Cash-secured means you
-              set aside strike × 100 per contract until expiry. A $16 strike ties up $1,600; a $700
-              strike ties up $70,000.
-            </li>
-            <li>
-              <span className="text-foreground">Read the four tiles.</span> Deployed is what the
-              book uses, Cash idle is what it could not place, Est. credit is the premium collected
-              across every position.
-            </li>
-            <li>
-              <span className="text-foreground">Check the bucket chips.</span> They show
-              concentration by what moves together, not by sector label — a chip turning amber means
-              you are near the cap for that group.
-            </li>
-            <li>
-              <span className="text-foreground">Then place the trades yourself.</span> The desk
-              never touches a broker.
-            </li>
+            <li>{t.rich("howTo.step1", { lead })}</li>
+            <li>{t.rich("howTo.step2", { lead })}</li>
+            <li>{t.rich("howTo.step3", { lead })}</li>
+            <li>{t.rich("howTo.step4", { lead })}</li>
           </ol>
-          <p className="max-w-2xl text-xs text-muted-foreground">
-            Without a number the desk stays a ranking. That is the honest default: which names score
-            best is a different question from which ones you can afford, and only you know the
-            second.
-          </p>
+          <p className="max-w-2xl text-xs text-muted-foreground">{t("howTo.outro")}</p>
         </div>
       ) : (
         <>
-          <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-border bg-border sm:grid-cols-4">
-            {[
-              { k: "Deployed", v: usd(book.deployed), n: `${(book.utilisation * 100).toFixed(1)}% of budget` },
-              { k: "Positions", v: String(book.n_positions), n: `cap ${book.caps.max_positions}` },
-              { k: "Est. credit", v: usd(book.credit_est_total), n: `${book.credit_yield_on_budget_pct}% on budget` },
-              { k: "Cash idle", v: usd(book.cash_free), n: "not deployed" },
-            ].map((s) => (
-              <div key={s.k} className="bg-card p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.k}</div>
-                <div className="nums mt-0.5 text-lg font-semibold">{s.v}</div>
-                <div className="text-[11px] text-muted-foreground">{s.n}</div>
-              </div>
-            ))}
+          <div className="mb-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat
+              size="sm"
+              label={t("stat.deployed")}
+              value={usd(book.deployed)}
+              sub={t("stat.deployedSub", { pct: (book.utilisation * 100).toFixed(1) })}
+            />
+            <Stat
+              size="sm"
+              label={t("stat.positions")}
+              value={String(book.n_positions)}
+              sub={t("stat.positionsSub", { cap: book.caps.max_positions })}
+            />
+            <Stat
+              size="sm"
+              label={t("stat.credit")}
+              value={usd(book.credit_est_total)}
+              sub={t("stat.creditSub", { pct: book.credit_yield_on_budget_pct })}
+            />
+            <Stat
+              size="sm"
+              label={t("stat.idle")}
+              value={usd(book.cash_free)}
+              sub={t("stat.idleSub")}
+            />
           </div>
 
           {book.utilisation < 0.5 ? (
-            <p className="mb-3 flex items-start gap-2 rounded border border-signal-caution/40 bg-signal-caution-bg p-2.5 text-xs text-signal-caution">
-              <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" />
-              <span>
-                Only {(book.utilisation * 100).toFixed(0)}% of the budget is deployed — there are not
-                enough qualified names to fill it today. That is a candidate-supply limit, not a
-                reason to loosen the caps.
-              </span>
+            <p className="mb-3 flex items-start gap-2 rounded-control border border-signal-caution/40 bg-signal-caution-bg p-2.5 text-xs text-signal-caution">
+              <TriangleAlert className="mt-px h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span>{t("underDeployed", { pct: (book.utilisation * 100).toFixed(0) })}</span>
             </p>
           ) : null}
 
-          {book.positions.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] text-sm">
-                <caption className="sr-only">Sized positions</caption>
-                <thead>
-                  <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                    <th scope="col" className="py-2 pr-3 text-left font-medium">Ticker</th>
-                    <th scope="col" className="py-2 pr-3 text-left font-medium">Bucket</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">Contracts</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">Strike</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">DTE</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">Collateral</th>
-                    <th scope="col" className="py-2 pr-3 text-right font-medium">Credit</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {book.positions.map((p) => (
-                    <tr key={p.ticker} className="border-b border-border/60 last:border-0">
-                      <td className="py-2 pr-3 font-mono font-bold">{p.ticker}</td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">
-                        {p.bucket}
-                        {p.sector_raw && p.sector_raw !== p.bucket ? (
-                          <span className="ml-1 opacity-60" title={`vendor label: ${p.sector_raw}`}>
-                            ({p.sector_raw})
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="nums py-2 pr-3 text-right font-semibold">{p.contracts}</td>
-                      <td className="nums py-2 pr-3 text-right">${p.strike}</td>
-                      <td className="nums py-2 pr-3 text-right text-muted-foreground">{p.dte ?? "—"}</td>
-                      <td className="nums py-2 pr-3 text-right">
-                        {usd(p.collateral)}
-                        <span className="ml-1 text-[10px] text-muted-foreground">
-                          {(p.collateral_pct * 100).toFixed(0)}%
-                        </span>
-                      </td>
-                      <td className="nums py-2 pr-3 text-right text-signal-long">
-                        {p.credit_est == null ? "—" : usd(p.credit_est)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <p className="py-4 text-center text-sm text-muted-foreground">
-              Nothing fits. Every qualified name is either unaffordable at this budget or blocked by
-              a cap — see below.
-            </p>
-          )}
+          <DataTable<BookPosition>
+            caption={t("tableCaption")}
+            columns={columns}
+            rows={book.positions}
+            rowKey={(p) => p.ticker}
+            rowHref={(p) => `/stock/${p.ticker}`}
+            emptyText={t("nothingFits")}
+          />
 
           <div className="mt-3 flex flex-wrap gap-1.5">
             {Object.entries(book.by_bucket).map(([b, v]) => {
@@ -239,14 +288,11 @@ export default function SizedBook({
               return (
                 <span
                   key={b}
-                  className={`rounded border px-2 py-0.5 text-[11px] ${
-                    near
-                      ? "border-signal-caution/40 bg-signal-caution-bg text-signal-caution"
-                      : "border-border bg-background text-muted-foreground"
-                  }`}
-                  title={near ? `At or near the ${(book.caps.max_bucket_pct * 100).toFixed(0)}% bucket cap` : undefined}
+                  title={near ? t("nearCap", { pct: (book.caps.max_bucket_pct * 100).toFixed(0) }) : undefined}
                 >
-                  {b} {(v.pct * 100).toFixed(0)}%
+                  <Chip tone={near ? "caution" : "plain"}>
+                    {t("bucketChip", { bucket: b, pct: (v.pct * 100).toFixed(0) })}
+                  </Chip>
                 </span>
               );
             })}
@@ -254,27 +300,16 @@ export default function SizedBook({
 
           {unaffordable.length > 0 ? (
             <p className="mt-3 text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">Qualified but unaffordable:</span>{" "}
-              {unaffordable.map((s) => s.ticker).join(", ")} — one contract alone breaches the{" "}
-              {(book.caps.max_name_pct * 100).toFixed(0)}% per-name cap of {usd(book.caps.name_cap_usd)}.
+              {t.rich("unaffordable", {
+                strong,
+                tickers: unaffordable.map((s) => s.ticker).join(", "),
+                pct: (book.caps.max_name_pct * 100).toFixed(0),
+                cap: usd(book.caps.name_cap_usd),
+              })}
             </p>
           ) : null}
-
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            <span className="font-medium text-foreground">Caps in force:</span> no name past{" "}
-            {(book.caps.max_name_pct * 100).toFixed(0)}% ({usd(book.caps.name_cap_usd)}), no
-            correlation bucket past {(book.caps.max_bucket_pct * 100).toFixed(0)}% (
-            {usd(book.caps.bucket_cap_usd)}), at most {book.caps.max_positions} positions. Change
-            your collateral to re-run.
-          </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            Credit is the engine&apos;s mid-price estimate. The market-data plan returns no bid/ask,
-            so treat it as an upper bound. Caps are fixed fractional, not Kelly — half-Kelly on the
-            settled sample is about 10% per position, and 284 overlapping trades in one regime is
-            too thin to size against.
-          </p>
         </>
       )}
-    </section>
+    </Panel>
   );
 }

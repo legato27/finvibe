@@ -17,8 +17,12 @@
  */
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { optionsApi } from "@/lib/api";
 import { FlaskConical, Info } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import Segmented from "@/components/ui/Segmented";
 
 interface Cohort {
   label: string;
@@ -45,18 +49,23 @@ interface BacktestResponse {
   note: string;
 }
 
-const PRESETS = [
-  { id: "p30", label: "30 DTE puts", dte: 30, delta: 0.25, type: "put" as const },
-  { id: "p7", label: "7 DTE puts", dte: 7, delta: 0.13, type: "put" as const },
-  { id: "c30", label: "30 DTE calls", dte: 30, delta: 0.25, type: "call" as const },
+type PresetId = "p30" | "p7" | "c30";
+
+const PRESETS: Array<{ id: PresetId; dte: number; delta: number; type: "put" | "call" }> = [
+  { id: "p30", dte: 30, delta: 0.25, type: "put" },
+  { id: "p7", dte: 7, delta: 0.13, type: "put" },
+  { id: "c30", dte: 30, delta: 0.25, type: "call" },
 ];
 
-const COHORT_LABEL: Record<string, string> = {
-  all: "Every entry",
-  "ou_z_below_-1": "Entered 1σ below",
-  "ou_z_below_-2": "Entered 2σ below",
-  "ou_z_above_+1": "Entered 1σ above",
+/** API cohort key → message key. Unknown cohorts fall back to the raw key. */
+const COHORT_KEY: Record<string, "all" | "below1" | "below2" | "above1"> = {
+  all: "all",
+  "ou_z_below_-1": "below1",
+  "ou_z_below_-2": "below2",
+  "ou_z_above_+1": "above1",
 };
+
+type CohortRow = { key: string; c: Cohort };
 
 const pct = (v: number | null | undefined, d = 1) =>
   v == null ? "—" : `${(v * 100).toFixed(d)}%`;
@@ -71,6 +80,8 @@ function Bar({ value, max, tone }: { value: number; max: number; tone: string })
   );
 }
 
+const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
+
 export default function AssignmentBacktest({
   strategy = "csp",
 }: {
@@ -78,6 +89,7 @@ export default function AssignmentBacktest({
    *  put assignment stats — that is the other side of the trade. */
   strategy?: "csp" | "covered_call";
 } = {}) {
+  const t = useTranslations("deskPanels.assignmentBacktest");
   const [preset, setPreset] = useState(
     () => PRESETS.find((x) => x.type === (strategy === "covered_call" ? "call" : "put")) ?? PRESETS[0],
   );
@@ -97,178 +109,176 @@ export default function AssignmentBacktest({
     staleTime: 60 * 60_000,
   });
 
-  const cohorts = data ? Object.entries(data.cohorts) : [];
+  const cohorts: CohortRow[] = data ? Object.entries(data.cohorts).map(([key, c]) => ({ key, c })) : [];
   const isPut = preset.type === "put";
-  const maxAssign = Math.max(0.001, ...cohorts.map(([, c]) => c.assignment_rate));
+  const maxAssign = Math.max(0.001, ...cohorts.map(({ c }) => c.assignment_rate));
   const baseline = data?.cohorts?.all;
+  const below2 = data?.cohorts?.["ou_z_below_-2"];
+
+  const label = (
+    <>
+      <FlaskConical className="h-3.5 w-3.5 text-signal" aria-hidden="true" />
+      {t("label")}
+    </>
+  );
+
+  const aside = (
+    <Segmented<PresetId>
+      size="sm"
+      mode="toggle"
+      ariaLabel={t("presetsLabel")}
+      value={preset.id}
+      onChange={(id) => setPreset(PRESETS.find((p) => p.id === id) ?? PRESETS[0])}
+      options={PRESETS.map((p) => ({ value: p.id, label: t(`preset.${p.id}`) }))}
+    />
+  );
+
+  if (error) {
+    return <PanelUnavailable label={label} aside={aside} reason={t("unavailable")} />;
+  }
+  if (isLoading || !data) {
+    return <PanelPending label={label} text={t("loading")} />;
+  }
+
+  const columns: Column<CohortRow>[] = [
+    {
+      key: "condition",
+      header: t("col.condition"),
+      cell: ({ key }) => {
+        const isBase = key === "all";
+        const mk = COHORT_KEY[key];
+        return (
+          <span>
+            <span className={isBase ? "font-semibold" : ""}>{mk ? t(`cohort.${mk}`) : key}</span>
+            {isBase ? (
+              <span className="ml-1.5 text-[10px] uppercase text-muted-foreground">{t("baseline")}</span>
+            ) : null}
+          </span>
+        );
+      },
+    },
+    {
+      key: "entries",
+      header: t("col.entries"),
+      sortable: true,
+      align: "right",
+      sortValue: ({ c }) => c.n,
+      cell: ({ c }) => <span className="nums text-muted-foreground">{c.n.toLocaleString()}</span>,
+    },
+    {
+      key: "assigned",
+      header: isPut ? t("col.assigned") : t("col.calledAway"),
+      sortable: true,
+      align: "right",
+      sortValue: ({ c }) => c.assignment_rate,
+      cell: ({ c }) => (
+        <span className="nums block font-semibold">
+          {pct(c.assignment_rate)}
+          <Bar value={c.assignment_rate} max={maxAssign} tone="bg-signal-short" />
+        </span>
+      ),
+    },
+    {
+      key: "touched",
+      header: t("col.touched"),
+      sortable: true,
+      align: "right",
+      hideBelow: "md",
+      sortValue: ({ c }) => c.touch_rate,
+      cell: ({ c }) => <span className="nums text-muted-foreground">{pct(c.touch_rate)}</span>,
+    },
+    {
+      key: "worst",
+      header: t("col.worst"),
+      ariaLabel: t("aria.worst"),
+      sortable: true,
+      align: "right",
+      sortValue: ({ c }) => c.p95_adverse_excursion,
+      cell: ({ c }) => <span className="nums text-signal-short">{pct(c.p95_adverse_excursion)}</span>,
+    },
+    ...(isPut
+      ? ([
+          {
+            key: "recovered",
+            header: t("col.recovered"),
+            sortable: true,
+            align: "right",
+            hideBelow: "lg",
+            sortValue: ({ c }) => c.recovery_rate,
+            cell: ({ c }) => <span className="nums">{pct(c.recovery_rate)}</span>,
+          },
+          {
+            key: "hold",
+            header: t("col.hold"),
+            ariaLabel: t("aria.hold"),
+            sortable: true,
+            align: "right",
+            sortValue: ({ c }) => c.mean_hold_return,
+            cell: ({ c }) => (
+              <span
+                className={`nums font-semibold ${
+                  (c.mean_hold_return ?? 0) > 0.02 ? "text-signal-long" : "text-muted-foreground"
+                }`}
+              >
+                {pct(c.mean_hold_return)}
+              </span>
+            ),
+          },
+        ] as Column<CohortRow>[])
+      : []),
+  ];
 
   return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <header className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold">
-            <FlaskConical className="h-4 w-4 text-signal" />
-            If I get assigned, can I live with it?
-          </h2>
-          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            Five years of daily candles, {data ? data.n_trials.toLocaleString() : "—"} simulated
-            entries across {data?.n_names ?? "—"} names. Strikes are inverted from delta using the
-            volatility known at the time — no future information, and no option prices, so there is
-            no profit figure here on purpose.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {PRESETS.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setPreset(p)}
-              aria-pressed={preset.id === p.id}
-              className={`rounded border px-2 py-1 text-xs font-medium transition-colors ${
-                preset.id === p.id
-                  ? "border-signal/40 bg-signal/10 text-signal"
-                  : "border-border bg-background text-muted-foreground hover:border-signal/30"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </header>
+    <Panel
+      label={label}
+      qualifier={t("qualifier", { trials: data.n_trials.toLocaleString(), names: data.n_names })}
+      aside={aside}
+      reading={t("reading")}
+    >
+      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">
+        {t("lead", { trials: data.n_trials.toLocaleString(), names: data.n_names })}
+      </p>
 
-      {error ? (
-        <p className="rounded border border-signal-short/40 bg-signal-short-bg p-3 text-sm text-signal-short">
-          Could not run the backtest. The analytics box may be unreachable.
+      <DataTable<CohortRow>
+        caption={t("tableCaption")}
+        columns={columns}
+        rows={cohorts}
+        rowKey={(r) => r.key}
+      />
+
+      {/* The finding, stated — a table of four rows should not require the
+          reader to derive the conclusion themselves. */}
+      {isPut && baseline && below2 ? (
+        <p className="mt-3 max-w-3xl border-l-2 border-signal pl-3 text-sm text-muted-foreground">
+          {t.rich("finding", {
+            hl: (chunks) => <span className="text-foreground">{chunks}</span>,
+            good: (chunks) => <span className="font-semibold text-signal-long">{chunks}</span>,
+            baseAssign: pct(baseline.assignment_rate),
+            cohortAssign: pct(below2.assignment_rate),
+            baseRecover: pct(baseline.recovery_rate),
+            cohortRecover: pct(below2.recovery_rate),
+            baseHold: pct(baseline.mean_hold_return),
+            cohortHold: pct(below2.mean_hold_return),
+            share: baseline.n > 0 ? `${((below2.n / baseline.n) * 100).toFixed(1)}%` : "—",
+          })}
         </p>
-      ) : isLoading ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          Running ~90,000 simulated entries…
-        </p>
-      ) : (
-        <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <caption className="sr-only">
-                Assignment outcomes by entry condition
-              </caption>
-              <thead>
-                <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <th scope="col" className="py-2 pr-3 text-left font-medium">Entry condition</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Entries</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">
-                    {isPut ? "Assigned" : "Called away"}
-                  </th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Touched</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Worst 5%</th>
-                  {isPut ? (
-                    <>
-                      <th scope="col" className="py-2 pr-3 text-right font-medium">Recovered</th>
-                      <th scope="col" className="py-2 pr-3 text-right font-medium">Shares +63d</th>
-                    </>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {cohorts.map(([key, c]) => {
-                  const isBase = key === "all";
-                  return (
-                    <tr
-                      key={key}
-                      className={`border-b border-border/60 last:border-0 ${
-                        isBase ? "bg-muted/40" : ""
-                      }`}
-                    >
-                      <td className="py-2.5 pr-3">
-                        <span className={isBase ? "font-semibold" : ""}>
-                          {COHORT_LABEL[key] ?? key}
-                        </span>
-                        {isBase ? (
-                          <span className="ml-1.5 text-[10px] uppercase text-muted-foreground">
-                            baseline
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="nums py-2.5 pr-3 text-right text-muted-foreground">
-                        {c.n.toLocaleString()}
-                      </td>
-                      <td className="nums py-2.5 pr-3 text-right font-semibold">
-                        {pct(c.assignment_rate)}
-                        <Bar value={c.assignment_rate} max={maxAssign} tone="bg-signal-short" />
-                      </td>
-                      <td className="nums py-2.5 pr-3 text-right text-muted-foreground">
-                        {pct(c.touch_rate)}
-                      </td>
-                      <td className="nums py-2.5 pr-3 text-right text-signal-short">
-                        {pct(c.p95_adverse_excursion)}
-                      </td>
-                      {isPut ? (
-                        <>
-                          <td className="nums py-2.5 pr-3 text-right">{pct(c.recovery_rate)}</td>
-                          <td
-                            className={`nums py-2.5 pr-3 text-right font-semibold ${
-                              (c.mean_hold_return ?? 0) > 0.02
-                                ? "text-signal-long"
-                                : "text-muted-foreground"
-                            }`}
-                          >
-                            {pct(c.mean_hold_return)}
-                          </td>
-                        </>
-                      ) : null}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+      ) : null}
 
-          {/* The finding, stated — a table of four rows should not require the
-              reader to derive the conclusion themselves. */}
-          {isPut && baseline && data?.cohorts?.["ou_z_below_-2"] ? (
-            <p className="mt-3 max-w-3xl border-l-2 border-signal pl-3 text-sm text-muted-foreground">
-              Entering after weakness barely changes how often you are assigned —{" "}
-              <span className="text-foreground">
-                {pct(baseline.assignment_rate)} to{" "}
-                {pct(data.cohorts["ou_z_below_-2"].assignment_rate)}
-              </span>
-              . What it changes is what assignment feels like: shares recover within 63 days{" "}
-              <span className="text-foreground">
-                {pct(baseline.recovery_rate)} → {pct(data.cohorts["ou_z_below_-2"].recovery_rate)}
-              </span>{" "}
-              of the time, and their return goes{" "}
-              <span className="text-signal-long font-semibold">
-                {pct(baseline.mean_hold_return)} →{" "}
-                {pct(data.cohorts["ou_z_below_-2"].mean_hold_return)}
-              </span>
-              . The cost is opportunity: that cohort is{" "}
-              {baseline.n > 0
-                ? `${((data.cohorts["ou_z_below_-2"].n / baseline.n) * 100).toFixed(1)}%`
-                : "—"}{" "}
-              of all entries.
-            </p>
-          ) : null}
-
-          <details className="mt-3 text-xs text-muted-foreground">
-            <summary className="cursor-pointer select-none font-medium">
-              <Info className="mr-1 inline h-3 w-3" />
-              What these columns mean, and what this does not measure
-            </summary>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li><strong>Assigned</strong> — finished in the money; the shares change hands.</li>
-              <li><strong>Touched</strong> — traded through the strike at some point. It runs at roughly twice the assignment rate, which is the standard probability-of-touch relationship and a check that the model is behaving.</li>
-              <li><strong>Worst 5%</strong> — the 5th-percentile excursion past the strike while the contract was open. This is what position sizing has to survive, not the average.</li>
-              <li><strong>Recovered</strong> — of the assigned trades, how often the shares got back above the strike within 63 trading days.</li>
-              <li><strong>Shares +63d</strong> — average return on the assigned shares, measured from the strike.</li>
-              <li className="pt-1">
-                <strong>No profit figure.</strong> Historical per-strike option prices were never stored, so a P&amp;L here would be a model on top of a volatility guess. Strikes come from inverting Black-Scholes delta with a {data?.params.vrp}× volatility-premium multiplier.
-              </li>
-              <li>
-                <strong>No fundamental filters.</strong> F-Score and Altman are stored as current values only. Applying today&apos;s scores to a 2022 entry would select companies that turned out fine and make these numbers look considerably better than the strategy is.
-              </li>
-            </ul>
-          </details>
-        </>
-      )}
-    </section>
+      <details className="mt-3 text-xs text-muted-foreground">
+        <summary className="cursor-pointer select-none font-medium">
+          <Info className="mr-1 inline h-3 w-3" aria-hidden="true" />
+          {t("glossary.summary")}
+        </summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5">
+          <li>{t.rich("glossary.assigned", { strong })}</li>
+          <li>{t.rich("glossary.touched", { strong })}</li>
+          <li>{t.rich("glossary.worst", { strong })}</li>
+          <li>{t.rich("glossary.recovered", { strong })}</li>
+          <li>{t.rich("glossary.hold", { strong })}</li>
+          <li className="pt-1">{t.rich("glossary.noProfit", { strong, vrp: data.params.vrp })}</li>
+          <li>{t.rich("glossary.noFundamentals", { strong })}</li>
+        </ul>
+      </details>
+    </Panel>
   );
 }

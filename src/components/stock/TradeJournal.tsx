@@ -19,6 +19,7 @@
  * strike minus premium — not on the premium alone.
  */
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   useOptionsTrades,
   useAddOptionsTrade,
@@ -29,13 +30,16 @@ import {
 } from "@/lib/supabase/hooks";
 import { useUser } from "@/lib/supabase/hooks";
 import { NotebookPen, Plus, X } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import Stat from "@/components/ui/Stat";
 
-const STRATEGY_LABEL: Record<OptionStrategy, string> = {
-  cash_secured_put: "Cash-secured put",
-  covered_call: "Covered call",
-  put_credit_spread: "Put credit spread",
-  call_credit_spread: "Call credit spread",
-};
+const STRATEGIES: OptionStrategy[] = [
+  "cash_secured_put",
+  "covered_call",
+  "put_credit_spread",
+  "call_credit_spread",
+];
 
 const STATUS_STYLE: Record<string, string> = {
   open: "text-signal-neutral bg-signal-neutral-bg border-signal-neutral/40",
@@ -50,6 +54,13 @@ const usd = (v: number | null | undefined, d = 0) =>
 const daysTo = (iso: string) =>
   Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
 
+const INPUT_CLS =
+  "rounded-control border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
+const PRIMARY_CLS =
+  "rounded-control bg-primary px-3 py-1.5 text-sm font-bold text-primary-foreground disabled:opacity-50";
+const SECONDARY_CLS =
+  "rounded-control border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent";
+
 export default function TradeJournal({
   defaultStrategy = "cash_secured_put",
 }: {
@@ -57,8 +68,9 @@ export default function TradeJournal({
    *  covered-call desk does not hand you a cash-secured-put form. */
   defaultStrategy?: OptionStrategy;
 } = {}) {
-  const { data: user } = useUser();
-  const { data: trades, isLoading } = useOptionsTrades();
+  const t = useTranslations("deskPanels.tradeJournal");
+  const { data: user, isLoading: userLoading } = useUser();
+  const { data: trades, isLoading, error } = useOptionsTrades();
   const addTrade = useAddOptionsTrade();
   const closeTrade = useCloseOptionsTrade();
   const delTrade = useDeleteOptionsTrade();
@@ -66,19 +78,19 @@ export default function TradeJournal({
   const [adding, setAdding] = useState(false);
   const [closingId, setClosingId] = useState<number | null>(null);
 
-  const open = (trades ?? []).filter((t) => t.status === "open");
-  const done = (trades ?? []).filter((t) => t.status !== "open");
+  const open = (trades ?? []).filter((tr) => tr.status === "open");
+  const done = (trades ?? []).filter((tr) => tr.status !== "open");
 
   const stats = useMemo(() => {
     const collateral = open.reduce(
-      (a, t) => a + t.strike_price * t.contracts * 100, 0);
-    const openCredit = open.reduce((a, t) => a + t.premium * t.contracts * 100, 0);
-    const realized = done.reduce((a, t) => a + (t.realized_pnl ?? 0), 0);
-    const assigned = done.filter((t) => t.status === "assigned");
+      (a, tr) => a + tr.strike_price * tr.contracts * 100, 0);
+    const openCredit = open.reduce((a, tr) => a + tr.premium * tr.contracts * 100, 0);
+    const realized = done.reduce((a, tr) => a + (tr.realized_pnl ?? 0), 0);
+    const assigned = done.filter((tr) => tr.status === "assigned");
     // Win rate over trades that RESOLVED without assignment. Counting an
     // assignment as a win is the distortion this whole panel guards against.
-    const clean = done.filter((t) => t.status !== "assigned");
-    const wins = clean.filter((t) => t.was_profitable).length;
+    const clean = done.filter((tr) => tr.status !== "assigned");
+    const wins = clean.filter((tr) => tr.was_profitable).length;
     return {
       collateral,
       openCredit,
@@ -90,43 +102,190 @@ export default function TradeJournal({
     };
   }, [open, done]);
 
+  const label = (
+    <>
+      <NotebookPen className="h-3.5 w-3.5 text-signal" aria-hidden="true" />
+      {t("label")}
+    </>
+  );
+
+  if (userLoading) {
+    return <PanelPending label={label} text={t("checkingSession")} />;
+  }
   if (!user) {
-    return (
-      <section className="rounded-lg border border-border bg-card p-4">
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          <NotebookPen className="h-4 w-4 text-signal" />
-          Trade journal
-        </h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Sign in to log trades. The journal is private to your account.
-        </p>
-      </section>
-    );
+    return <PanelUnavailable label={label} reason={t("signedOut")} />;
+  }
+  if (error) {
+    return <PanelUnavailable label={label} reason={t("unavailable")} />;
+  }
+  if (isLoading) {
+    return <PanelPending label={label} text={t("loading")} />;
   }
 
-  return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <header className="mb-3 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold">
-            <NotebookPen className="h-4 w-4 text-signal" />
-            Trade journal
-          </h2>
-          <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-            What you actually did, at the fill you actually got. Every premium figure elsewhere on
-            this page is a mid-price estimate — logging real trades is the only way to find out how
-            far off they are.
-          </p>
+  const columns: Column<OptionsTrade>[] = [
+    {
+      key: "ticker",
+      header: t("col.ticker"),
+      sortable: true,
+      sortValue: (tr) => tr.ticker,
+      cell: (tr) => <span className="font-mono font-bold">{tr.ticker}</span>,
+    },
+    {
+      key: "strategy",
+      header: t("col.strategy"),
+      sortable: true,
+      sortValue: (tr) => tr.strategy,
+      cell: (tr) => (
+        <span className="text-xs text-muted-foreground">
+          {t(`strategy.${tr.strategy}`)}
+          <span className="ml-1">{t("contractsSuffix", { count: tr.contracts })}</span>
+        </span>
+      ),
+    },
+    {
+      key: "strike",
+      header: t("col.strike"),
+      sortable: true,
+      align: "right",
+      sortValue: (tr) => tr.strike_price,
+      cell: (tr) => <span className="nums">${tr.strike_price}</span>,
+    },
+    {
+      key: "credit",
+      header: t("col.credit"),
+      sortable: true,
+      align: "right",
+      hideBelow: "md",
+      sortValue: (tr) => tr.premium * tr.contracts * 100,
+      cell: (tr) => <span className="nums">{usd(tr.premium * tr.contracts * 100)}</span>,
+    },
+    {
+      key: "expiry",
+      header: t("col.expiry"),
+      sortable: true,
+      align: "right",
+      sortValue: (tr) => tr.expiry_date,
+      cell: (tr) => {
+        const dte = daysTo(tr.expiry_date);
+        return (
+          <span className="nums text-muted-foreground">
+            {tr.expiry_date}
+            {tr.status === "open" ? (
+              <span className={`ml-1 text-[10px] ${dte <= 2 ? "text-signal-short" : ""}`}>
+                {t("dteSuffix", { days: dte })}
+              </span>
+            ) : null}
+          </span>
+        );
+      },
+    },
+    {
+      key: "status",
+      header: t("col.status"),
+      sortable: true,
+      sortValue: (tr) => tr.status,
+      cell: (tr) => (
+        <div className="min-w-0">
+          <span
+            className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase ${STATUS_STYLE[tr.status]}`}
+            title={
+              tr.status === "assigned"
+                ? t("assignedTitle", { basis: (tr.strike_price - tr.premium).toFixed(2) })
+                : undefined
+            }
+          >
+            {t(`status.${tr.status}`)}
+          </span>
+          {tr.status === "open" ? (
+            <button
+              type="button"
+              onClick={() => setClosingId(closingId === tr.id ? null : tr.id)}
+              className="ml-2 text-[11px] text-signal underline underline-offset-2"
+            >
+              {t("resolve")}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => delTrade.mutate(tr.id)}
+              className="ml-2 text-[11px] text-muted-foreground underline underline-offset-2"
+            >
+              {t("delete")}
+            </button>
+          )}
+          {closingId === tr.id ? (
+            <CloseForm
+              trade={tr}
+              pending={closeTrade.isPending}
+              onSubmit={(v) =>
+                closeTrade.mutate({ id: tr.id, ...v }, {
+                  onSuccess: () => setClosingId(null),
+                })
+              }
+            />
+          ) : null}
         </div>
+      ),
+    },
+    {
+      key: "pnl",
+      header: t("col.pnl"),
+      ariaLabel: t("aria.pnl"),
+      sortable: true,
+      align: "right",
+      sortValue: (tr) => tr.realized_pnl,
+      cell: (tr) => (
+        <span
+          className={`nums font-semibold ${
+            tr.realized_pnl == null ? "text-muted-foreground"
+            : tr.status === "assigned" ? "text-signal-caution"
+            : tr.realized_pnl > 0 ? "text-signal-long" : "text-signal-short"
+          }`}
+        >
+          {tr.realized_pnl == null ? "—" : usd(tr.realized_pnl)}
+          {tr.status === "assigned" ? (
+            <span className="block text-[10px] font-normal text-muted-foreground">
+              {t("holdingAt", { basis: (tr.strike_price - tr.premium).toFixed(2) })}
+            </span>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      key: "ann",
+      header: t("col.ann"),
+      ariaLabel: t("aria.ann"),
+      sortable: true,
+      align: "right",
+      hideBelow: "lg",
+      sortValue: (tr) => tr.annualized_return,
+      cell: (tr) => (
+        <span className="nums text-muted-foreground">
+          {tr.annualized_return == null ? "—" : `${(tr.annualized_return * 100).toFixed(0)}%`}
+        </span>
+      ),
+    },
+  ];
+
+  const hasTrades = (trades ?? []).length > 0;
+
+  return (
+    <Panel
+      label={label}
+      qualifier={hasTrades ? t("qualifier", { count: open.length }) : undefined}
+      aside={
         <button
           type="button"
           onClick={() => setAdding((v) => !v)}
-          className="flex items-center gap-1.5 rounded border border-signal/40 bg-signal/10 px-3 py-1.5 text-sm font-medium text-signal"
+          className={`flex items-center gap-1.5 ${adding ? SECONDARY_CLS : PRIMARY_CLS}`}
         >
-          {adding ? <X className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
-          {adding ? "Cancel" : "Log a trade"}
+          {adding ? <X className="h-3.5 w-3.5" aria-hidden="true" /> : <Plus className="h-3.5 w-3.5" aria-hidden="true" />}
+          {adding ? t("cancel") : t("logTrade")}
         </button>
-      </header>
+      }
+      reading={hasTrades ? t.rich("reading", { em: (chunks) => <em>{chunks}</em> }) : undefined}
+    >
+      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{t("lead")}</p>
 
       {adding ? (
         <AddForm
@@ -137,165 +296,63 @@ export default function TradeJournal({
         />
       ) : null}
 
-      {isLoading ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Loading…</p>
-      ) : (trades ?? []).length === 0 ? (
-        <p className="rounded border border-dashed border-border p-4 text-sm text-muted-foreground">
-          Nothing logged yet. Log a trade when you open one, then mark it expired, closed or
-          assigned when it resolves — the journal works out the P&amp;L, the return on collateral,
-          and the annualised figure from the dates.
+      {!hasTrades ? (
+        <p className="rounded-control border border-dashed border-border p-4 text-sm text-muted-foreground">
+          {t("empty")}
         </p>
       ) : (
         <>
-          <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded border border-border bg-border sm:grid-cols-4">
-            {[
-              { k: "Collateral tied up", v: usd(stats.collateral), n: `${open.length} open` },
-              { k: "Credit at risk", v: usd(stats.openCredit), n: "on open trades" },
-              {
-                k: "Realised",
-                v: usd(stats.realized),
-                n: `${stats.nDone} resolved`,
-                tone: stats.realized > 0 ? "text-signal-long" : stats.realized < 0 ? "text-signal-short" : "",
-              },
-              {
-                k: "Won / assigned",
-                v: stats.winRate == null ? "—" : `${(stats.winRate * 100).toFixed(0)}%`,
-                n: `${stats.nAssigned} assigned${
-                  stats.assignRate != null ? ` (${(stats.assignRate * 100).toFixed(0)}%)` : ""
-                }`,
-              },
-            ].map((s) => (
-              <div key={s.k} className="bg-card p-3">
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.k}</div>
-                <div className={`nums mt-0.5 text-lg font-semibold ${s.tone ?? ""}`}>{s.v}</div>
-                <div className="text-[11px] text-muted-foreground">{s.n}</div>
-              </div>
-            ))}
+          <div className="mb-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat
+              size="sm"
+              label={t("stat.collateral")}
+              value={usd(stats.collateral)}
+              sub={t("stat.collateralSub", { count: open.length })}
+            />
+            <Stat
+              size="sm"
+              label={t("stat.credit")}
+              value={usd(stats.openCredit)}
+              sub={t("stat.creditSub")}
+            />
+            <Stat
+              size="sm"
+              label={t("stat.realised")}
+              value={usd(stats.realized)}
+              sub={t("stat.realisedSub", { count: stats.nDone })}
+              tone={stats.realized > 0 ? "long" : stats.realized < 0 ? "short" : "plain"}
+            />
+            <Stat
+              size="sm"
+              label={t("stat.won")}
+              value={stats.winRate == null ? "—" : `${(stats.winRate * 100).toFixed(0)}%`}
+              sub={
+                stats.assignRate != null
+                  ? t("stat.wonSubRate", { count: stats.nAssigned, pct: (stats.assignRate * 100).toFixed(0) })
+                  : t("stat.wonSub", { count: stats.nAssigned })
+              }
+            />
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[820px] text-sm">
-              <caption className="sr-only">Logged option trades</caption>
-              <thead>
-                <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <th scope="col" className="py-2 pr-3 text-left font-medium">Ticker</th>
-                  <th scope="col" className="py-2 pr-3 text-left font-medium">Strategy</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Strike</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Credit</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Expiry</th>
-                  <th scope="col" className="py-2 pr-3 text-left font-medium">Status</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">P&amp;L</th>
-                  <th scope="col" className="py-2 text-right font-medium">Ann.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...open, ...done].map((t) => {
-                  const dte = daysTo(t.expiry_date);
-                  const credit = t.premium * t.contracts * 100;
-                  return (
-                    <tr key={t.id} className="border-b border-border/60 last:border-0 align-top">
-                      <td className="py-2 pr-3 font-mono font-bold">{t.ticker}</td>
-                      <td className="py-2 pr-3 text-xs text-muted-foreground">
-                        {STRATEGY_LABEL[t.strategy]}
-                        <span className="ml-1">×{t.contracts}</span>
-                      </td>
-                      <td className="nums py-2 pr-3 text-right">${t.strike_price}</td>
-                      <td className="nums py-2 pr-3 text-right">{usd(credit)}</td>
-                      <td className="nums py-2 pr-3 text-right text-muted-foreground">
-                        {t.expiry_date}
-                        {t.status === "open" ? (
-                          <span className={`ml-1 text-[10px] ${dte <= 2 ? "text-signal-short" : ""}`}>
-                            {dte}d
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="py-2 pr-3">
-                        <span
-                          className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-semibold uppercase ${STATUS_STYLE[t.status]}`}
-                          title={
-                            t.status === "assigned"
-                              ? `Net basis $${(t.strike_price - t.premium).toFixed(2)} — the option kept its credit, but you hold the shares.`
-                              : undefined
-                          }
-                        >
-                          {t.status}
-                        </span>
-                        {t.status === "open" ? (
-                          <button
-                            type="button"
-                            onClick={() => setClosingId(closingId === t.id ? null : t.id)}
-                            className="ml-2 text-[11px] text-signal underline underline-offset-2"
-                          >
-                            resolve
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => delTrade.mutate(t.id)}
-                            className="ml-2 text-[11px] text-muted-foreground underline underline-offset-2"
-                          >
-                            delete
-                          </button>
-                        )}
-                        {closingId === t.id ? (
-                          <CloseForm
-                            trade={t}
-                            pending={closeTrade.isPending}
-                            onSubmit={(v) =>
-                              closeTrade.mutate({ id: t.id, ...v }, {
-                                onSuccess: () => setClosingId(null),
-                              })
-                            }
-                          />
-                        ) : null}
-                      </td>
-                      <td
-                        className={`nums py-2 pr-3 text-right font-semibold ${
-                          t.realized_pnl == null ? "text-muted-foreground"
-                          : t.status === "assigned" ? "text-signal-caution"
-                          : t.realized_pnl > 0 ? "text-signal-long" : "text-signal-short"
-                        }`}
-                      >
-                        {t.realized_pnl == null ? "—" : usd(t.realized_pnl)}
-                        {t.status === "assigned" ? (
-                          <div className="text-[10px] font-normal text-muted-foreground">
-                            holding at ${(t.strike_price - t.premium).toFixed(2)}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="nums py-2 text-right text-muted-foreground">
-                        {t.annualized_return == null
-                          ? "—"
-                          : `${(t.annualized_return * 100).toFixed(0)}%`}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <p className="mt-3 text-[11px] text-muted-foreground">
-            The win rate counts only trades that resolved <em>without</em> assignment. An assigned
-            put keeps its whole credit, so counting it as a win would push a wheel journal toward
-            100% while the account fills with underwater stock. Assignments are shown separately and
-            judged on the position — spot against the net basis of strike minus premium.
-          </p>
+          <DataTable<OptionsTrade>
+            caption={t("tableCaption")}
+            columns={columns}
+            rows={[...open, ...done]}
+            rowKey={(tr) => String(tr.id)}
+            rowHref={(tr) => `/stock/${tr.ticker}`}
+          />
         </>
       )}
-    </section>
+    </Panel>
   );
 }
 
 // ── forms ────────────────────────────────────────────────────────────────────
 function Field({ label, ...p }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <label className="flex flex-col text-[10px] uppercase tracking-wide text-muted-foreground">
-      {label}
-      <input
-        {...p}
-        className="mt-1 rounded border border-border bg-background px-2 py-1 text-sm text-foreground tabular-nums"
-      />
+    <label className="flex flex-col gap-1">
+      <span className="stat-label">{label}</span>
+      <input {...p} className={`nums font-mono ${INPUT_CLS}`} />
     </label>
   );
 }
@@ -312,6 +369,7 @@ function AddForm({
   pending: boolean;
   error: string | null;
 }) {
+  const t = useTranslations("deskPanels.tradeJournal");
   const [f, setF] = useState({
     ticker: "", strategy: defaultStrategy,
     strike_price: "", premium: "", contracts: "1", expiry_date: "", spot: "",
@@ -325,7 +383,7 @@ function AddForm({
 
   return (
     <form
-      className="mb-3 rounded border border-border bg-background p-3"
+      className="mb-3 rounded-control border border-border bg-background p-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (!valid) return;
@@ -341,37 +399,27 @@ function AddForm({
       }}
     >
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        <Field label="Ticker" value={f.ticker} onChange={set("ticker")} placeholder="ORCL" required />
-        <label className="flex flex-col text-[10px] uppercase tracking-wide text-muted-foreground">
-          Strategy
-          <select
-            value={f.strategy}
-            onChange={set("strategy")}
-            className="mt-1 rounded border border-border bg-background px-2 py-1 text-sm text-foreground"
-          >
-            {Object.entries(STRATEGY_LABEL).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
+        <Field label={t("form.ticker")} value={f.ticker} onChange={set("ticker")} placeholder={t("form.tickerPlaceholder")} required />
+        <label className="flex flex-col gap-1">
+          <span className="stat-label">{t("form.strategy")}</span>
+          <select value={f.strategy} onChange={set("strategy")} className={INPUT_CLS}>
+            {STRATEGIES.map((k) => (
+              <option key={k} value={k}>{t(`strategy.${k}`)}</option>
             ))}
           </select>
         </label>
-        <Field label="Strike" type="number" step="0.01" value={f.strike_price} onChange={set("strike_price")} required />
-        <Field label="Premium / share" type="number" step="0.01" value={f.premium} onChange={set("premium")} placeholder="1.25" required />
-        <Field label="Contracts" type="number" min="1" value={f.contracts} onChange={set("contracts")} required />
-        <Field label="Expiry" type="date" value={f.expiry_date} onChange={set("expiry_date")} required />
-        <Field label="Spot at entry" type="number" step="0.01" value={f.spot} onChange={set("spot")} />
+        <Field label={t("form.strike")} type="number" step="0.01" value={f.strike_price} onChange={set("strike_price")} required />
+        <Field label={t("form.premium")} type="number" step="0.01" value={f.premium} onChange={set("premium")} placeholder={t("form.premiumPlaceholder")} required />
+        <Field label={t("form.contracts")} type="number" min="1" value={f.contracts} onChange={set("contracts")} required />
+        <Field label={t("form.expiry")} type="date" value={f.expiry_date} onChange={set("expiry_date")} required />
+        <Field label={t("form.spotAtEntry")} type="number" step="0.01" value={f.spot} onChange={set("spot")} />
       </div>
       {error ? <p className="mt-2 text-xs text-signal-short">{error}</p> : null}
       <div className="mt-2 flex items-center gap-3">
-        <button
-          type="submit"
-          disabled={!valid || pending}
-          className="rounded border border-signal/40 bg-signal/10 px-3 py-1.5 text-sm font-medium text-signal disabled:opacity-50"
-        >
-          {pending ? "Saving…" : "Save trade"}
+        <button type="submit" disabled={!valid || pending} className={PRIMARY_CLS}>
+          {pending ? t("form.saving") : t("form.save")}
         </button>
-        <span className="text-[11px] text-muted-foreground">
-          Premium per share, as filled — not the mid the desk quoted.
-        </span>
+        <span className="text-[11px] text-muted-foreground">{t("form.fillNote")}</span>
       </div>
     </form>
   );
@@ -388,28 +436,29 @@ function CloseForm({
   }) => void;
   pending: boolean;
 }) {
+  const t = useTranslations("deskPanels.tradeJournal");
   const [status, setStatus] = useState<"expired" | "closed" | "assigned">("expired");
   const [closePrice, setClosePrice] = useState("");
   const [spot, setSpot] = useState("");
 
   return (
-    <div className="mt-2 rounded border border-border bg-background p-2">
+    <div className="mt-2 rounded-control border border-border bg-background p-2">
       <div className="flex flex-wrap items-end gap-2">
-        <label className="flex flex-col text-[10px] uppercase tracking-wide text-muted-foreground">
-          Outcome
+        <label className="flex flex-col gap-1">
+          <span className="stat-label">{t("form.outcome")}</span>
           <select
             value={status}
             onChange={(e) => setStatus(e.target.value as typeof status)}
-            className="mt-1 rounded border border-border bg-background px-2 py-1 text-sm text-foreground"
+            className={INPUT_CLS}
           >
-            <option value="expired">Expired worthless</option>
-            <option value="closed">Bought back</option>
-            <option value="assigned">Assigned</option>
+            <option value="expired">{t("form.expired")}</option>
+            <option value="closed">{t("form.boughtBack")}</option>
+            <option value="assigned">{t("form.assigned")}</option>
           </select>
         </label>
         {status === "closed" ? (
           <Field
-            label="Paid to close / share"
+            label={t("form.paidToClose")}
             type="number"
             step="0.01"
             value={closePrice}
@@ -418,7 +467,7 @@ function CloseForm({
         ) : null}
         {status === "assigned" ? (
           <Field
-            label="Spot at assignment"
+            label={t("form.spotAtAssignment")}
             type="number"
             step="0.01"
             value={spot}
@@ -435,16 +484,18 @@ function CloseForm({
               underlying_price_at_close: spot ? Number(spot) : null,
             })
           }
-          className="rounded border border-signal/40 bg-signal/10 px-2.5 py-1 text-xs font-medium text-signal disabled:opacity-50"
+          className={PRIMARY_CLS}
         >
-          {pending ? "Saving…" : "Record"}
+          {pending ? t("form.saving") : t("form.record")}
         </button>
       </div>
       {status === "assigned" ? (
         <p className="mt-1.5 text-[11px] text-muted-foreground">
-          You keep the ${(trade.premium * trade.contracts * 100).toFixed(0)} credit, and now hold{" "}
-          {trade.contracts * 100} shares at a net basis of $
-          {(trade.strike_price - trade.premium).toFixed(2)}. This will not count as a win.
+          {t("form.assignedNote", {
+            credit: (trade.premium * trade.contracts * 100).toFixed(0),
+            shares: trade.contracts * 100,
+            basis: (trade.strike_price - trade.premium).toFixed(2),
+          })}
         </p>
       ) : null}
     </div>

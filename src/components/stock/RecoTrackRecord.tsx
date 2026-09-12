@@ -22,8 +22,11 @@
  * showing rather than leaving in a database.
  */
 import { useQuery } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import { modelsApi } from "@/lib/api";
 import { ClipboardList } from "lucide-react";
+import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import DataTable, { type Column } from "@/components/ui/DataTable";
 
 interface Block {
   n: number;
@@ -45,56 +48,20 @@ interface Scorecard {
   review_at?: string | null;
 }
 
-const STRATEGY_LABEL: Record<string, string> = {
-  sell_puts: "Short puts",
-  sell_calls: "Covered calls",
-  sell_strangle: "Strangles",
-};
+const STRATEGY_KEYS = ["sell_puts", "sell_calls", "sell_strangle"] as const;
+type StrategyKey = (typeof STRATEGY_KEYS)[number];
+const isStrategyKey = (s: string): s is StrategyKey => (STRATEGY_KEYS as readonly string[]).includes(s);
 
 const pct = (v: number | null | undefined, d = 1) =>
   v == null ? "—" : `${(v * 100).toFixed(d)}%`;
 
+const signedPts = (gap: number) => `${gap > 0 ? "+" : ""}${(gap * 100).toFixed(1)}`;
+
 /** A win rate this close to a coin flip is not an edge, whatever the yield. */
 const NO_EDGE_BAND = 0.55;
 
-function Row({ label, b, hint }: { label: string; b: Block; hint?: string }) {
-  // Optimistic (positive gap) is the direction that hurts: sizing is derived
-  // from the predicted number, so over-promising compounds into over-betting.
-  const gap = b.calibration_gap;
-  const gapTone =
-    Math.abs(gap) <= 0.03 ? "text-signal-long"
-    : gap > 0 ? "text-signal-short"
-    : "text-signal-caution";
-  const flat = b.win_rate < NO_EDGE_BAND;
-
-  return (
-    <tr className="border-b border-border/60 last:border-0">
-      <td className="py-2 pr-3">
-        <span className="font-medium">{label}</span>
-        {flat ? (
-          <span
-            className="ml-2 rounded border border-signal-short/40 bg-signal-short-bg px-1.5 py-px text-[10px] font-semibold uppercase text-signal-short"
-            title="Win rate near a coin flip. With roughly symmetric payoffs there is no edge here, however good the annualised number looks."
-          >
-            no edge
-          </span>
-        ) : null}
-        {hint ? <span className="ml-2 text-[11px] text-muted-foreground">{hint}</span> : null}
-      </td>
-      <td className="nums py-2 pr-3 text-right text-muted-foreground">{b.n.toLocaleString()}</td>
-      <td className="nums py-2 pr-3 text-right font-semibold">{pct(b.win_rate)}</td>
-      <td className="nums py-2 pr-3 text-right text-muted-foreground">{pct(b.mean_pop_pred)}</td>
-      <td className={`nums py-2 pr-3 text-right font-semibold ${gapTone}`}>
-        {gap > 0 ? "+" : ""}
-        {(gap * 100).toFixed(1)}
-      </td>
-      <td className="nums py-2 pr-3 text-right">{pct(b.assignment_rate)}</td>
-      <td className="nums py-2 pr-3 text-right text-muted-foreground">
-        {b.avg_annualized_pct?.toFixed(0)}%
-      </td>
-    </tr>
-  );
-}
+type TrackRow = { key: string; label: string; b: Block };
+type BreakdownRow = { label: string; b: Block };
 
 export default function RecoTrackRecord({
   strategy = "csp",
@@ -103,6 +70,7 @@ export default function RecoTrackRecord({
    *  block rather than always narrating short puts. */
   strategy?: "csp" | "covered_call";
 } = {}) {
+  const t = useTranslations("deskPanels.recoTrackRecord");
   const { data, isLoading, error } = useQuery<Scorecard>({
     queryKey: ["options-reco-scorecard", 400],
     queryFn: () => modelsApi.optionsRecoScorecard(400),
@@ -111,115 +79,209 @@ export default function RecoTrackRecord({
 
   const focusKey = strategy === "covered_call" ? "sell_calls" : "sell_puts";
   const focus = data?.by_strategy?.[focusKey];
-  const focusNoun = strategy === "covered_call" ? "covered calls" : "short puts";
+  const focusNoun = strategy === "covered_call" ? t("nounCalls") : t("nounPuts");
   // The gap is predicted minus realised, so its SIGN is the finding: positive
   // means the engine over-promised, negative that it under-promised. Calling
   // it "optimistic" unconditionally was only ever right for puts.
   const gapPts = focus ? Math.abs(focus.calibration_gap * 100) : 0;
-  const gapWord = focus && focus.calibration_gap > 0 ? "optimistic" : "conservative";
+  const gapWord = focus && focus.calibration_gap > 0 ? t("optimistic") : t("conservative");
   const calibrated = gapPts < 5;
 
-  return (
-    <section className="rounded-lg border border-border bg-card p-4">
-      <header className="mb-3">
-        <h2 className="flex items-center gap-2 text-base font-semibold">
-          <ClipboardList className="h-4 w-4 text-signal" />
-          What the engine actually called
-        </h2>
-        <p className="mt-1 max-w-2xl text-xs text-muted-foreground">
-          Every recommendation the engine logged, graded against the price on expiry. Not a
-          simulation — these were real calls made ahead of time.{" "}
-          {data ? `${data.overall.n.toLocaleString()} settled over ${data.window_days} days.` : ""}
-        </p>
-      </header>
+  const label = (
+    <>
+      <ClipboardList className="h-3.5 w-3.5 text-signal" aria-hidden="true" />
+      {t("label")}
+    </>
+  );
 
-      {error ? (
-        <p className="rounded border border-signal-short/40 bg-signal-short-bg p-3 text-sm text-signal-short">
-          Could not load the track record.
-        </p>
-      ) : isLoading || !data ? (
-        <p className="py-6 text-center text-sm text-muted-foreground">Loading the track record…</p>
-      ) : (
-        <>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px] text-sm">
-              <caption className="sr-only">Recommendation track record by strategy</caption>
-              <thead>
-                <tr className="border-b border-border text-[10px] uppercase tracking-wider text-muted-foreground">
-                  <th scope="col" className="py-2 pr-3 text-left font-medium">Strategy</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Settled</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Won</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Predicted</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium" title="Predicted probability of profit minus realised win rate, in points. Near zero is well calibrated; positive means the engine over-promised.">
-                    Gap
-                  </th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Assigned</th>
-                  <th scope="col" className="py-2 pr-3 text-right font-medium">Ann.</th>
-                </tr>
-              </thead>
-              <tbody>
-                <Row label="All" b={data.overall} />
-                {Object.entries(data.by_strategy).map(([k, b]) => (
-                  <Row key={k} label={STRATEGY_LABEL[k] ?? k} b={b} />
-                ))}
-              </tbody>
-            </table>
-          </div>
+  if (error) {
+    return <PanelUnavailable label={label} reason={t("unavailable")} />;
+  }
+  if (isLoading || !data) {
+    return <PanelPending label={label} text={t("loading")} />;
+  }
 
-          {focus ? (
-            <p className="mt-3 max-w-3xl border-l-2 border-signal pl-3 text-sm text-muted-foreground">
-              On the strategy this desk is set to, the engine is{" "}
-              <span className="text-foreground">
-                {calibrated ? "well calibrated" : "poorly calibrated"}
-              </span>
-              : it predicted {pct(focus.mean_pop_pred)} and delivered {pct(focus.win_rate)} across{" "}
-              {focus.n.toLocaleString()} settled {focusNoun} — {gapWord} by {gapPts.toFixed(1)}{" "}
-              points.{" "}
-              {calibrated
-                ? "Close enough that the predicted probability is usable as an input rather than decoration."
-                : "Far enough out that the predicted probability should be read as a ranking hint, not a probability."}
-            </p>
+  const rows: TrackRow[] = [
+    { key: "all", label: t("all"), b: data.overall },
+    ...Object.entries(data.by_strategy).map(([k, b]) => ({
+      key: k,
+      label: isStrategyKey(k) ? t(`strategy.${k}`) : k,
+      b,
+    })),
+  ];
+
+  const columns: Column<TrackRow>[] = [
+    {
+      key: "strategy",
+      header: t("col.strategy"),
+      sortable: true,
+      sortValue: (r) => r.label,
+      cell: (r) => (
+        <span>
+          <span className="font-medium">{r.label}</span>
+          {r.b.win_rate < NO_EDGE_BAND ? (
+            <span
+              className="ml-2 rounded border border-signal-short/40 bg-signal-short-bg px-1.5 py-px text-[10px] font-semibold uppercase text-signal-short"
+              title={t("noEdgeTitle")}
+            >
+              {t("noEdge")}
+            </span>
           ) : null}
+        </span>
+      ),
+    },
+    {
+      key: "settled",
+      header: t("col.settled"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.n,
+      cell: (r) => <span className="nums text-muted-foreground">{r.b.n.toLocaleString()}</span>,
+    },
+    {
+      key: "won",
+      header: t("col.won"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.win_rate,
+      cell: (r) => <span className="nums font-semibold">{pct(r.b.win_rate)}</span>,
+    },
+    {
+      key: "predicted",
+      header: t("col.predicted"),
+      ariaLabel: t("aria.predicted"),
+      sortable: true,
+      align: "right",
+      hideBelow: "md",
+      sortValue: (r) => r.b.mean_pop_pred,
+      cell: (r) => <span className="nums text-muted-foreground">{pct(r.b.mean_pop_pred)}</span>,
+    },
+    {
+      key: "gap",
+      header: <span title={t("gapTitle")}>{t("col.gap")}</span>,
+      ariaLabel: t("aria.gap"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.calibration_gap,
+      cell: (r) => {
+        // Optimistic (positive gap) is the direction that hurts: sizing is
+        // derived from the predicted number, so over-promising compounds into
+        // over-betting.
+        const gap = r.b.calibration_gap;
+        const tone =
+          Math.abs(gap) <= 0.03 ? "text-signal-long"
+          : gap > 0 ? "text-signal-short"
+          : "text-signal-caution";
+        return <span className={`nums font-semibold ${tone}`}>{signedPts(gap)}</span>;
+      },
+    },
+    {
+      key: "assigned",
+      header: t("col.assigned"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.assignment_rate,
+      cell: (r) => <span className="nums">{pct(r.b.assignment_rate)}</span>,
+    },
+    {
+      key: "ann",
+      header: t("col.ann"),
+      ariaLabel: t("aria.ann"),
+      sortable: true,
+      align: "right",
+      hideBelow: "lg",
+      sortValue: (r) => r.b.avg_annualized_pct,
+      cell: (r) => (
+        <span className="nums text-muted-foreground">{r.b.avg_annualized_pct?.toFixed(0)}%</span>
+      ),
+    },
+  ];
 
-          <details className="mt-3 text-xs text-muted-foreground">
-            <summary className="cursor-pointer select-none font-medium">
-              By model agreement, and by days to expiry
-            </summary>
-            <div className="mt-2 grid gap-4 sm:grid-cols-2">
-              {(["by_agreement", "by_dte"] as const).map((k) => (
-                <div key={k}>
-                  <div className="mb-1 text-[10px] uppercase tracking-wide">
-                    {k === "by_agreement" ? "Quant × PAM agreement" : "Days to expiry"}
-                  </div>
-                  <table className="w-full">
-                    <tbody>
-                      {Object.entries(data[k]).map(([label, b]) => (
-                        <tr key={label} className="border-b border-border/40 last:border-0">
-                          <td className="py-1 capitalize">{label}</td>
-                          <td className="nums py-1 text-right text-muted-foreground">n={b.n}</td>
-                          <td className="nums py-1 text-right font-medium">{pct(b.win_rate)}</td>
-                          <td className="nums py-1 text-right">
-                            {b.calibration_gap > 0 ? "+" : ""}
-                            {(b.calibration_gap * 100).toFixed(1)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ))}
-            </div>
-            <p className="mt-2">
-              <strong>Gap</strong> is predicted probability of profit minus realised win rate, in
-              points. Positive means the engine over-promised, which is the direction that matters:
-              sizing is derived from the predicted number, so over-promising compounds into
-              over-betting. <strong>Ann.</strong> is annualised return on collateral as the engine
-              estimated it at entry, priced at mid — an upper bound, since the market-data plan
-              returns no bid/ask.
-            </p>
-          </details>
-        </>
-      )}
-    </section>
+  const breakdownColumns = (labelHeader: string): Column<BreakdownRow>[] => [
+    {
+      key: "label",
+      header: labelHeader,
+      sortable: true,
+      sortValue: (r) => r.label,
+      cell: (r) => <span className="capitalize">{r.label}</span>,
+    },
+    {
+      key: "n",
+      header: t("breakdown.settled"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.n,
+      cell: (r) => <span className="nums text-muted-foreground">{r.b.n.toLocaleString()}</span>,
+    },
+    {
+      key: "won",
+      header: t("breakdown.won"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.win_rate,
+      cell: (r) => <span className="nums font-medium">{pct(r.b.win_rate)}</span>,
+    },
+    {
+      key: "gap",
+      header: t("breakdown.gap"),
+      ariaLabel: t("aria.gap"),
+      sortable: true,
+      align: "right",
+      sortValue: (r) => r.b.calibration_gap,
+      cell: (r) => <span className="nums">{signedPts(r.b.calibration_gap)}</span>,
+    },
+  ];
+
+  const toRows = (block: Record<string, Block>): BreakdownRow[] =>
+    Object.entries(block).map(([label, b]) => ({ label, b }));
+
+  const reading = focus
+    ? t.rich("reading", {
+        hl: (chunks) => <span className="text-foreground">{chunks}</span>,
+        verdict: calibrated ? t("calibrated") : t("poorlyCalibrated"),
+        predicted: pct(focus.mean_pop_pred),
+        won: pct(focus.win_rate),
+        count: focus.n.toLocaleString(),
+        noun: focusNoun,
+        word: gapWord,
+        points: gapPts.toFixed(1),
+        conclusion: calibrated ? t("closeEnough") : t("farOut"),
+      })
+    : undefined;
+
+  return (
+    <Panel
+      label={label}
+      qualifier={t("qualifier", { count: data.overall.n.toLocaleString(), days: data.window_days })}
+      reading={reading}
+    >
+      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{t("lead")}</p>
+
+      <DataTable<TrackRow>
+        caption={t("tableCaption")}
+        columns={columns}
+        rows={rows}
+        rowKey={(r) => r.key}
+      />
+
+      <details className="mt-3 text-xs text-muted-foreground">
+        <summary className="cursor-pointer select-none font-medium">{t("breakdown.summary")}</summary>
+        <div className="mt-2 grid gap-4 sm:grid-cols-2">
+          <DataTable<BreakdownRow>
+            caption={t("breakdown.captionAgreement")}
+            columns={breakdownColumns(t("breakdown.byAgreement"))}
+            rows={toRows(data.by_agreement)}
+            rowKey={(r) => r.label}
+          />
+          <DataTable<BreakdownRow>
+            caption={t("breakdown.captionDte")}
+            columns={breakdownColumns(t("breakdown.byDte"))}
+            rows={toRows(data.by_dte)}
+            rowKey={(r) => r.label}
+          />
+        </div>
+        <p className="mt-2">{t.rich("footnote", { strong: (chunks) => <strong>{chunks}</strong> })}</p>
+      </details>
+    </Panel>
   );
 }
