@@ -88,9 +88,12 @@ export function TodayCall() {
     (digest?.new_pam_triggers?.length ?? 0) +
     (digest?.verdict_changes?.length ?? 0) +
     (digest?.conflicts?.length ?? 0);
-  const top = [...(digest?.new_pam_triggers ?? [])].sort(
-    (a, b) => (b.conviction ?? 0) - (a.conviction ?? 0),
-  )[0];
+  // The three strongest new price-action triggers, each naming its setup and
+  // direction and linking to the chart where the levels are drawn. A bare
+  // ticker with a number was a figure the sentence never referred to.
+  const top3 = [...(digest?.new_pam_triggers ?? [])]
+    .sort((a, b) => (b.conviction ?? 0) - (a.conviction ?? 0))
+    .slice(0, 3);
 
   return (
     <section
@@ -120,7 +123,7 @@ export function TodayCall() {
           {watch && (
             <>
               {" "}
-              <b className="font-bold">{t("callWatch")}</b> {watch.signal}.
+              <b className="font-bold">{t("callMacroWatch")}</b> {watch.signal}.
             </>
           )}
           {bookRisk && (
@@ -156,14 +159,25 @@ export function TodayCall() {
           <div className={`nums font-mono text-3xl font-bold leading-none ${LEAN_TEXT[lean]}`}>{fmtScore(score)}</div>
         </div>
         <div>
-          <div className="stat-label">{t("callTopSignal")}</div>
-          {top ? (
-            <Link href={`/stock/${top.ticker}`} className="nums font-mono text-3xl font-bold leading-none text-foreground hover:text-signal">
-              {top.ticker}
-              {top.conviction != null && <span className="ml-1.5 text-base text-muted-foreground">· {Math.round(top.conviction)}</span>}
-            </Link>
+          <div className="stat-label">{t("callTopSignals")}</div>
+          {top3.length ? (
+            <ol className="mt-0.5 space-y-0.5">
+              {top3.map((s) => (
+                <li key={`${s.ticker}-${s.triggered_at ?? s.setup}`} className="flex items-baseline gap-2 whitespace-nowrap font-mono text-sm leading-tight">
+                  <Link href={`/stock/${s.ticker}#chart`} className="font-bold text-foreground hover:text-signal">
+                    {s.ticker}
+                  </Link>
+                  <span className={s.direction === "short" ? "text-signal-short" : "text-signal-long"}>{s.setup}</span>
+                  {s.conviction != null && (
+                    <span className="nums text-[11px] text-muted-foreground" title={t("callSignalConviction", { n: Math.round(s.conviction) })}>
+                      {Math.round(s.conviction)}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
           ) : (
-            <div className="nums font-mono text-3xl font-bold leading-none text-dim">—</div>
+            <div className="nums font-mono text-3xl font-bold leading-none text-dim" title={t("callTopSignalsNone")}>—</div>
           )}
         </div>
         <div>

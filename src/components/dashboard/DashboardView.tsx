@@ -14,6 +14,8 @@ import { SwarmIndicator } from "@/components/dashboard/SwarmIndicator";
 import { MacroTape } from "@/components/dashboard/MacroTape";
 import { TodaySignalsPanel } from "@/components/dashboard/TodaySignalsPanel";
 import { WatchlistGlance } from "@/components/dashboard/WatchlistGlance";
+import { YourBookCard } from "@/components/dashboard/YourBookCard";
+import { ThisWeekPanel } from "@/components/dashboard/ThisWeekPanel";
 import { SectorHeatmapCard } from "@/components/dashboard/SectorHeatmapCard";
 import { SectorRotationHeatmap } from "@/components/dashboard/SectorRotationHeatmap";
 import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
@@ -21,11 +23,13 @@ import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 
 /**
- * Today. The call strip first; everything under it is evidence, in the
- * order a reader would ask for it: regime and positioning, then vol, then
- * crowd and macro, then what fired and your own list, then rotation, then
- * the wire. No card returns null — a panel with no data keeps its place
- * and says why, so the page has the same shape on a bad-data day.
+ * Today. The call strip first, full width. Under it the stock page's frame:
+ * the market on the left (regime and positioning, vol, crowd and macro,
+ * sectors, rotation, crypto) and the reader's own things on the right (the
+ * week ahead, their book, their list, what fired, the wire). On a phone the
+ * right column comes first, because "what matters to me" reads before "what
+ * the market did". No card returns null — a panel with no data keeps its
+ * place and says why, so the page has the same shape on a bad-data day.
  */
 export function DashboardView() {
   const t = useTranslations("dashboard");
@@ -59,35 +63,48 @@ export function DashboardView() {
 
       <TodayCall />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2"><TodayPanel /></div>
-        <BreadthStrip />
+      {/* items-start at every width: several aside cards are h-full, and a
+          stretched grid row would hand them the row's height instead of
+          their own. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
+        {/* ── Right: you and the clock. First in the DOM so a phone reads it
+               straight after the call; pinned to the second column on a desk. ── */}
+        <aside className="min-w-0 space-y-4 lg:sticky lg:top-[104px] lg:col-start-2 lg:row-start-1">
+          <ThisWeekPanel />
+          <YourBookCard />
+          <WatchlistGlance />
+          <div id="signals" className="scroll-mt-24">
+            <TodaySignalsPanel />
+          </div>
+          <RealtimeNewsFeed />
+        </aside>
+
+        {/* ── Left: the market ── */}
+        <div className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="md:col-span-2"><TodayPanel /></div>
+            <BreadthStrip />
+          </div>
+
+          {/* Two abreast, not three: the column is 880px wide on a desk and
+              the VIX gauge and the cycle wheel each need ~400px to keep
+              their side figures unclipped. */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <VixGauge />
+            <GexCard />
+            <BusinessCycleWheel />
+            <SwarmIndicator />
+          </div>
+
+          <MacroTape />
+
+          <SectorHeatmapCard />
+
+          <SectorRotationHeatmap />
+
+          <CryptoIndicators />
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <VixGauge />
-        <GexCard />
-        <BusinessCycleWheel />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <SwarmIndicator />
-        <div className="lg:col-span-2"><MacroTape /></div>
-      </div>
-
-      <div id="signals" className="grid scroll-mt-20 grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2"><TodaySignalsPanel /></div>
-        <WatchlistGlance />
-      </div>
-
-      <SectorHeatmapCard />
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2"><SectorRotationHeatmap /></div>
-        <CryptoIndicators />
-      </div>
-
-      <RealtimeNewsFeed />
 
       {/* The one surface not in our skin: TradingView's tape, kept for the
           affiliate link, at the bottom where it cannot dilute the call. */}
