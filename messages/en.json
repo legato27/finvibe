@@ -439,7 +439,8 @@
       "readingWeakening": "{list} weakening.",
       "readingLagging": "{list} lag.",
       "readingRegime": "Past {regime} regimes favoured {favors} and avoided {avoids}."
-    }
+    },
+    "sectorHeatmapNoWindow": "The {window} window has no returns yet: the box has not computed them since the last market close. The Day tiles are live."
   },
   "errors": {
     "loadFailed": "Failed to load",

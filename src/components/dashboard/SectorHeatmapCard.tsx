@@ -87,9 +87,12 @@ export function SectorHeatmapCard() {
   const capMax = useMemo(() => rows.reduce((m, s) => Math.max(m, s.market_cap), 0), [rows]);
   const capSum = useMemo(() => rows.reduce((a, s) => a + s.market_cap, 0), [rows]);
   const market = useMemo(() => {
-    const v = rows.reduce((a, s) => a + (s[win] ?? 0) * s.market_cap, 0);
-    return capSum ? v / capSum : null;
-  }, [rows, win, capSum]);
+    const have = rows.filter((s) => s[win] != null);
+    if (!have.length) return null;
+    const cap = have.reduce((a, s) => a + s.market_cap, 0);
+    const v = have.reduce((a, s) => a + (s[win] ?? 0) * s.market_cap, 0);
+    return cap ? v / cap : null;
+  }, [rows, win]);
 
   const label = (
     <span className="flex items-center gap-1">
@@ -121,8 +124,12 @@ export function SectorHeatmapCard() {
   const up = scored.filter((s) => (s[win] ?? 0) > 0).length;
   const leader = scored[0];
   const laggard = scored[scored.length - 1];
-  const reading =
-    leader && laggard && leader !== laggard
+  // A window the box has not computed (its returns layer is built by a
+  // nightly beat) shows dashes on every tile; the sentence must say that
+  // rather than "0 of 0 sectors up".
+  const reading = !scored.length
+    ? t("sectorHeatmapNoWindow", { window: w.label })
+    : leader && laggard && leader !== laggard
       ? t("sectorHeatmapReading", {
           up,
           total: scored.length,
