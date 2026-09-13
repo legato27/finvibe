@@ -24,6 +24,8 @@ import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrateg
 import { YourExposure, type Position } from "@/components/stock/YourExposure";
 import { SectionNav } from "@/components/stock/SectionNav";
 import { IndexNote, isIndexTicker } from "@/components/stock/IndexNote";
+import { isCryptoTicker } from "@/modules/crypto/flag";
+import { CryptoStockSections } from "@/modules/crypto/components/CryptoSurfaces";
 import VerdictCard from "@/components/ui/VerdictCard";
 import Panel, { PanelUnavailable } from "@/components/ui/Panel";
 import Disclosure from "@/components/ui/Disclosure";
@@ -182,7 +184,18 @@ export default function StockDetailPage() {
   // An index has a chart and price action; the rest does not apply and is
   // said once, in one panel, rather than as six pending sections.
   const isIndex = isIndexTicker(ticker);
-  const sections = isIndex
+  // Crypto module: a coin keeps chart, verdict and sentiment; the module's
+  // section replaces DCF, thoughts, options and models.
+  const isCrypto = !isIndex && isCryptoTicker(ticker);
+  const sections = isCrypto
+    ? [
+        { id: "chart", label: t("sectionChart") },
+        { id: "why", label: t("sectionWhy") },
+        { id: "crypto", label: t("sectionCrypto") },
+        ...(position ? [{ id: "position", label: t("sectionPosition") }] : []),
+        { id: "sentiment", label: t("sectionSentiment") },
+      ]
+    : isIndex
     ? [
         { id: "chart", label: t("sectionChart") },
         { id: "why", label: t("sectionWhy") },
@@ -240,7 +253,8 @@ export default function StockDetailPage() {
             )}
           </section>
 
-          {!isIndex && (
+          {isCrypto && <CryptoStockSections ticker={ticker} />}
+          {!isIndex && !isCrypto && (
           <section id="thoughts" className="scroll-mt-24 space-y-4">
             <DcfScenarios dcf={detail.dcf_detail} />
             <FinVibeThoughts
@@ -292,7 +306,7 @@ export default function StockDetailPage() {
             </section>
           )}
 
-          {!isIndex && (
+          {!isIndex && !isCrypto && (
             <>
               <Disclosure id="options" label={t("sectionOptions")} qualifier={t("chainQualifier")} open={openSection === "options"}>
                 <OptionsChainTab ticker={ticker} />
@@ -301,11 +315,12 @@ export default function StockDetailPage() {
               <Disclosure id="models" label={t("sectionModels")} qualifier={t("modelsQualifier")} open={openSection === "models"}>
                 <ModelCards ticker={ticker} />
               </Disclosure>
-
-              <section id="sentiment" className="scroll-mt-24">
-                <SentimentPanel ticker={ticker} />
-              </section>
             </>
+          )}
+          {!isIndex && (
+            <section id="sentiment" className="scroll-mt-24">
+              <SentimentPanel ticker={ticker} />
+            </section>
           )}
         </div>
 

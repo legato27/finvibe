@@ -84,7 +84,7 @@ function inBackground(work: () => Promise<void>): void {
   }
 }
 
-async function dgxJson<T>(path: string, init?: RequestInit): Promise<T> {
+export async function dgxJson<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
   // Writes are excluded exactly as they are in the proxy: generate-thoughts,
   // run/all and enrich are requests to change something on the box, and

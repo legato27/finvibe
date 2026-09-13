@@ -5,6 +5,7 @@ import * as db from "@/lib/mcp/db";
 import { market } from "@/lib/mcp/market";
 import * as readings from "@/lib/mcp/readings";
 import { fibFromPriceAction } from "@/lib/fib";
+import { registerCryptoTools } from "@/lib/mcp/crypto-tools";
 import { toolByName, scopeAllows, type McpScope } from "@/lib/mcp/catalog";
 
 export interface ToolContext {
@@ -562,6 +563,9 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     },
     async (args) => ok(await db.resolveOptionTrade(ctx.userId, ctx.supabase, args)),
   );
+
+  // Crypto module tools (src/modules/crypto): one line, removed with the module.
+  registerCryptoTools(reg, { userId: ctx.userId, supabase: ctx.supabase });
 
   if (isSuperAdmin)
   reg(

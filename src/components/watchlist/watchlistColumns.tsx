@@ -7,6 +7,7 @@
  */
 import { Briefcase, Brain, Building2, TrendingDown, TrendingUp, X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { CryptoChip, CryptoNa } from "@/modules/crypto/components/CryptoSurfaces";
 import type { Column } from "@/components/ui/DataTable";
 import VerdictBadge, { type VerdictJson, type VerdictState } from "@/components/ui/VerdictBadge";
 import { PamBadge, type PamSummary } from "@/components/shared/PamBadge";
@@ -35,6 +36,8 @@ export interface WatchRow {
   isEtf: boolean;
   /** A yfinance index symbol (^GSPC): priced and given price action, never enriched. */
   isIndex: boolean;
+  /** A coin (crypto module): live Binance price and price action, no financials or options. */
+  isCrypto: boolean;
   moat: string | null;
   moatIsAi: boolean;
   enrichmentStatus: string | null;
@@ -97,6 +100,7 @@ export function useWatchlistColumns({
           {r.isIndex && (
             <span className="rounded-full border border-protocol/50 bg-protocol-bg px-1.5 py-0.5 text-[9px] text-protocol" title={t("indexTitle")}>{t("indexChip")}</span>
           )}
+          {r.isCrypto && <CryptoChip />}
           {moatStyle(r.moat).show && (
             <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${moatStyle(r.moat).badgeClass}`}>
               {r.moat}{r.moatIsAi ? " (AI)" : ""}
@@ -145,7 +149,7 @@ export function useWatchlistColumns({
     },
     {
       key: "mos", header: t("mos"), sortable: true, sortValue: (r) => r.mos, align: "right",
-      cell: (r) => r.isIndex ? <NotForIndex /> : r.mos != null ? (
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.isCrypto ? <CryptoNa /> : r.mos != null ? (
         <span className={`nums inline-flex items-center justify-end gap-0.5 font-mono text-xs ${signTextClass(r.mos)}`}>
           {r.mos > 0 ? <TrendingUp className="h-3 w-3" aria-hidden="true" /> : <TrendingDown className="h-3 w-3" aria-hidden="true" />}
           {formatMoS(r.mos)}
@@ -154,11 +158,11 @@ export function useWatchlistColumns({
     },
     {
       key: "fairValue", header: t("fairValue"), sortable: true, sortValue: (r) => r.fairValue, align: "right", hideBelow: "lg",
-      cell: (r) => r.isIndex ? <NotForIndex /> : r.fairValue != null ? <span className="nums font-mono text-xs text-muted-foreground">${r.fairValue.toFixed(2)}</span> : <Dash />,
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.isCrypto ? <CryptoNa /> : r.fairValue != null ? <span className="nums font-mono text-xs text-muted-foreground">${r.fairValue.toFixed(2)}</span> : <Dash />,
     },
     {
       key: "aiMos", header: t("mosAi"), sortable: true, sortValue: (r) => r.aiMos, align: "right", hideBelow: "lg",
-      cell: (r) => r.isIndex ? <NotForIndex /> : r.aiMos != null ? <span className={`nums font-mono text-xs ${signTextClass(r.aiMos)}`}>{formatMoS(r.aiMos)}</span> : <Dash />,
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.isCrypto ? <CryptoNa /> : r.aiMos != null ? <span className={`nums font-mono text-xs ${signTextClass(r.aiMos)}`}>{formatMoS(r.aiMos)}</span> : <Dash />,
     },
     {
       key: "trend", header: t("trend"), sortable: true, sortValue: (r) => (r.trend ? TREND_RANK[r.trend] ?? null : null), align: "right", hideBelow: "md",
@@ -182,7 +186,7 @@ export function useWatchlistColumns({
     },
     {
       key: "opt", header: t("columnOption"), sortable: true, sortValue: (r) => r.opt?.strategy ?? null, hideBelow: "md",
-      cell: (r) => r.isIndex ? <NotForIndex /> : r.opt?.strategy ? (
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.isCrypto ? <CryptoNa /> : r.opt?.strategy ? (
         <span
           title={r.opt.conviction != null ? `${(r.opt.conviction * 100).toFixed(0)}% conviction` : undefined}
           className="inline-block rounded-full border border-signal/30 bg-signal-bg px-1.5 py-0.5 font-mono text-[10px] text-signal"

@@ -25,6 +25,7 @@ const GROUP_ORDER: ToolGroup[] = [
   "Quant",
   "Desk",
   "Journal",
+  "Crypto",
 ];
 
 const GROUP_KEY: Record<ToolGroup, string> = {
@@ -41,6 +42,7 @@ const GROUP_KEY: Record<ToolGroup, string> = {
   Quant: "groupQuant",
   Desk: "groupDesk",
   Journal: "groupJournal",
+  Crypto: "groupCrypto",
 };
 
 function ToolCard({
@@ -129,6 +131,7 @@ export default async function McpDocsPage() {
     Quant: [],
     Desk: [],
     Journal: [],
+    Crypto: [],
   };
   for (const tool of TOOL_CATALOG) grouped[tool.group].push(tool);
 

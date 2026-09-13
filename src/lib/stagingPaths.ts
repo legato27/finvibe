@@ -131,6 +131,25 @@ export const PATH_FAMILIES: PathFamily[] = [
     sMaxAge: 300,
   },
 
+  // ── Crypto module (src/modules/crypto) ───────────────────────────────
+  // Binance answers in seconds and a stale coin price is a wrong price, so
+  // the windows are short. Remove this block with the module.
+  {
+    pattern: /^\/api\/crypto-desk\/(coins\/ticker|btc\/(session|setup|liquidity|reading|backtest))$/,
+    label: "crypto desk",
+    maxAge: 15 * MINUTE,
+    refreshAfter: 30_000,
+    sMaxAge: 30,
+    timeoutMs: 45_000,
+  },
+  {
+    pattern: /^\/api\/crypto-desk\/coins\/[a-z0-9.-]+\/candles$/,
+    label: "crypto candles",
+    maxAge: 6 * HOUR,
+    refreshAfter: 5 * MINUTE,
+    sMaxAge: 120,
+  },
+
   // ── Ranked book & screeners ──────────────────────────────────────────
   {
     pattern: /^\/api\/models\/(cross-sectional\/ranked|ranked-book\/performance|options-ranked)$/,

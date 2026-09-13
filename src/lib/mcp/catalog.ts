@@ -32,7 +32,8 @@ export type ToolGroup =
   | "Today"
   | "Quant"
   | "Desk"
-  | "Journal";
+  | "Journal"
+  | "Crypto";
 
 export const TOOL_CATALOG: ToolDoc[] = [
   // ── Profile ──────────────────────────────────────────────
@@ -670,6 +671,29 @@ export const TOOL_CATALOG: ToolDoc[] = [
       { name: "outcome_notes", type: "string", required: false },
     ],
     returns: "The updated options_trades row.",
+  },
+
+  // ── Crypto (module; remove with src/modules/crypto) ───────
+  {
+    name: "get_crypto_reading",
+    group: "Crypto",
+    title: "The Bitcoin desk's call",
+    description:
+      "The crypto desk's composed reading: Bitcoin price and day change from Binance, the market-maker setup " +
+      "(type, bias, confidence, entry zone, stop, targets, invalidation), the premium-or-discount zone and the " +
+      "session clock, plus the liquidity map (pools, order blocks, fair-value gaps). Nothing places an order.",
+    params: [{ name: "timeframe", type: "string", required: false, description: "1h | 4h | 1d | 1w. Default 4h." }],
+    returns: "{ reading, price, session, setup, premium_discount, counts, liquidity, as_of }",
+  },
+  {
+    name: "get_crypto_tickers",
+    group: "Crypto",
+    title: "Live coin tickers",
+    description:
+      "Binance 24-hour tickers (price, change, high, low, volume) for the token's crypto watchlist names, or " +
+      "for any coins passed as yfinance-style symbols such as BTC-USD.",
+    params: [{ name: "symbols", type: "string[]", required: false, description: "Up to 50 symbols. Default: the token's crypto watchlist names." }],
+    returns: "{ as_of, source, tickers: { <symbol>: {...} }, missing[] }",
   },
 ];
 

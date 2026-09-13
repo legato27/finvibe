@@ -592,7 +592,8 @@
     "groupToday": "Today",
     "groupQuant": "Quant",
     "groupDesk": "Desk",
-    "groupJournal": "Trade journal"
+    "groupJournal": "Trade journal",
+    "groupCrypto": "Crypto"
   },
   "models": {
     "blurb": {
@@ -1497,7 +1498,8 @@
     "fibLegendTargets": "Fib targets",
     "fibLegendInvalid": "Fib invalidation",
     "fibZoomPill": "Zoom to leg",
-    "fibZoomTitle": "Frame the leg with thirty bars of context"
+    "fibZoomTitle": "Frame the leg with thirty bars of context",
+    "sectionCrypto": "Binance"
   },
   "watchlist": {
     "addAnyway": "Add {query} anyway",
@@ -1934,7 +1936,9 @@
     "tooThin": " — too thin to qualify on",
     "ccStrikeTitle": "Use the gamma wall and your own cost basis",
     "annAriaCsp": "Annualized return on cash collateral",
-    "annAriaCc": "Annualized premium yield on the shares held"
+    "annAriaCc": "Annualized premium yield on the shares held",
+    "crypto": "Crypto",
+    "cryptoCaption": "Bitcoin market maker"
   },
   "deskPanels": {
     "sizedBook": {
@@ -2294,6 +2298,107 @@
         "engineRow": "The engine's own {noun}"
       },
       "reading": "A settled trade counts as won when its realised P&L is positive. Held to expiry uses the underlying's close on expiry and ignores commissions and the stock leg of a covered call. The engine's rates come from its own graded log over 400 days, not from your trades; the gap is measured on your trades it priced."
+    }
+  },
+  "crypto": {
+    "title": "Crypto desk",
+    "subtitle": "Bitcoin market-maker read on Binance data · nothing here places an order",
+    "deskSwitch": "Desk",
+    "switchPuts": "Sell puts",
+    "switchCalls": "Covered calls",
+    "switchCrypto": "Crypto",
+    "callLabel": "The Bitcoin call",
+    "loading": "Reading Binance…",
+    "unavailable": "Binance did not answer and the box has no recent snapshot.",
+    "leanIn": "Lean long",
+    "leanOut": "Lean short",
+    "leanNeutral": "Stand aside",
+    "stat": {
+      "price": "BTC",
+      "confidence": "Setup confidence",
+      "noBias": "no bias",
+      "session": "Minutes",
+      "minutesLeft": "left in session",
+      "minutesToNext": "to next session"
+    },
+    "setup": {
+      "label": "Market-maker setup",
+      "unavailable": "No setup read: Binance did not answer.",
+      "bias": "Bias",
+      "entry": "Entry zone",
+      "stop": "Stop",
+      "target1": "Target 1",
+      "target2": "Target 2",
+      "invalidation": "Invalidation"
+    },
+    "chart": {
+      "label": "Bitcoin, daily",
+      "qualifier": "setup levels drawn",
+      "reading": "Entry zone as the sweet spot, stop as the invalidation line, targets as the target lines. The Fibonacci tool works here too."
+    },
+    "liq": {
+      "label": "Liquidity map",
+      "unavailable": "No liquidity read: Binance did not answer.",
+      "zone": "price in the {zone} zone · equilibrium {eq}",
+      "reading": "Pools are where resting stops cluster; order blocks are the last opposing candle before an impulse; gaps are unfilled imbalances. Nearest to price first.",
+      "count": "{count, plural, one {# feature} other {# features}}",
+      "col": {
+        "kind": "Feature",
+        "side": "Side",
+        "level": "Level",
+        "distance": "From price",
+        "strength": "Strength",
+        "touches": "Touches"
+      },
+      "kind": {
+        "pool": "Pool",
+        "order_block": "Order block",
+        "fvg": "Gap"
+      },
+      "scopeLabel": "How much of the map",
+      "nearest": "Nearest {count}",
+      "all": "All {count}"
+    },
+    "session": {
+      "label": "Session clock",
+      "qualifier": "UTC",
+      "unavailable": "Session clock unavailable."
+    },
+    "bt": {
+      "label": "Setup backtest",
+      "qualifier": "run {date} · {tf}",
+      "none": "No backtest stored on the box yet.",
+      "sharpe": "Sharpe (R)",
+      "winRate": "Win rate",
+      "trades": "Trades",
+      "best": "Best trade",
+      "curveAria": "Equity curve in R",
+      "reading": "Simulated on {lookback} bars at a minimum {conf}% confidence. A summary of the model's own rules, not a forecast."
+    },
+    "coins": {
+      "label": "Your coins",
+      "qualifier": "{count, plural, one {# coin} other {# coins}}",
+      "reading": "Live Binance prices for the coins on your watchlists.",
+      "signedOut": "Sign in to see your coins here.",
+      "signIn": "Sign in",
+      "none": "No coins on your watchlists yet. Add BTC-USD or ETH-USD from search.",
+      "openWatchlist": "Open watchlist"
+    },
+    "chip": {
+      "label": "Crypto",
+      "title": "A coin: live Binance price and price action, no financials or options.",
+      "na": "Not applicable to a crypto asset"
+    },
+    "stock": {
+      "label": "Binance, 24 hours",
+      "qualifier": "live",
+      "unavailable": "Binance did not answer for this coin.",
+      "reading": "Live spot data from Binance. A coin has price action and a verdict, but no financials, moat, DCF, thoughts, options or model grid.",
+      "openDesk": "Crypto desk",
+      "price": "Price",
+      "high": "24h high",
+      "low": "24h low",
+      "volume": "24h volume"
     }
   }
 }

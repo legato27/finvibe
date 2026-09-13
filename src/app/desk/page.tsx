@@ -19,7 +19,7 @@
  * with its reason attached. The trader can always see why the top tier is thin
  * — which is the thing an empty table can never tell them.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { optionsApi } from "@/lib/api";
 import DataTable, { Column } from "@/components/ui/DataTable";
@@ -30,6 +30,7 @@ import Segmented from "@/components/ui/Segmented";
 import Chip from "@/components/ui/Chip";
 import { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import GuideCard from "@/components/ui/GuideCard";
 import VerdictBadge, { VerdictState } from "@/components/ui/VerdictBadge";
 import { ShieldAlert, ShieldCheck, TrendingDown, Landmark } from "lucide-react";
@@ -38,6 +39,7 @@ import AssignmentBacktest from "@/components/stock/AssignmentBacktest";
 import CoveredCallBook from "@/components/stock/CoveredCallBook";
 import RecoTrackRecord from "@/components/stock/RecoTrackRecord";
 import { TrackRecordPanel } from "@/components/stock/TrackRecordPanel";
+import { CRYPTO_MODULE_ENABLED } from "@/modules/crypto/flag";
 import TradeJournal from "@/components/stock/TradeJournal";
 
 type Tier = "qualified" | "watch" | "rejected";
@@ -167,6 +169,13 @@ export default function OptionDeskPage() {
   const allRows = data?.rows ?? [];
   const rows = tierFilter === "all" ? allRows : allRows.filter((r) => r.tier === tierFilter);
   const isCsp = strategy === "csp";
+  const router = useRouter();
+  // The crypto desk hands a strategy back in the query when the reader
+  // switches away from it; read it once, without a Suspense boundary.
+  useEffect(() => {
+    const s = new URLSearchParams(window.location.search).get("strategy");
+    if (s === "covered_call" || s === "csp") setStrategy(s);
+  }, []);
 
   const deskAsOf = allRows.reduce<string | null>(
     (max, r) => (r.summary_date && (!max || r.summary_date > max) ? r.summary_date : max),
@@ -570,10 +579,12 @@ export default function OptionDeskPage() {
           <Segmented
             ariaLabel={t("strategyLabel")}
             value={strategy}
-            onChange={setStrategy}
+            onChange={(v) => { if ((v as string) === "crypto") { router.push("/desk/crypto"); return; } setStrategy(v as Strategy); }}
             options={[
               { value: "csp", label: <span className="flex flex-col items-start leading-tight"><span>{t("sellPuts")}</span><span className="text-[10px] font-normal opacity-70">{t("sellPutsCaption")}</span></span> },
               { value: "covered_call", label: <span className="flex flex-col items-start leading-tight"><span>{t("coveredCalls")}</span><span className="text-[10px] font-normal opacity-70">{t("coveredCallsCaption")}</span></span> },
+              // Crypto module (src/modules/crypto): a third choice that is its own route.
+              ...(CRYPTO_MODULE_ENABLED ? [{ value: "crypto" as const, label: <span className="flex flex-col items-start leading-tight"><span>{t("crypto")}</span><span className="text-[10px] font-normal opacity-70">{t("cryptoCaption")}</span></span> }] : []),
             ]}
           />
         </div>

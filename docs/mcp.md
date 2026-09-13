@@ -181,6 +181,13 @@ the tool: `read` < `manage` < `full`.
 | `list_option_trades` | read | The token's option trade journal: open first, then settled, newest expiry first. | `status`?: string, `ticker`?: string, `limit`?: integer |
 | `log_option_trade` | manage | Record a trade you placed elsewhere: short put, covered call or a credit spread, with strike, premium received per share, contracts and expiry. Nothing here places an order. | `ticker`: string, `strategy`: string, `strike_price`: number, `premium`: number, `expiry_date`: string, `contracts`?: integer, `entry_date`?: string, `underlying_price_at_entry`?: number, `outcome_notes`?: string |
 | `resolve_option_trade` | manage | Close a trade as expired, assigned or bought back, with the same arithmetic the web journal uses: realised P&L, return on collateral, annualised return, and whether it was profitable. | `id`: integer, `status`: string, `close_date`?: string, `close_price`?: number, `underlying_price_at_close`?: number, `outcome_notes`?: string |
+
+### Crypto
+
+| Tool | Scope | Description | Parameters |
+|---|---|---|---|
+| `get_crypto_reading` | read | The crypto desk's composed reading: Bitcoin price and day change from Binance, the market-maker setup (type, bias, confidence, entry zone, stop, targets, invalidation), the premium-or-discount zone and the session clock, plus the liquidity map (pools, order blocks, fair-value gaps). Nothing places an order. | `timeframe`?: string |
+| `get_crypto_tickers` | read | Binance 24-hour tickers (price, change, high, low, volume) for the token's crypto watchlist names, or for any coins passed as yfinance-style symbols such as BTC-USD. | `symbols`?: string[] |
 ## Implementation notes
 
 - Server lives at `src/app/api/mcp/[transport]/route.ts`. It validates the

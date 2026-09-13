@@ -15,6 +15,8 @@ import { Layers } from "lucide-react";
 import { Plus, Trash2, X, List, Search, FolderPlus, Pencil, Check, RefreshCw } from "lucide-react";
 import { stocksApi, modelsApi } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { isCryptoTicker } from "@/modules/crypto/flag";
+import { useCryptoLivePrices } from "@/modules/crypto/components/CryptoSurfaces";
 
 /* ── Add-to-Portfolio Modal ─────────────────────────────────── */
 function AddToPortfolioModal({
@@ -314,6 +316,13 @@ export default function WatchlistPage() {
   }, [optBook]);
 
   // Flatten + enrich each watchlist item into the row shape the grid consumes.
+  // Crypto module: live Binance prices for the coins on this list (removed with the module).
+  const cryptoNames = useMemo(
+    () => ((activeWatchlist?.watchlist_items ?? []) as any[]).map((it) => String(it.stock_catalog?.ticker ?? "").toUpperCase()).filter(isCryptoTicker),
+    [activeWatchlist],
+  );
+  const { data: cryptoPrices } = useCryptoLivePrices(cryptoNames);
+
   const rows = useMemo<WatchRow[]>(() => {
     const items = activeWatchlist?.watchlist_items ?? [];
     return items
@@ -324,6 +333,8 @@ export default function WatchlistPage() {
         const livePrice = priceMap.get(stock.ticker) ?? null;
         const isEtf = stock.is_etf || stock.asset_type === "etf";
         const isIndex = stock.asset_type === "index" || String(stock.ticker).startsWith("^");
+        const isCrypto = !isIndex && (stock.asset_type === "crypto" || isCryptoTicker(stock.ticker));
+        const cryptoLive = isCrypto ? cryptoPrices?.tickers?.[String(stock.ticker).toUpperCase()]?.price ?? null : null;
 
         // Sector display (first part + "+N"), with AI fallback — mirrors the old row logic.
         let sectorDisplay: string | null = null;
@@ -332,6 +343,9 @@ export default function WatchlistPage() {
         if (isIndex) {
           sectorDisplay = "Index";
           sectorGroup = "Index";
+        } else if (isCrypto) {
+          sectorDisplay = "Crypto";
+          sectorGroup = "Crypto";
         } else if (!isEtf) {
           if (stock.sector && stock.sector.trim() && stock.sector !== "-") {
             const parts = stock.sector.split(",").map((s: string) => s.trim()).filter(Boolean);
@@ -358,11 +372,12 @@ export default function WatchlistPage() {
           industry: !isEtf && !sectorIsAi ? stock.industry ?? null : null,
           isEtf,
           isIndex,
-          moat: isIndex ? null : moat,
+          isCrypto,
+          moat: isIndex || isCrypto ? null : moat,
           moatIsAi,
           enrichmentStatus: stock.enrichment_status ?? null,
           hasThoughts: !!llm?.thoughts_json,
-          price: livePrice ?? stock.last_price ?? null,
+          price: cryptoLive ?? livePrice ?? stock.last_price ?? null,
           livePrice,
           lastPriceUpdatedAt: stock.last_price_updated_at ?? null,
           fairValue: stock.intrinsic_value ?? null,
@@ -376,7 +391,7 @@ export default function WatchlistPage() {
         };
       })
       .filter(Boolean) as WatchRow[];
-  }, [activeWatchlist, llmMap, priceMap, verdictMap, pamMap, optMap]);
+  }, [activeWatchlist, llmMap, priceMap, verdictMap, pamMap, optMap, cryptoPrices]);
 
   const renameWatchlist = useRenameWatchlist();
   const [editingName, setEditingName] = useState(false);
