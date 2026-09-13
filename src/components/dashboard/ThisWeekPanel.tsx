@@ -19,7 +19,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
+import DataTable, { type Column } from "@/components/ui/DataTable";
+import { macroApi } from "@/lib/api";
 import Panel from "@/components/ui/Panel";
 import Disclosure from "@/components/ui/Disclosure";
 import Chip from "@/components/ui/Chip";
@@ -39,6 +41,18 @@ import {
 /** Names checked for earnings and ex-div dates; each is one cached request a day. */
 const MAX_NAMES = 60;
 const WEEKS_AHEAD = 4;
+
+type InflationRow = {
+  month: string;
+  cpi_yoy: number | null; cpi_core_yoy: number | null; cpi_mom: number | null; cpi_core_mom: number | null;
+  pce_yoy: number | null; pce_core_yoy: number | null; pce_mom: number | null; pce_core_mom: number | null;
+};
+type InflationResponse = {
+  rows: InflationRow[];
+  latest: { cpi: InflationRow | null; pce: InflationRow | null };
+  expectations: { date: string | null; market_5_year: number | null; market_10_year: number | null; model_1_year: number | null } | null;
+  target: number;
+};
 
 type EventsResponse = {
   earnings_date?: string | null;
@@ -99,7 +113,41 @@ export function ThisWeekPanel({ todayIso }: { todayIso?: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [names, held, week.from, to, ...eventData]);
 
-  const merged = useMemo(() => mergeEvents(scheduled, named), [scheduled, named]);
+  // Inflation prints from the box (Polygon's economy feed), attached to the
+  // CPI and PCE rows: the month's own figure once released, else the latest.
+  const { data: inflation } = useQuery<InflationResponse>({
+    queryKey: ["macro_inflation"],
+    queryFn: macroApi.inflation,
+    staleTime: 6 * 60 * 60_000,
+    retry: 1,
+  });
+  const monthName = useMemo(() => new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }), []);
+  const pctS = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${v.toFixed(d)}%`);
+  const signed = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v).toFixed(d)}`);
+  const annotate = (e: CalEvent): CalEvent => {
+    if (!inflation || (e.kind !== "cpi" && e.kind !== "pce")) return e;
+    const rows = inflation.rows ?? [];
+    const key = e.kind === "cpi" ? "cpi_yoy" : "pce_yoy";
+    const coreKey = e.kind === "cpi" ? "cpi_core_yoy" : "pce_core_yoy";
+    // The reference month is the one before the release; a December print
+    // released in January belongs to the prior year.
+    const releaseYear = Number(e.date.slice(0, 4));
+    const refYear = e.detail === "December" && e.date.slice(5, 7) === "01" ? releaseYear - 1 : releaseYear;
+    const idx = rows.findIndex(
+      (r) => r[key] != null && r.month.slice(0, 4) === String(refYear) && monthName.format(new Date(`${r.month}T00:00:00Z`)) === e.detail,
+    );
+    if (idx >= 0) {
+      const r = rows[idx];
+      const prev = [...rows.slice(0, idx)].reverse().find((x) => x[key] != null);
+      const delta = prev && r[key] != null && prev[key] != null ? r[key]! - prev[key]! : null;
+      return { ...e, note: t("printThis", { yoy: pctS(r[key]), delta: delta == null ? "—" : signed(delta), core: pctS(r[coreKey]) }) };
+    }
+    const latest = e.kind === "cpi" ? inflation.latest?.cpi : inflation.latest?.pce;
+    if (!latest) return e;
+    return { ...e, note: t("printLast", { month: monthName.format(new Date(`${latest.month}T00:00:00Z`)), yoy: pctS(latest[key]), core: pctS(latest[coreKey]) }) };
+  };
+
+  const merged = useMemo(() => mergeEvents(scheduled, named).map(annotate), [scheduled, named, inflation]); // eslint-disable-line react-hooks/exhaustive-deps
   const thisWeek = merged.filter((e) => e.date <= week.to);
   const later = merged.filter((e) => e.date > week.to);
 
@@ -131,6 +179,21 @@ export function ThisWeekPanel({ todayIso }: { todayIso?: string }) {
   if (!user) sentences.push(t("signedOut"));
   else if (namesTotal > MAX_NAMES) sentences.push(t("namesCapped", { count: MAX_NAMES, total: namesTotal }));
   if (to > horizon()) sentences.push(t("readingHorizon", { date: dayOf(horizon()) }));
+  if (inflation?.latest?.cpi) sentences.push(t("readingInflation", { yoy: pctS(inflation.latest.cpi.cpi_yoy), core: pctS(inflation.latest.cpi.cpi_core_yoy), target: inflation.target ?? 2 }));
+
+  // Four columns fit the 360px aside; the rest sit behind the table's
+  // optional-columns toggle.
+  const fmtMonth = new Intl.DateTimeFormat(locale, { month: "short", year: "2-digit", timeZone: "UTC" });
+  const inflationColumns: Column<InflationRow>[] = [
+    { key: "month", header: t("col.month"), cell: (r) => <span className="whitespace-nowrap font-mono text-xs">{fmtMonth.format(new Date(`${r.month}T00:00:00Z`))}</span> },
+    { key: "cpi", header: t("col.cpi"), align: "right", cell: (r) => <span className="nums font-mono">{pctS(r.cpi_yoy)}</span> },
+    { key: "core", header: t("col.core"), align: "right", cell: (r) => <span className="nums font-mono">{pctS(r.cpi_core_yoy)}</span> },
+    { key: "pce", header: t("col.pce"), align: "right", cell: (r) => <span className="nums font-mono">{pctS(r.pce_yoy)}</span> },
+    { key: "mom", header: t("col.mom"), align: "right", optional: true, cell: (r) => <span className="nums font-mono">{signed(r.cpi_mom, 2)}</span> },
+    { key: "pceCore", header: t("col.pceCore"), align: "right", optional: true, cell: (r) => <span className="nums font-mono">{pctS(r.pce_core_yoy)}</span> },
+  ];
+  const inflationRows = [...(inflation?.rows ?? [])].reverse().slice(0, 12);
+  const ex = inflation?.expectations;
 
   const qualifier = `${dayOf(week.from)} – ${dayOf(week.to)}`;
   const aside = (
@@ -144,6 +207,20 @@ export function ThisWeekPanel({ todayIso }: { todayIso?: string }) {
       </Panel>
       <Disclosure label={t("later")} qualifier={t("laterQualifier", { count: later.length })}>
         <EventList events={later} today={today} held={held} dayOf={dayOf} timeOf={timeOf} kindLabel={kindLabel} emptyText={t("emptyLater")} heldTitle={t("heldTitle")} />
+      </Disclosure>
+      <Disclosure label={t("inflationLabel")} qualifier={inflationRows.length ? t("inflationQualifier", { count: inflationRows.length }) : undefined}>
+        {inflationRows.length ? (
+          <>
+            <DataTable caption={t("inflationLabel")} columns={inflationColumns} rows={inflationRows} rowKey={(r) => r.month} />
+            {ex && (
+              <p className="card-reading">
+                {t("expectations", { y5: pctS(ex.market_5_year, 2), y10: pctS(ex.market_10_year, 2), y1: pctS(ex.model_1_year, 2), target: inflation?.target ?? 2 })}
+              </p>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("inflationNone")}</p>
+        )}
       </Disclosure>
     </>
   );
@@ -177,6 +254,7 @@ function EventList({
                   <span className="nums w-11 shrink-0 font-mono text-[11px] text-muted-foreground">{time ?? "—"}</span>
                   <span className={strong ? "font-semibold text-foreground" : "text-foreground"}>{kindLabel(e.kind)}</span>
                   {e.detail && <span className="text-xs text-muted-foreground">{e.detail}</span>}
+                  {e.note && <span className="nums font-mono text-[11px] text-foreground">{e.note}</span>}
                   {e.tickers?.map((tk) => (
                     <Link key={tk} href={`/stock/${tk}`} className="inline-flex">
                       <Chip tone={held.has(tk) ? "caution" : "plain"} className="font-mono">

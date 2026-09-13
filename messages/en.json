@@ -416,7 +416,22 @@
       "emptyLater": "Nothing scheduled in the next three weeks.",
       "later": "Next three weeks",
       "laterQualifier": "{count, plural, =0 {no events} one {# event} other {# events}}",
-      "heldTitle": "You hold this name"
+      "heldTitle": "You hold this name",
+      "printThis": "{yoy} y/y ({delta} vs prior) · core {core}",
+      "printLast": "last {month}: {yoy} y/y · core {core}",
+      "readingInflation": "Latest CPI {yoy} y/y, core {core}; the Fed targets {target}%.",
+      "inflationLabel": "Inflation prints",
+      "inflationQualifier": "last {count} months",
+      "inflationNone": "Inflation prints are unavailable from the box right now.",
+      "expectations": "Markets price {y5} inflation over five years and {y10} over ten; the model's one-year figure is {y1}. The Fed targets {target}%.",
+      "col": {
+        "month": "Month",
+        "cpi": "CPI y/y",
+        "core": "Core y/y",
+        "mom": "CPI m/m",
+        "pce": "PCE y/y",
+        "pceCore": "Core PCE y/y"
+      }
     },
     "rotation": {
       "viewLabel": "Rotation view",
@@ -440,7 +455,13 @@
       "readingLagging": "{list} lag.",
       "readingRegime": "Past {regime} regimes favoured {favors} and avoided {avoids}."
     },
-    "sectorHeatmapNoWindow": "The {window} window has no returns yet: the box has not computed them since the last market close. The Day tiles are live."
+    "sectorHeatmapNoWindow": "The {window} window has no returns yet: the box has not computed them since the last market close. The Day tiles are live.",
+    "macroTipFutures": "Front-month E-mini contract, rolled a week before expiry. End-of-day settlement from Polygon's futures feed; there is no overnight tape on this plan.",
+    "futuresDelayed": "EOD",
+    "futuresSettled": "settled {day} · rolls in {days}d",
+    "futuresUnavailable": "no settlement available",
+    "futuresTitle": "Contract {ticker}",
+    "futuresReading": "S&P futures settled {esChg} on {day}; Nasdaq futures {nqChg}. End-of-day settlement, not the overnight session."
   },
   "errors": {
     "loadFailed": "Failed to load",

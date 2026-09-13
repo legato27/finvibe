@@ -42,6 +42,8 @@ export type CalEvent = {
   detail?: string;
   /** Names this event belongs to (earnings, ex-div). */
   tickers?: string[];
+  /** A figure attached at render time, e.g. the latest CPI print. */
+  note?: string;
   /** high = moves the whole tape; medium = worth a glance; low = housekeeping. */
   weight: "high" | "medium" | "low";
 };

@@ -283,6 +283,10 @@ export const macroApi = {
   today: () => api.get("/api/macro/today").then((r) => r.data),
   cryptoFearGreed: () => api.get("/api/macro/crypto-fear-greed").then((r) => r.data),
   macroTape: () => api.get("/api/macro/macro-tape").then((r) => r.data),
+  // Front-month ES/NQ settlement and inflation prints from Polygon's Basic
+  // tiers: end-of-day data, cached on the box (30 min / 6 h).
+  futures: () => api.get("/api/macro/futures").then((r) => r.data),
+  inflation: () => api.get("/api/macro/inflation").then((r) => r.data),
   dashboard: () => api.get("/api/macro/dashboard", { timeout: 90_000 }).then((r) => r.data),
 };
 

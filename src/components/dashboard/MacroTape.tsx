@@ -4,6 +4,23 @@ import { useQuery } from "@tanstack/react-query";
 import { InfoTip } from "@/components/shared/InfoTip";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
+import { useLocale } from "next-intl";
+import { macroApi } from "@/lib/api";
+
+/** Front-month futures from /api/macro/futures: end-of-day settlement. */
+interface FutureProduct {
+  code: string;
+  label: string;
+  short: string;
+  error: string | null;
+  ticker?: string;
+  session_end_date?: string;
+  settlement?: number | null;
+  change_1d?: number | null;
+  change_1m?: number | null;
+  days_to_roll?: number;
+  sparkline?: number[];
+}
 
 interface Instrument {
   key: string;
@@ -56,6 +73,25 @@ const INSTRUMENT_TIP_KEYS: Record<string, string> = {
 
 export function MacroTape() {
   const t = useTranslations("dashboard");
+  const locale = useLocale();
+  // Futures ride on their own query: a failure leaves two tiles that say
+  // so, not a tape that waits.
+  const { data: fut } = useQuery<{ products: FutureProduct[] }>({
+    queryKey: ["macro_futures"],
+    queryFn: macroApi.futures,
+    staleTime: 15 * 60_000,
+    retry: 1,
+  });
+  const futures: FutureProduct[] = fut?.products ?? [];
+  const weekdayOf = (iso?: string) =>
+    iso ? new Intl.DateTimeFormat(locale, { weekday: "long", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`)) : "";
+  const fmtChg = (v: number | null | undefined) => (v == null ? "—" : `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`);
+  const es = futures.find((p) => p.code === "ES");
+  const nq = futures.find((p) => p.code === "NQ");
+  const futuresReading =
+    es?.settlement != null && nq?.settlement != null
+      ? t("futuresReading", { day: weekdayOf(es.session_end_date), esChg: fmtChg(es.change_1d), nqChg: fmtChg(nq.change_1d) })
+      : undefined;
   const { data, isLoading } = useQuery({
     queryKey: ["macro_tape"],
     queryFn: async () => {
@@ -76,8 +112,41 @@ export function MacroTape() {
   if (instruments.length === 0) return <PanelUnavailable label={label} reason={t("notAvailableReason")} className="h-full" />;
 
   return (
-    <Panel label={label} qualifier={t("macroTapeSubtitle")} className="h-full">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-control border border-border bg-border sm:grid-cols-3">
+    <Panel label={label} qualifier={t("macroTapeSubtitle")} className="h-full" reading={futuresReading}>
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-control border border-border bg-border sm:grid-cols-3 lg:grid-cols-4">
+        {(futures.length ? futures : [{ code: "ES", label: "S&P 500 E-mini", short: "ES", error: "pending" }, { code: "NQ", label: "Nasdaq-100 E-mini", short: "NQ", error: "pending" }]).map((p) => {
+          const has = p.settlement != null;
+          const up1d = (p.change_1d ?? 0) >= 0;
+          const up1m = (p.change_1m ?? 0) >= 0;
+          return (
+            <div key={`fut-${p.code}`} className="bg-card p-3 space-y-1.5" title={p.ticker ? t("futuresTitle", { ticker: p.ticker }) : undefined}>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                  {p.label}
+                  <InfoTip size={9} tip={t("macroTipFutures")} />
+                </span>
+                <span className="font-mono text-[9px] uppercase tracking-wider text-dim">{t("futuresDelayed")}</span>
+              </div>
+              <div className={`text-sm font-bold font-mono ${has ? "text-foreground" : "text-dim"}`}>
+                {has ? p.settlement!.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}
+              </div>
+              {has && p.sparkline ? <Sparkline data={p.sparkline} color={up1m ? "text-signal-long" : "text-signal-short"} /> : <div className="h-6" />}
+              {has ? (
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className={`text-[10px] font-mono flex items-center gap-0.5 ${up1d ? "text-signal-long" : "text-signal-short"}`}>
+                    {up1d ? <TrendingUp className="w-2.5 h-2.5" /> : <TrendingDown className="w-2.5 h-2.5" />}
+                    {fmtChg(p.change_1d)}
+                  </span>
+                  <span className="text-[9px] font-mono text-muted-foreground">
+                    {t("futuresSettled", { day: weekdayOf(p.session_end_date).slice(0, 3), days: p.days_to_roll ?? 0 })}
+                  </span>
+                </div>
+              ) : (
+                <div className="text-[10px] text-muted-foreground">{p.error === "pending" ? t("loadingGeneric") : t("futuresUnavailable")}</div>
+              )}
+            </div>
+          );
+        })}
         {instruments.map((inst) => {
           const up1d = inst.change_1d >= 0;
           const up1m = inst.change_1m >= 0;
