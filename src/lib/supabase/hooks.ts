@@ -1195,3 +1195,44 @@ export function useWatchlistNamesForTicker(ticker: string | null) {
     staleTime: 60_000,
   });
 }
+
+/** Every lot the user holds, across all portfolios, with catalog prices.
+ *
+ *  The book-risk read wants the whole book: a trader's bets do not stop at a
+ *  portfolio boundary. Same join as usePortfolioHoldings, minus the portfolio
+ *  filter and minus the background price refresh and enrichment sweep — this
+ *  is a read for a summary line, not the page where prices are the point.
+ *  RLS scopes portfolio_holdings to the user. */
+export function useAllHoldings(enabled = true) {
+  return useQuery({
+    queryKey: ["portfolio-holdings", "all"],
+    queryFn: async (): Promise<HoldingWithPrice[]> => {
+      const { data: holdings, error } = await supabase
+        .from("portfolio_holdings")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      if (!holdings?.length) return [];
+      const tickers = [...new Set(holdings.map((h: any) => h.ticker))];
+      const { data: stocks } = await supabase
+        .from("stock_catalog")
+        .select("ticker, name, last_price, last_price_updated_at, sector")
+        .in("ticker", tickers);
+      const stockMap: Record<string, any> = {};
+      for (const s of stocks || []) stockMap[s.ticker] = s;
+      return holdings.map((h: any) => {
+        const stock = stockMap[h.ticker];
+        return {
+          ...h,
+          currency: (h.currency || "USD").toUpperCase(),
+          name: stock?.name || undefined,
+          current_price: stock?.last_price || undefined,
+          last_price_updated_at: stock?.last_price_updated_at || undefined,
+          sector: stock?.sector || undefined,
+        };
+      });
+    },
+    enabled,
+    staleTime: 60_000,
+  });
+}

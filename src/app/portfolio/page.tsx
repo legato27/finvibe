@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { useAppStore } from "@/store/useAppStore";
 import { PortfolioAnalysisPanel } from "@/components/dashboard/PortfolioAnalysisPanel";
+import { BookRiskPanel } from "@/components/portfolio/BookRiskPanel";
 import {
   SUPPORTED_CURRENCIES,
   inferCurrency,
@@ -676,6 +677,13 @@ export default function PortfolioPage() {
               totalValue={totalValue}
               totalCost={totalCost}
             />
+          )}
+
+          {/* Book-aware risk: how many bets the book really holds. Reads the
+              same holdings query as this page; weights are by value in the
+              default currency. */}
+          {activePortfolio && (
+            <BookRiskPanel portfolioId={activePortfolio.id} portfolioCount={portfolios?.length ?? 1} />
           )}
 
           {/* Holdings table */}

@@ -370,7 +370,13 @@
     "loadingGeneric": "Loading…",
     "notAvailableReason": "Not available today. No data came back for this panel, so it keeps its place instead of disappearing.",
     "openDesk": "Open desk",
-    "openScreener": "Open screener"
+    "openScreener": "Open screener",
+    "callBook": "Your book:",
+    "callBookClause": "{bets} bets across {names} names, the largest {pct}% of value.",
+    "callBookStat": "Your book",
+    "callBookUnit": "bets",
+    "callBookSub": "largest {pct}%",
+    "callBookEmpty": "add holdings"
   },
   "errors": {
     "loadFailed": "Failed to load",
@@ -846,7 +852,63 @@
     "yourPosition": "Your Position",
     "noInvestmentsYet": "No investments yet. Click “Add Investment” to track your positions.",
     "priceStale": "Price may be stale (>24h)",
-    "deleteTickerPrompt": "Delete {ticker}?"
+    "deleteTickerPrompt": "Delete {ticker}?",
+    "bookRisk": {
+      "label": "Book risk",
+      "qualifier": "{names} names · {days} trading days",
+      "pending": "Reading how your positions move together…",
+      "needHoldings": "Add holdings to see how many bets this book really holds.",
+      "needTwo": "Add a second holding to see how your positions move together.",
+      "scopeLabel": "Which holdings to read",
+      "scopeThis": "This portfolio",
+      "scopeAll": "All portfolios",
+      "lead": "Your book behaves like {bets} bets, not {names} names. The largest bet is {pct}% of value: {members}.",
+      "leadIndependent": "Your {names} names move independently of each other. The largest is {pct}% of value: {members}.",
+      "moreMembers": "+{count} more",
+      "moreBets": "+{count} more bets",
+      "stat": {
+        "bets": "Effective bets",
+        "betsSub": "of {names} names",
+        "largest": "Largest bet",
+        "largestOne": "one name",
+        "largestMany": "{count} names moving together",
+        "beta": "Beta to SPY",
+        "betaSub": "{count} of {names} measured",
+        "betaNone": "SPY history unavailable",
+        "excluded": "Own bet, no history",
+        "excludedNone": "every name measured"
+      },
+      "detailLabel": "Bets, correlations and tilt",
+      "detailQualifier": "names correlated above {threshold} count as one bet",
+      "tableCaption": "Bets in this book",
+      "col": {
+        "bet": "Bet",
+        "names": "Names",
+        "weight": "Weight",
+        "corr": "Avg corr",
+        "beta": "Beta"
+      },
+      "countLabel": "{count, plural, one {# bet} other {# bets}}",
+      "matrixLabel": "Daily-return correlation",
+      "matrixAria": "Correlation matrix of daily returns across {count} names",
+      "matrixTruncated": "Showing the {count} largest positions.",
+      "noMatrix": "Fewer than two names have enough shared history for a correlation.",
+      "tiltLabel": "Factor tilt",
+      "tiltSub": "Value-weighted z-scores from the ranked book, covering {pct}% of the book's value.",
+      "tiltReading": "Tilted toward {hi} and away from {lo}.",
+      "tiltNone": "None of these names is in the ranked book yet, so there is no factor tilt to show.",
+      "factor": {
+        "momentum": "Momentum",
+        "ensemble": "ML forecast",
+        "quality": "Quality",
+        "value": "Value",
+        "moat": "Moat",
+        "low_vol": "Low volatility"
+      },
+      "reading": "Two names count as one bet when their daily returns correlate above {threshold} over the last {days} trading days. Weights are by market value in {ccy}; a name without history keeps its weight as its own bet.",
+      "unconverted": "{count, plural, one {# lot} other {# lots}} could not be converted to {ccy} and left out.",
+      "historyErrors": "Price history failed for {count, plural, one {# name; it counts as its own bet} other {# names; they count as their own bets}}."
+    }
   },
   "priceAction": {
     "title": "Price Action (PAM)",

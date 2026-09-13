@@ -16,6 +16,9 @@ import { macroApi, stocksApi } from "@/lib/api";
 import { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import Freshness from "@/components/ui/Freshness";
 import { InfoTip } from "@/components/shared/InfoTip";
+import { useUser } from "@/lib/supabase/hooks";
+import { useBookRisk } from "@/lib/useBookRisk";
+import { fmtBets } from "@/components/portfolio/BookRiskPanel";
 import {
   agreement, cycleLean, regimeColorLean, swarmLean, vixLean,
   LEAN_DOT, LEAN_TEXT, type Lean, type LeanRow,
@@ -40,6 +43,14 @@ export function TodayCall() {
     staleTime: 5 * 60_000,
     retry: 1,
   });
+
+  // The reader's own book, every portfolio combined. Signed out there is no
+  // book, so the clause and the figure are simply absent; signed in with
+  // fewer than two holdings the figure stays and says what to do.
+  const { data: user } = useUser();
+  const book = useBookRisk({ kind: "all" }, !!user);
+  const bookRisk = book.status === "ready" ? book.risk : null;
+  const bookPct = bookRisk?.largest ? Math.round(bookRisk.largest.weight * 100) : 0;
 
   const today = data?.today;
   if (isLoading) return <PanelPending label={t("callLabel")} text={t("buildingTodayView")} />;
@@ -112,6 +123,15 @@ export function TodayCall() {
               <b className="font-bold">{t("callWatch")}</b> {watch.signal}.
             </>
           )}
+          {bookRisk && (
+            <>
+              {" "}
+              <b className="font-bold">{t("callBook")}</b>{" "}
+              <Link href="/portfolio#book-risk" className="hover:text-signal hover:underline">
+                {t("callBookClause", { bets: fmtBets(bookRisk.effectiveBets), names: bookRisk.names, pct: bookPct })}
+              </Link>
+            </>
+          )}
           {missing.length > 0 && (
             <span className="text-signal-caution"> {t("inputsMissingNote", { count: missing.length })}.</span>
           )}
@@ -128,7 +148,7 @@ export function TodayCall() {
       </div>
 
       {/* Figures */}
-      <div className="flex gap-6 lg:gap-8">
+      <div className="flex flex-wrap gap-6 lg:gap-8">
         <div>
           <div className="stat-label flex items-center gap-1">
             {t("riskScore")} <InfoTip size={10} tip={t("riskScoreTip")} />
@@ -152,6 +172,24 @@ export function TodayCall() {
             {digest ? fired : "—"}
           </a>
         </div>
+        {user && book.status !== "pending" && (
+          <div>
+            <div className="stat-label">{t("callBookStat")}</div>
+            {bookRisk ? (
+              <Link href="/portfolio#book-risk" className="nums font-mono text-3xl font-bold leading-none text-foreground hover:text-signal">
+                {fmtBets(bookRisk.effectiveBets)}
+                <span className="ml-1.5 text-base text-muted-foreground">{t("callBookUnit")}</span>
+              </Link>
+            ) : (
+              <Link href="/portfolio" className="nums font-mono text-3xl font-bold leading-none text-dim hover:text-signal">
+                —
+              </Link>
+            )}
+            <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+              {bookRisk ? t("callBookSub", { pct: bookPct }) : t("callBookEmpty")}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );
