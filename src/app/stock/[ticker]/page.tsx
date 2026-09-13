@@ -23,6 +23,7 @@ import { TransactionHistory } from "@/components/stock/TransactionHistory";
 import { OptionsStrategyRecommendation } from "@/components/stock/OptionsStrategyRecommendation";
 import { YourExposure, type Position } from "@/components/stock/YourExposure";
 import { SectionNav } from "@/components/stock/SectionNav";
+import { IndexNote, isIndexTicker } from "@/components/stock/IndexNote";
 import VerdictCard from "@/components/ui/VerdictCard";
 import Panel, { PanelUnavailable } from "@/components/ui/Panel";
 import Disclosure from "@/components/ui/Disclosure";
@@ -178,15 +179,23 @@ export default function StockDetailPage() {
   const isLongDesc = (description?.length || 0) > 200;
   const currentPrice: number = stockInfo?.current_price || detail.last_price || 0;
 
-  const sections = [
-    { id: "chart", label: t("sectionChart") },
-    { id: "why", label: t("sectionWhy") },
-    { id: "thoughts", label: t("sectionThoughts") },
-    ...(position ? [{ id: "position", label: t("sectionPosition") }] : []),
-    { id: "options", label: t("sectionOptions") },
-    { id: "models", label: t("sectionModels") },
-    { id: "sentiment", label: t("sectionSentiment") },
-  ];
+  // An index has a chart and price action; the rest does not apply and is
+  // said once, in one panel, rather than as six pending sections.
+  const isIndex = isIndexTicker(ticker);
+  const sections = isIndex
+    ? [
+        { id: "chart", label: t("sectionChart") },
+        { id: "why", label: t("sectionWhy") },
+      ]
+    : [
+        { id: "chart", label: t("sectionChart") },
+        { id: "why", label: t("sectionWhy") },
+        { id: "thoughts", label: t("sectionThoughts") },
+        ...(position ? [{ id: "position", label: t("sectionPosition") }] : []),
+        { id: "options", label: t("sectionOptions") },
+        { id: "models", label: t("sectionModels") },
+        { id: "sentiment", label: t("sectionSentiment") },
+      ];
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4">
@@ -196,8 +205,8 @@ export default function StockDetailPage() {
         detail={detail}
         stockInfo={stockInfo}
         currentPrice={currentPrice}
-        verdict={unifiedAction ?? thoughts?.verdict}
-        conviction={detail.verdict?.state ? verdictConviction(detail.verdict.state, detail.verdict.confidence) : thoughts?.conviction}
+        verdict={isIndex ? undefined : (unifiedAction ?? thoughts?.verdict)}
+        conviction={isIndex ? undefined : detail.verdict?.state ? verdictConviction(detail.verdict.state, detail.verdict.confidence) : thoughts?.conviction}
         llm={llm}
       />
 
@@ -212,7 +221,7 @@ export default function StockDetailPage() {
           </section>
 
           <section id="why" className="scroll-mt-24 space-y-4">
-            <VerdictCard verdict={detail.verdict} />
+            {isIndex ? <IndexNote ticker={ticker} /> : <VerdictCard verdict={detail.verdict} />}
             {description && (
               <Panel label={t("about")} as="div">
                 <p className={`text-sm leading-relaxed text-muted-foreground ${!descExpanded && isLongDesc ? "line-clamp-2" : ""}`}>{description}</p>
@@ -231,6 +240,7 @@ export default function StockDetailPage() {
             )}
           </section>
 
+          {!isIndex && (
           <section id="thoughts" className="scroll-mt-24 space-y-4">
             <DcfScenarios dcf={detail.dcf_detail} />
             <FinVibeThoughts
@@ -245,6 +255,7 @@ export default function StockDetailPage() {
               llmMarginOfSafety={llm.margin_of_safety ?? llm.llm_margin_of_safety ?? thoughtsData?.llm_margin_of_safety}
             />
           </section>
+          )}
 
           {/* ── Held only: what to do with the position ── */}
           {position && currentPrice > 0 && (
@@ -281,23 +292,33 @@ export default function StockDetailPage() {
             </section>
           )}
 
-          <Disclosure id="options" label={t("sectionOptions")} qualifier={t("chainQualifier")} open={openSection === "options"}>
-            <OptionsChainTab ticker={ticker} />
-          </Disclosure>
+          {!isIndex && (
+            <>
+              <Disclosure id="options" label={t("sectionOptions")} qualifier={t("chainQualifier")} open={openSection === "options"}>
+                <OptionsChainTab ticker={ticker} />
+              </Disclosure>
 
-          <Disclosure id="models" label={t("sectionModels")} qualifier={t("modelsQualifier")} open={openSection === "models"}>
-            <ModelCards ticker={ticker} />
-          </Disclosure>
+              <Disclosure id="models" label={t("sectionModels")} qualifier={t("modelsQualifier")} open={openSection === "models"}>
+                <ModelCards ticker={ticker} />
+              </Disclosure>
 
-          <section id="sentiment" className="scroll-mt-24">
-            <SentimentPanel ticker={ticker} />
-          </section>
+              <section id="sentiment" className="scroll-mt-24">
+                <SentimentPanel ticker={ticker} />
+              </section>
+            </>
+          )}
         </div>
 
         {/* ── Right: you and the world ── */}
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-[104px]">
-          <YourExposure ticker={ticker} signedIn={!!user} position={position} currentPrice={currentPrice} listNames={listNames} />
-          <StockEvents ticker={ticker} />
+          {isIndex ? (
+            <IndexNote ticker={ticker} variant="aside" />
+          ) : (
+            <>
+              <YourExposure ticker={ticker} signedIn={!!user} position={position} currentPrice={currentPrice} listNames={listNames} />
+              <StockEvents ticker={ticker} />
+            </>
+          )}
           <RealtimeNewsFeed tickers={[ticker]} />
           <Panel label={t("viaMcp")} reading={t("viaMcpNote")} as="div">
             <code className="block whitespace-pre-wrap font-mono text-[11.5px] text-muted-foreground">

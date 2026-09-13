@@ -323,12 +323,16 @@ export default function WatchlistPage() {
         const llm = llmMap?.[stock.ticker];
         const livePrice = priceMap.get(stock.ticker) ?? null;
         const isEtf = stock.is_etf || stock.asset_type === "etf";
+        const isIndex = stock.asset_type === "index" || String(stock.ticker).startsWith("^");
 
         // Sector display (first part + "+N"), with AI fallback — mirrors the old row logic.
         let sectorDisplay: string | null = null;
         let sectorGroup: string | null = null;
         let sectorIsAi = false;
-        if (!isEtf) {
+        if (isIndex) {
+          sectorDisplay = "Index";
+          sectorGroup = "Index";
+        } else if (!isEtf) {
           if (stock.sector && stock.sector.trim() && stock.sector !== "-") {
             const parts = stock.sector.split(",").map((s: string) => s.trim()).filter(Boolean);
             sectorGroup = parts[0];
@@ -353,7 +357,8 @@ export default function WatchlistPage() {
           sectorIsAi,
           industry: !isEtf && !sectorIsAi ? stock.industry ?? null : null,
           isEtf,
-          moat,
+          isIndex,
+          moat: isIndex ? null : moat,
           moatIsAi,
           enrichmentStatus: stock.enrichment_status ?? null,
           hasThoughts: !!llm?.thoughts_json,

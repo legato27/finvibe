@@ -33,6 +33,8 @@ export interface WatchRow {
   sectorIsAi: boolean;
   industry: string | null;
   isEtf: boolean;
+  /** A yfinance index symbol (^GSPC): priced and given price action, never enriched. */
+  isIndex: boolean;
   moat: string | null;
   moatIsAi: boolean;
   enrichmentStatus: string | null;
@@ -72,6 +74,11 @@ export function groupLabelFor(key: GroupKey): ((r: WatchRow) => string) | undefi
 
 const isStale = (iso: string | null) => !iso || Date.now() - new Date(iso).getTime() > 3600_000;
 const Dash = () => <span className="text-dim">{DASH}</span>;
+/** A dash that says why: valuation, verdict and options do not apply to an index. */
+function NotForIndex() {
+  const t = useTranslations("watchlist");
+  return <span className="text-dim" title={t("indexNa")} aria-label={t("indexNa")}>—</span>;
+}
 
 export function useWatchlistColumns({
   onAddToPortfolio,
@@ -87,6 +94,9 @@ export function useWatchlistColumns({
       cell: (r) => (
         <span className="flex items-center gap-2">
           <span className="font-mono text-sm font-bold text-foreground">{r.ticker}</span>
+          {r.isIndex && (
+            <span className="rounded-full border border-protocol/50 bg-protocol-bg px-1.5 py-0.5 text-[9px] text-protocol" title={t("indexTitle")}>{t("indexChip")}</span>
+          )}
           {moatStyle(r.moat).show && (
             <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${moatStyle(r.moat).badgeClass}`}>
               {r.moat}{r.moatIsAi ? " (AI)" : ""}
@@ -135,7 +145,7 @@ export function useWatchlistColumns({
     },
     {
       key: "mos", header: t("mos"), sortable: true, sortValue: (r) => r.mos, align: "right",
-      cell: (r) => r.mos != null ? (
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.mos != null ? (
         <span className={`nums inline-flex items-center justify-end gap-0.5 font-mono text-xs ${signTextClass(r.mos)}`}>
           {r.mos > 0 ? <TrendingUp className="h-3 w-3" aria-hidden="true" /> : <TrendingDown className="h-3 w-3" aria-hidden="true" />}
           {formatMoS(r.mos)}
@@ -144,11 +154,11 @@ export function useWatchlistColumns({
     },
     {
       key: "fairValue", header: t("fairValue"), sortable: true, sortValue: (r) => r.fairValue, align: "right", hideBelow: "lg",
-      cell: (r) => r.fairValue != null ? <span className="nums font-mono text-xs text-muted-foreground">${r.fairValue.toFixed(2)}</span> : <Dash />,
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.fairValue != null ? <span className="nums font-mono text-xs text-muted-foreground">${r.fairValue.toFixed(2)}</span> : <Dash />,
     },
     {
       key: "aiMos", header: t("mosAi"), sortable: true, sortValue: (r) => r.aiMos, align: "right", hideBelow: "lg",
-      cell: (r) => r.aiMos != null ? <span className={`nums font-mono text-xs ${signTextClass(r.aiMos)}`}>{formatMoS(r.aiMos)}</span> : <Dash />,
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.aiMos != null ? <span className={`nums font-mono text-xs ${signTextClass(r.aiMos)}`}>{formatMoS(r.aiMos)}</span> : <Dash />,
     },
     {
       key: "trend", header: t("trend"), sortable: true, sortValue: (r) => (r.trend ? TREND_RANK[r.trend] ?? null : null), align: "right", hideBelow: "md",
@@ -160,7 +170,7 @@ export function useWatchlistColumns({
     },
     {
       key: "verdict", header: t("columnVerdict"), sortable: true, sortValue: (r) => (r.verdict?.state ? VERDICT_RANK[r.verdict.state] ?? null : null),
-      cell: (r) => r.verdict?.state ? <VerdictBadge state={r.verdict.state} size="sm" /> : <Dash />,
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.verdict?.state ? <VerdictBadge state={r.verdict.state} size="sm" /> : <Dash />,
     },
     {
       key: "pam", header: t("columnPam"), sortable: true, sortValue: (r) => (r.pam?.setup ? `${r.pam.direction ?? "z"}-${r.pam.setup}` : null), hideBelow: "md",
@@ -172,7 +182,7 @@ export function useWatchlistColumns({
     },
     {
       key: "opt", header: t("columnOption"), sortable: true, sortValue: (r) => r.opt?.strategy ?? null, hideBelow: "md",
-      cell: (r) => r.opt?.strategy ? (
+      cell: (r) => r.isIndex ? <NotForIndex /> : r.opt?.strategy ? (
         <span
           title={r.opt.conviction != null ? `${(r.opt.conviction * 100).toFixed(0)}% conviction` : undefined}
           className="inline-block rounded-full border border-signal/30 bg-signal-bg px-1.5 py-0.5 font-mono text-[10px] text-signal"
@@ -185,6 +195,7 @@ export function useWatchlistColumns({
       key: "actions", header: <span className="sr-only">{t("remove")}</span>, ariaLabel: t("remove"), align: "right",
       cell: (r) => (
         <span className="flex items-center justify-end gap-1">
+          {!r.isIndex && (
           <button
             type="button"
             onClick={() => onAddToPortfolio(r)}
@@ -194,6 +205,7 @@ export function useWatchlistColumns({
           >
             <Briefcase className="h-4 w-4" aria-hidden="true" />
           </button>
+          )}
           <button
             type="button"
             onClick={() => onRemove(r)}

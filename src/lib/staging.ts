@@ -48,7 +48,8 @@ import {
 
 // Same shape src/lib/mcp/db.ts enforces, and now also the CHECK in
 // supabase/018_enrichment_requests.sql: alphanumeric start, then [A-Z0-9.-].
-const TICKER_RE = /^[A-Z0-9][A-Z0-9.-]{0,14}$/;
+// A leading caret is a yfinance index symbol (^GSPC), allowed on watchlists.
+const TICKER_RE = /^\^?[A-Z0-9][A-Z0-9.-]{0,14}$/;
 
 const DAY = 24 * 60 * 60 * 1000;
 

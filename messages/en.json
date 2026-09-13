@@ -1469,7 +1469,14 @@
     "openWatchlist": "Open watchlist",
     "recordLabel": "Your record",
     "recordSub": "{pnl} realised, {sales, plural, =0 {options only} one {incl. # sale} other {incl. # sales}}",
-    "recordNone": "no trades logged on this name"
+    "recordNone": "no trades logged on this name",
+    "indexNoteLabel": "This is an index",
+    "indexNoteBody": "An index has a chart and price-action levels, nothing else on this page applies: no financials, no moat or DCF, no thoughts, no verdict, no option chain and no model grid. It cannot be held.",
+    "indexNoteBodyEtf": "An index has a chart and price-action levels; nothing else on this page applies: no financials, no moat or DCF, no thoughts, no verdict, no option chain and no model grid. To trade it, hold or write options on {etf}, whose page has all of that.",
+    "indexNoteReading": "Structure, setups and swing levels above come from the index's own daily bars, on the same three timeframes as any stock.",
+    "indexOpenEtf": "Open {etf}",
+    "indexHoldVia": "An index cannot be held. {etf} tracks it and can be added to a portfolio.",
+    "indexHoldNone": "An index cannot be held, and no tracking ETF is mapped for this one."
   },
   "watchlist": {
     "addAnyway": "Add {query} anyway",
@@ -1544,7 +1551,10 @@
     "columnPam": "PAM",
     "columnOption": "Options",
     "noMatch": "No stocks match your search.",
-    "resultCount": "{count} names"
+    "resultCount": "{count} names",
+    "indexChip": "Index",
+    "indexTitle": "An index: priced with price action, not enriched, and it cannot be held.",
+    "indexNa": "Not applicable to an index"
   },
   "verdict": {
     "title": "Unified verdict",

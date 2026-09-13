@@ -16,7 +16,8 @@ function tickerOf(t: string): string {
 // Plausible symbol: alphanumeric start, then [A-Z0-9.-], max 15 chars. Covers US
 // tickers, SGX (O39.SI), crypto (BTC-USD), class shares (BRK.B). Rejects LLM
 // special-token leakage (e.g. "<|...|>") that previously polluted stock_catalog.
-const TICKER_RE = /^[A-Z0-9][A-Z0-9.-]{0,14}$/;
+// A leading caret is a yfinance index symbol (^GSPC), allowed on watchlists.
+const TICKER_RE = /^\^?[A-Z0-9][A-Z0-9.-]{0,14}$/;
 function assertValidTicker(t: string): string {
   const norm = tickerOf(t);
   if (!TICKER_RE.test(norm)) throw new Error(`Invalid ticker symbol: ${JSON.stringify(t)}`);
