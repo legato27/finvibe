@@ -576,7 +576,10 @@ export const TOOL_CATALOG: ToolDoc[] = [
       { name: "max_bucket_pct", type: "number", required: false },
       { name: "max_positions", type: "integer", required: false },
     ],
-    returns: "The desk payload: rows[] with score, gates, strike, premium, annualised return; book when collateral is given.",
+    returns:
+      "The desk payload: rows[] with score, gates, strike, strike_source, premium, annualised return, pop_pred " +
+      "(with pop_source: the engine's own number on an inherited strike, Black-Scholes from the quote's IV on a " +
+      "quote-band strike); book when collateral is given.",
   },
   {
     name: "get_assignment_backtest",
@@ -597,11 +600,14 @@ export const TOOL_CATALOG: ToolDoc[] = [
     group: "Desk",
     title: "The engine's own track record",
     description:
-      "Every option recommendation the engine logged, graded at expiry: win rate, captured premium, " +
-      "annualised return, assignment rate, mean predicted probability and the calibration gap, overall and " +
-      "by strategy, model agreement and days to expiry.",
+      "Every option recommendation the engine logged, graded at expiry: win rate, captured premium (mean and " +
+      "median), realised P&L on collateral, annualised return, assignment rate, mean predicted probability and " +
+      "the calibration gap, overall and by strategy, model agreement, agreement within a strategy, and days to " +
+      "expiry. `coverage` says what the window actually spans: tracking began 2026-06, so until the log is " +
+      "older than the window every window returns the same rows.",
     params: [{ name: "window_days", type: "integer", required: false, description: "Grading window. Default 400." }],
-    returns: "{ window_days, overall, by_strategy, by_agreement, by_dte }",
+    returns:
+      "{ window_days, coverage, overall, by_strategy, by_agreement, by_strategy_agreement, by_dte, latest_review }",
   },
   {
     name: "get_track_record",
