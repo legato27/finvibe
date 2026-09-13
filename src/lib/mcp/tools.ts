@@ -3,6 +3,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import * as db from "@/lib/mcp/db";
 import { market } from "@/lib/mcp/market";
+import * as readings from "@/lib/mcp/readings";
 import { toolByName, scopeAllows, type McpScope } from "@/lib/mcp/catalog";
 
 export interface ToolContext {
@@ -393,6 +394,161 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
 
   // enrich_stock triggers the expensive DGX pipeline — super admins only, on
   // top of the existing "full" scope gate. A non-admin token never sees it.
+  // ── Today ────────────────────────────────────────────────
+  reg(
+    "get_today_reading",
+    { ...meta("get_today_reading"), inputSchema: { detail: z.boolean().optional() } },
+    async (args) => ok(await readings.readToday(!!args.detail)),
+  );
+
+  reg(
+    "get_sector_pulse",
+    { ...meta("get_sector_pulse"), inputSchema: { window: z.enum(["chg_1d", "ret_1w", "ret_1m", "ret_ytd"]).optional() } },
+    async (args) => ok(await readings.readSectorPulse(args.window ?? "chg_1d")),
+  );
+
+  reg(
+    "get_week_ahead",
+    { ...meta("get_week_ahead"), inputSchema: { weeks: z.number().int().min(1).max(4).optional() } },
+    async (args) => ok(await readings.readWeekAhead(ctx.userId, ctx.supabase, args.weeks ?? 1)),
+  );
+
+  reg(
+    "get_book_risk",
+    { ...meta("get_book_risk"), inputSchema: { portfolio_id: z.number().int().positive().optional() } },
+    async (args) => ok(await readings.readBookRisk(ctx.userId, ctx.supabase, args.portfolio_id)),
+  );
+
+  // ── Quant ────────────────────────────────────────────────
+  reg(
+    "get_model_results",
+    { ...meta("get_model_results"), inputSchema: { ticker: z.string().min(1) } },
+    async (args) => {
+      const [results, last_run] = await Promise.all([
+        market.modelResults(args.ticker),
+        market.modelLastRun(args.ticker).catch(() => null),
+      ]);
+      return ok({ ticker: args.ticker.toUpperCase(), results, last_run });
+    },
+  );
+
+  reg(
+    "get_ranked_book",
+    { ...meta("get_ranked_book"), inputSchema: { mine: z.boolean().optional() } },
+    async (args) => ok(await readings.readRankedBook(ctx.userId, ctx.supabase, !!args.mine)),
+  );
+
+  reg(
+    "get_heatmap",
+    {
+      ...meta("get_heatmap"),
+      inputSchema: {
+        sector: z.string().min(1).optional(),
+        universe: z.enum(["both", "spx", "ndx", "book"]).optional(),
+      },
+    },
+    async (args) => ok(await readings.readHeatmap(ctx.userId, ctx.supabase, args.sector, args.universe ?? "both")),
+  );
+
+  // ── Desk ─────────────────────────────────────────────────
+  reg(
+    "get_options_desk",
+    {
+      ...meta("get_options_desk"),
+      inputSchema: {
+        strategy: z.enum(["csp", "covered_call"]).optional(),
+        limit: z.number().int().min(1).max(120).optional(),
+        collateral: z.number().positive().optional(),
+        max_name_pct: z.number().positive().max(1).optional(),
+        max_bucket_pct: z.number().positive().max(1).optional(),
+        max_positions: z.number().int().positive().optional(),
+      },
+    },
+    async (args) =>
+      ok(
+        await market.optionsDesk(args.strategy ?? "csp", args.limit ?? 40, {
+          collateral: args.collateral,
+          max_name_pct: args.max_name_pct,
+          max_bucket_pct: args.max_bucket_pct,
+          max_positions: args.max_positions,
+        }),
+      ),
+  );
+
+  reg(
+    "get_assignment_backtest",
+    {
+      ...meta("get_assignment_backtest"),
+      inputSchema: {
+        dte: z.number().int().min(1).max(120).optional(),
+        delta: z.number().min(0.05).max(0.5).optional(),
+        type: z.enum(["put", "call"]).optional(),
+      },
+    },
+    async (args) => ok(await market.assignmentBacktest(args.dte ?? 30, args.delta ?? 0.25, args.type ?? "put")),
+  );
+
+  reg(
+    "get_engine_scorecard",
+    { ...meta("get_engine_scorecard"), inputSchema: { window_days: z.number().int().min(30).max(2000).optional() } },
+    async (args) => ok(await market.scorecard(args.window_days ?? 400)),
+  );
+
+  reg(
+    "get_track_record",
+    { ...meta("get_track_record"), inputSchema: { strategy: z.enum(["csp", "covered_call"]).optional() } },
+    async (args) => ok(await readings.readTrackRecord(ctx.userId, ctx.supabase, args.strategy ?? "csp")),
+  );
+
+  // ── Journal ──────────────────────────────────────────────
+  reg(
+    "list_option_trades",
+    {
+      ...meta("list_option_trades"),
+      inputSchema: {
+        status: z.enum(["open", "closed", "expired", "assigned"]).optional(),
+        ticker: z.string().min(1).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+      },
+    },
+    async (args) => ok(await db.listOptionTrades(ctx.userId, ctx.supabase, args)),
+  );
+
+  reg(
+    "log_option_trade",
+    {
+      ...meta("log_option_trade"),
+      inputSchema: {
+        ticker: z.string().min(1),
+        strategy: z.enum(["cash_secured_put", "covered_call", "put_credit_spread", "call_credit_spread"]),
+        strike_price: z.number().positive(),
+        premium: z.number().positive(),
+        expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD"),
+        contracts: z.number().int().positive().optional(),
+        entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD").optional(),
+        underlying_price_at_entry: z.number().positive().optional(),
+        outcome_notes: z.string().optional(),
+      },
+    },
+    async (args) => ok(await db.logOptionTrade(ctx.userId, ctx.supabase, args)),
+  );
+
+  reg(
+    "resolve_option_trade",
+    {
+      ...meta("resolve_option_trade"),
+      inputSchema: {
+        id: z.number().int().positive(),
+        status: z.enum(["closed", "expired", "assigned"]),
+        close_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD").optional(),
+        close_price: z.number().min(0).optional(),
+        underlying_price_at_close: z.number().positive().optional(),
+        outcome_notes: z.string().optional(),
+      },
+    },
+    async (args) => ok(await db.resolveOptionTrade(ctx.userId, ctx.supabase, args)),
+  );
+
   if (isSuperAdmin)
   reg(
     "enrich_stock",

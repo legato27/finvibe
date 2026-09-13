@@ -197,6 +197,28 @@ export const market = {
   // Watchlist-wide options screener: persisted daily summaries, no live fetches.
   optionsScreener: () => dgxJson<unknown>(`/api/options/screener`),
   // Watchlist digest: new PAM triggers, verdict state changes, conflicts.
+  // ── Today, sectors, quant, desk: the routes the pages read ──────────
+  dashboard: () => dgxJson<unknown>(`/api/macro/dashboard`),
+  sectors: () => dgxJson<unknown>(`/api/heatmap/sectors`),
+  sectorRotation: () => dgxJson<unknown>(`/api/macro/sector-rotation`),
+  inflation: () => dgxJson<unknown>(`/api/macro/inflation`),
+  futures: () => dgxJson<unknown>(`/api/macro/futures`),
+  events: (ticker: string) => dgxJson<unknown>(`/api/stocks/${encodeURIComponent(ticker)}/events`),
+  modelResults: (ticker: string) => dgxJson<unknown>(`/api/models/${encodeURIComponent(ticker)}/results`),
+  modelLastRun: (ticker: string) => dgxJson<unknown>(`/api/models/${encodeURIComponent(ticker)}/last-run`),
+  rankedBook: () => dgxJson<unknown>(`/api/models/cross-sectional/ranked`),
+  rankedBookPerformance: () => dgxJson<unknown>(`/api/models/ranked-book/performance`),
+  heatmap: () => dgxJson<unknown>(`/api/heatmap`),
+  optionsDesk: (strategy: "csp" | "covered_call", limit: number, opts?: { collateral?: number; max_name_pct?: number; max_bucket_pct?: number; max_positions?: number }) => {
+    const p = new URLSearchParams({ strategy, limit: String(limit) });
+    for (const [k, v] of Object.entries(opts ?? {})) if (v != null) p.set(k, String(v));
+    return dgxJson<unknown>(`/api/options/desk?${p.toString()}`);
+  },
+  assignmentBacktest: (dte: number, delta: number, type: "put" | "call") =>
+    dgxJson<unknown>(`/api/options/backtest/assignment?dte=${dte}&delta=${delta}&type=${type}`),
+  scorecard: (window: number) => dgxJson<unknown>(`/api/models/options-reco/scorecard?window=${window}`),
+  strategyLog: (ticker: string, limit: number) =>
+    dgxJson<unknown>(`/api/options/${encodeURIComponent(ticker)}/strategy-log?limit=${limit}`),
   signalsToday: () => dgxJson<unknown>(`/api/stocks/signals/today`),
   // Latest cached multibagger scan; track filters A (confirmed) / B (early).
   multibaggerCandidates: (track?: "all" | "A" | "B") =>

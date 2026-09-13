@@ -588,7 +588,11 @@
     "url": "URL",
     "yes": "yes",
     "groupOptions": "Options",
-    "groupNews": "News & sentiment"
+    "groupNews": "News & sentiment",
+    "groupToday": "Today",
+    "groupQuant": "Quant",
+    "groupDesk": "Desk",
+    "groupJournal": "Trade journal"
   },
   "models": {
     "blurb": {

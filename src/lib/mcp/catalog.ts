@@ -28,7 +28,11 @@ export type ToolGroup =
   | "Market data"
   | "Options"
   | "News & sentiment"
-  | "AI";
+  | "AI"
+  | "Today"
+  | "Quant"
+  | "Desk"
+  | "Journal";
 
 export const TOOL_CATALOG: ToolDoc[] = [
   // ── Profile ──────────────────────────────────────────────
@@ -471,6 +475,196 @@ export const TOOL_CATALOG: ToolDoc[] = [
     ],
     returns: "{ refreshed: <count>, scheduled: <count> } once price refresh completes.",
   },
+  // ── Today ────────────────────────────────────────────────
+  {
+    name: "get_today_reading",
+    group: "Today",
+    title: "Today's call",
+    description:
+      "The Today page's answer, composed the same way: lean, regime and risk score, which models agree, " +
+      "the macro watch, the top three price-action signals and how many fired. `detail: true` adds every " +
+      "component the strip is built from (VIX and term structure, breadth, dealer gamma, business cycle, " +
+      "swarm, sector rotation, regime sector forecasts, the signals digest).",
+    params: [{ name: "detail", type: "boolean", required: false, description: "Include the full component payloads. Default false." }],
+    returns: "{ reading, lean, regime, risk_score, models[], agreement, macro_watch, top_signals[], fired_today, components? }",
+  },
+  {
+    name: "get_sector_pulse",
+    group: "Today",
+    title: "Sector pulse and rotation",
+    description:
+      "Every GICS sector's cap-weighted return over a window, leaders first, plus the relative-rotation " +
+      "quadrant of each sector ETF against SPY (leading, weakening, lagging, improving). One sentence first.",
+    params: [{ name: "window", type: "string", required: false, description: "chg_1d | ret_1w | ret_1m | ret_ytd. Default chg_1d." }],
+    returns: "{ reading, window, sectors[], rotation[], as_of }",
+  },
+  {
+    name: "get_week_ahead",
+    group: "Today",
+    title: "The week ahead",
+    description:
+      "Scheduled US market events (Fed decision, CPI, PCE, jobs report, opex and quad witching, holidays and " +
+      "early closes) with the latest inflation print attached to the CPI and PCE rows, joined with earnings " +
+      "and ex-dividend dates for the token's watchlist and held names. Times are US Eastern.",
+    params: [{ name: "weeks", type: "integer", required: false, description: "1 to 4 weeks from this Monday. Default 1." }],
+    returns: "{ reading, week, through, events[], names_checked, names_total, inflation }",
+  },
+  {
+    name: "get_book_risk",
+    group: "Today",
+    title: "Book risk: how many bets you really hold",
+    description:
+      "Correlation clusters of the token's holdings from six months of daily returns, the effective number " +
+      "of bets, the largest bet and its members, beta to SPY, and the factor tilt from the ranked book. " +
+      "All portfolios combined unless portfolio_id is given. Weights are by market value in the default currency.",
+    params: [{ name: "portfolio_id", type: "integer", required: false, description: "One portfolio instead of all." }],
+    returns: "{ reading, effective_bets, largest_bet, book_beta, clusters[], excluded[], factor_tilt[], window }",
+  },
+
+  // ── Quant ────────────────────────────────────────────────
+  {
+    name: "get_model_results",
+    group: "Quant",
+    title: "Quant model results for a ticker",
+    description:
+      "The name's model grid as the stock page shows it: ML ensemble forecast, gradient-boosted models, GARCH " +
+      "volatility, DCF with scenarios, Piotroski, Altman, OU mean-reversion, with when each last ran.",
+    params: [{ name: "ticker", type: "string", required: true }],
+    returns: "{ ticker, results, last_run }",
+  },
+  {
+    name: "get_ranked_book",
+    group: "Quant",
+    title: "Six-factor ranked book",
+    description:
+      "Every enriched name scored cross-sectionally on momentum, ML forecast, quality, value, moat and low " +
+      "volatility into Long / Neutral / Short quintiles, with the book's own performance stat. " +
+      "`mine: true` keeps only names on the token's watchlists.",
+    params: [{ name: "mine", type: "boolean", required: false, description: "Restrict to the token's watchlist names. Default false." }],
+    returns: "{ as_of, universe_size, factors[], ranked[], performance }",
+  },
+  {
+    name: "get_heatmap",
+    group: "Quant",
+    title: "Market heatmap",
+    description:
+      "The S&P 500 and Nasdaq-100 rolled up by GICS sector by default. With `sector`, the names inside that " +
+      "sector: price, day change, windowed returns, verdict and whether the name is enriched. " +
+      "`universe` narrows to spx, ndx or the token's book.",
+    params: [
+      { name: "sector", type: "string", required: false, description: "A GICS sector name, e.g. Information Technology." },
+      { name: "universe", type: "string", required: false, description: "both | spx | ndx | book. Default both." },
+    ],
+    returns: "{ as_of, count, sectors[] } or { as_of, sector, universe, names[] }",
+  },
+
+  // ── Desk ─────────────────────────────────────────────────
+  {
+    name: "get_options_desk",
+    group: "Desk",
+    title: "Options income desk",
+    description:
+      "The premium-selling ranking for short puts or covered calls: two hard gates (Altman solvency, strike " +
+      "liquidity) then the weighted score (IV percentile, Piotroski, OU z-score, annualised return, margin of " +
+      "safety). With `collateral` the ranking becomes a sized paper book under per-name and per-bucket caps. " +
+      "Returns are mid-fill upper bounds: the plan carries no bid/ask.",
+    params: [
+      { name: "strategy", type: "string", required: false, description: "csp | covered_call. Default csp." },
+      { name: "limit", type: "integer", required: false, description: "Rows to return. Default 40, max 120." },
+      { name: "collateral", type: "number", required: false, description: "Cash to size a book with, in USD." },
+      { name: "max_name_pct", type: "number", required: false },
+      { name: "max_bucket_pct", type: "number", required: false },
+      { name: "max_positions", type: "integer", required: false },
+    ],
+    returns: "The desk payload: rows[] with score, gates, strike, premium, annualised return; book when collateral is given.",
+  },
+  {
+    name: "get_assignment_backtest",
+    group: "Desk",
+    title: "Assignment backtest",
+    description:
+      "Five years of daily candles, tens of thousands of simulated entries: how often a short put or call at " +
+      "the given delta and days to expiry was assigned, how bad, and how often it recovered.",
+    params: [
+      { name: "dte", type: "integer", required: false, description: "Days to expiry. Default 30." },
+      { name: "delta", type: "number", required: false, description: "Absolute delta. Default 0.25." },
+      { name: "type", type: "string", required: false, description: "put | call. Default put." },
+    ],
+    returns: "The backtest payload as the Desk shows it.",
+  },
+  {
+    name: "get_engine_scorecard",
+    group: "Desk",
+    title: "The engine's own track record",
+    description:
+      "Every option recommendation the engine logged, graded at expiry: win rate, captured premium, " +
+      "annualised return, assignment rate, mean predicted probability and the calibration gap, overall and " +
+      "by strategy, model agreement and days to expiry.",
+    params: [{ name: "window_days", type: "integer", required: false, description: "Grading window. Default 400." }],
+    returns: "{ window_days, overall, by_strategy, by_agreement, by_dte }",
+  },
+  {
+    name: "get_track_record",
+    group: "Desk",
+    title: "You versus the engine",
+    description:
+      "The token's settled option trades graded beside the engine: your win rate against the engine's on the " +
+      "same strategy, what closing early saved or cost against holding to expiry, the calibration gap on the " +
+      "trades the engine priced, and cohorts by strategy, agreement and days to expiry.",
+    params: [{ name: "strategy", type: "string", required: false, description: "csp | covered_call, for the engine comparison. Default csp." }],
+    returns: "{ reading, summary, cohorts, engine, trades[], open_count }",
+  },
+
+  // ── Journal ──────────────────────────────────────────────
+  {
+    name: "list_option_trades",
+    group: "Journal",
+    title: "List journal trades",
+    description: "The token's option trade journal: open first, then settled, newest expiry first.",
+    params: [
+      { name: "status", type: "string", required: false, description: "open | closed | expired | assigned." },
+      { name: "ticker", type: "string", required: false },
+      { name: "limit", type: "integer", required: false, description: "Default 100." },
+    ],
+    returns: "options_trades rows",
+  },
+  {
+    name: "log_option_trade",
+    group: "Journal",
+    title: "Log an option trade",
+    description:
+      "Record a trade you placed elsewhere: short put, covered call or a credit spread, with strike, premium " +
+      "received per share, contracts and expiry. Nothing here places an order.",
+    params: [
+      { name: "ticker", type: "string", required: true },
+      { name: "strategy", type: "string", required: true, description: "cash_secured_put | covered_call | put_credit_spread | call_credit_spread" },
+      { name: "strike_price", type: "number", required: true },
+      { name: "premium", type: "number", required: true, description: "Credit received per share." },
+      { name: "expiry_date", type: "string", required: true, description: "YYYY-MM-DD" },
+      { name: "contracts", type: "integer", required: false, description: "Default 1." },
+      { name: "entry_date", type: "string", required: false, description: "YYYY-MM-DD. Default today." },
+      { name: "underlying_price_at_entry", type: "number", required: false },
+      { name: "outcome_notes", type: "string", required: false },
+    ],
+    returns: "The new options_trades row.",
+  },
+  {
+    name: "resolve_option_trade",
+    group: "Journal",
+    title: "Resolve a journal trade",
+    description:
+      "Close a trade as expired, assigned or bought back, with the same arithmetic the web journal uses: " +
+      "realised P&L, return on collateral, annualised return, and whether it was profitable.",
+    params: [
+      { name: "id", type: "integer", required: true },
+      { name: "status", type: "string", required: true, description: "closed | expired | assigned" },
+      { name: "close_date", type: "string", required: false, description: "YYYY-MM-DD. Default today." },
+      { name: "close_price", type: "number", required: false, description: "Premium paid per share to buy back (closed only)." },
+      { name: "underlying_price_at_close", type: "number", required: false },
+      { name: "outcome_notes", type: "string", required: false },
+    ],
+    returns: "The updated options_trades row.",
+  },
 ];
 
 export function toolByName(name: string): ToolDoc | undefined {
@@ -498,6 +692,8 @@ export const SCOPE_LABELS: Record<McpScope, string> = {
 
 // Tools that mutate the user's own watchlists / portfolios / holdings / sales.
 export const WRITE_USER_TOOLS = new Set<string>([
+  "log_option_trade",
+  "resolve_option_trade",
   "create_watchlist",
   "delete_watchlist",
   "add_to_watchlist",

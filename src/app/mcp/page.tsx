@@ -21,6 +21,10 @@ const GROUP_ORDER: ToolGroup[] = [
   "Options",
   "News & sentiment",
   "AI",
+  "Today",
+  "Quant",
+  "Desk",
+  "Journal",
 ];
 
 const GROUP_KEY: Record<ToolGroup, string> = {
@@ -33,6 +37,10 @@ const GROUP_KEY: Record<ToolGroup, string> = {
   Options: "groupOptions",
   "News & sentiment": "groupNews",
   AI: "groupAI",
+  Today: "groupToday",
+  Quant: "groupQuant",
+  Desk: "groupDesk",
+  Journal: "groupJournal",
 };
 
 function ToolCard({
@@ -117,6 +125,10 @@ export default async function McpDocsPage() {
     Options: [],
     "News & sentiment": [],
     AI: [],
+    Today: [],
+    Quant: [],
+    Desk: [],
+    Journal: [],
   };
   for (const tool of TOOL_CATALOG) grouped[tool.group].push(tool);
 

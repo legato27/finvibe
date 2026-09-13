@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/check-colors.mjs && next build",
+    "build": "node scripts/check-colors.mjs && node scripts/gen-mcp-docs.mjs --check && next build",
     "start": "next start",
     "lint": "next lint",
-    "lint:colors": "node scripts/check-colors.mjs"
+    "lint:colors": "node scripts/check-colors.mjs",
+    "docs:mcp": "node scripts/gen-mcp-docs.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.26.0",

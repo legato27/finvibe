@@ -710,3 +710,113 @@ export async function getStockCatalog(
   if (error) throw new Error(error.message);
   return data ?? null;
 }
+
+// ── Options trade journal (user-scoped) ───────────────────────
+
+export type JournalStrategy = "cash_secured_put" | "covered_call" | "put_credit_spread" | "call_credit_spread";
+export type JournalStatus = "open" | "closed" | "expired" | "assigned";
+
+export async function listOptionTrades(
+  userId: string,
+  supabase: ServiceSupabase,
+  args: { status?: JournalStatus; ticker?: string; limit?: number },
+) {
+  let q = supabase
+    .from("options_trades")
+    .select("*")
+    .eq("user_id", userId)
+    .order("status", { ascending: true })
+    .order("expiry_date", { ascending: false })
+    .limit(args.limit ?? 100);
+  if (args.status) q = q.eq("status", args.status);
+  if (args.ticker) q = q.eq("ticker", tickerOf(args.ticker));
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
+
+export async function logOptionTrade(
+  userId: string,
+  supabase: ServiceSupabase,
+  args: {
+    ticker: string; strategy: JournalStrategy; strike_price: number; premium: number; contracts?: number;
+    expiry_date: string; entry_date?: string; underlying_price_at_entry?: number | null; outcome_notes?: string | null;
+  },
+) {
+  const { data, error } = await supabase
+    .from("options_trades")
+    .insert({
+      user_id: userId,
+      ticker: assertValidTicker(args.ticker),
+      strategy: args.strategy,
+      strike_price: args.strike_price,
+      premium: args.premium,
+      contracts: args.contracts ?? 1,
+      expiry_date: args.expiry_date,
+      entry_date: args.entry_date || new Date().toISOString().slice(0, 10),
+      underlying_price_at_entry: args.underlying_price_at_entry ?? null,
+      outcome_notes: args.outcome_notes ?? null,
+      status: "open",
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+/**
+ * Same arithmetic as the web journal's resolve: assigned and expired keep
+ * the full credit, a buy-back keeps the difference; return on capital is
+ * earned on the collateral; an assignment is judged on the position
+ * (spot against strike minus premium), not on the option leg.
+ */
+export async function resolveOptionTrade(
+  userId: string,
+  supabase: ServiceSupabase,
+  args: {
+    id: number; status: Exclude<JournalStatus, "open">; close_date?: string;
+    close_price?: number | null; underlying_price_at_close?: number | null; outcome_notes?: string | null;
+  },
+) {
+  const { data: t, error: readErr } = await supabase
+    .from("options_trades")
+    .select("*")
+    .eq("id", args.id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (readErr) throw new Error(readErr.message);
+  if (!t) throw new Error(`Trade ${args.id} not found`);
+  if (t.status !== "open") throw new Error(`Trade ${args.id} is already ${t.status}`);
+
+  const shares = Number(t.contracts) * 100;
+  const credit = Number(t.premium) * shares;
+  const paidBack = (args.close_price ?? 0) * shares;
+  const realized = args.status === "closed" ? credit - paidBack : credit;
+  const capital = Number(t.strike_price) * shares;
+  const closeDate = args.close_date || new Date().toISOString().slice(0, 10);
+  const days = Math.max(1, Math.round((Date.parse(closeDate) - Date.parse(String(t.entry_date))) / 86_400_000));
+  const roc = capital > 0 ? realized / capital : null;
+  const netBasis = Number(t.strike_price) - Number(t.premium);
+  const spot = args.underlying_price_at_close ?? null;
+  const profitable = args.status === "assigned" ? (spot != null ? spot >= netBasis : null) : realized > 0;
+
+  const { data, error } = await supabase
+    .from("options_trades")
+    .update({
+      status: args.status,
+      close_date: closeDate,
+      close_price: args.close_price ?? null,
+      underlying_price_at_close: spot,
+      realized_pnl: realized,
+      return_on_capital: roc,
+      annualized_return: roc != null ? (roc * 365) / days : null,
+      was_profitable: profitable,
+      outcome_notes: args.outcome_notes ?? t.outcome_notes ?? null,
+    })
+    .eq("id", args.id)
+    .eq("user_id", userId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
