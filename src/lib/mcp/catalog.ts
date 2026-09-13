@@ -330,7 +330,7 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "Top-down Price Action Manipulation (PAM) read for a ticker: daily/weekly/" +
       "monthly trend structure (UC/DC/UR/DR), setup variant (UC1/UC2/…), " +
       "sweet-spot entry zone, Force Strike Bar trigger status, and divergence. " +
-      "Served from the nightly precomputed blob; computed live on cache miss.",
+      "Served from the nightly precomputed blob; computed live on cache miss. Includes `fib`: on each timeframe, the Fibonacci read of the last completed leg (golden pocket 61.8-65% as the buy or sell zone, invalidation at the leg origin, 127.2 and 161.8 extension targets, confluence with the model levels).",
     params: [
       { name: "ticker", type: "string", required: true },
     ],

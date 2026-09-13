@@ -121,7 +121,7 @@ the tool: `read` < `manage` < `full`.
 | `get_today_signals` | read | The daily watchlist digest: new PAM triggers (last 2 days), verdict state changes vs the previous run, and names currently in a CONFLICTING state. The same feed that powers the dashboard 'Today' panel. | — |
 | `get_macro_today` | read | Synthesized macro read for today — market regime, risk score, and suggested positioning, built from VIX, business cycle (HMM), sector rotation, and the swarm indicator. | — |
 | `get_fx_rates` | read | Spot FX rates for a base currency: 1 unit of base = rate units quote. | `base`?: string (ISO 4217) |
-| `get_price_action` | read | Top-down Price Action Manipulation (PAM) read for a ticker: daily/weekly/monthly trend structure (UC/DC/UR/DR), setup variant (UC1/UC2/…), sweet-spot entry zone, Force Strike Bar trigger status, and divergence. Served from the nightly precomputed blob; computed live on cache miss. | `ticker`: string |
+| `get_price_action` | read | Top-down Price Action Manipulation (PAM) read for a ticker: daily/weekly/monthly trend structure (UC/DC/UR/DR), setup variant (UC1/UC2/…), sweet-spot entry zone, Force Strike Bar trigger status, and divergence. Served from the nightly precomputed blob; computed live on cache miss. Includes `fib`: on each timeframe, the Fibonacci read of the last completed leg (golden pocket 61.8-65% as the buy or sell zone, invalidation at the leg origin, 127.2 and 161.8 extension targets, confluence with the model levels). | `ticker`: string |
 
 ### Options
 

@@ -1480,7 +1480,15 @@
     "indexNoteReading": "Structure, setups and swing levels above come from the index's own daily bars, on the same three timeframes as any stock.",
     "indexOpenEtf": "Open {etf}",
     "indexHoldVia": "An index cannot be held. {etf} tracks it and can be added to a portfolio.",
-    "indexHoldNone": "An index cannot be held, and no tracking ETF is mapped for this one."
+    "indexHoldNone": "An index cannot be held, and no tracking ETF is mapped for this one.",
+    "fibToggleTitle": "Fibonacci: golden pocket, invalidation and targets on the last completed leg",
+    "fibAnchorTitle": "Anchor the leg by hand: click its start, then its end",
+    "fibAnchorHint": "Click the leg's start, then its end",
+    "fibResetTitle": "Back to the automatic leg from the price-action swings",
+    "fibLegendPocket": "Golden pocket (61.8–65%)",
+    "fibLevelsLabel": "Fibonacci levels",
+    "fibInvalidChip": "invalid · ${price}",
+    "fibManualNote": "Leg anchored by hand."
   },
   "watchlist": {
     "addAnyway": "Add {query} anyway",

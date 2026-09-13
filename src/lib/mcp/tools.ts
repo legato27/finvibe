@@ -4,6 +4,7 @@ import type { ServiceSupabase } from "@/lib/supabase/service";
 import * as db from "@/lib/mcp/db";
 import { market } from "@/lib/mcp/market";
 import * as readings from "@/lib/mcp/readings";
+import { fibFromPriceAction } from "@/lib/fib";
 import { toolByName, scopeAllows, type McpScope } from "@/lib/mcp/catalog";
 
 export interface ToolContext {
@@ -274,7 +275,20 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
       ...meta("get_price_action"),
       inputSchema: { ticker: z.string().min(1) },
     },
-    async (args) => ok(await market.priceAction(args.ticker)),
+    async (args) => {
+      // The price-action payload plus the Fibonacci read on each timeframe:
+      // the last completed leg's golden pocket, invalidation and targets,
+      // the same module the chart draws from.
+      const pa = (await market.priceAction(args.ticker)) as Record<string, unknown>;
+      return ok({
+        ...pa,
+        fib: {
+          daily: fibFromPriceAction(pa as never, "daily"),
+          weekly: fibFromPriceAction(pa as never, "weekly"),
+          monthly: fibFromPriceAction(pa as never, "monthly"),
+        },
+      });
+    },
   );
 
   reg(
