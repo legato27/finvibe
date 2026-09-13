@@ -296,7 +296,7 @@ export default function StockDetailPage() {
 
         {/* ── Right: you and the world ── */}
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-[104px]">
-          <YourExposure signedIn={!!user} position={position} currentPrice={currentPrice} listNames={listNames} />
+          <YourExposure ticker={ticker} signedIn={!!user} position={position} currentPrice={currentPrice} listNames={listNames} />
           <StockEvents ticker={ticker} />
           <RealtimeNewsFeed tickers={[ticker]} />
           <Panel label={t("viaMcp")} reading={t("viaMcpNote")} as="div">

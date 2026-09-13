@@ -13,15 +13,18 @@ import { useTranslations } from "next-intl";
 import Panel from "@/components/ui/Panel";
 import Stat from "@/components/ui/Stat";
 import { useAppStore } from "@/store/useAppStore";
+import { NameRecordStat } from "@/components/stock/NameRecordStat";
 
 export type Position = { totalShares: number; avgCost: number; lotCount: number; portfolioIds: number[] };
 
 export function YourExposure({
+  ticker,
   signedIn,
   position,
   currentPrice,
   listNames,
 }: {
+  ticker: string;
   signedIn: boolean;
   position: Position | null;
   currentPrice: number;
@@ -78,6 +81,7 @@ export function YourExposure({
           tone={currentPrice > 0 ? (pnl < 0 ? "short" : "long") : "muted"}
           size="sm"
         />
+        <NameRecordStat ticker={ticker} />
       </div>
     </Panel>
   );

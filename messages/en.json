@@ -1444,7 +1444,10 @@
     "mktValue": "Mkt value",
     "unrealisedPnl": "Unrealised P&L",
     "lots": "{count} lots",
-    "openWatchlist": "Open watchlist"
+    "openWatchlist": "Open watchlist",
+    "recordLabel": "Your record",
+    "recordSub": "{pnl} realised, {sales, plural, =0 {options only} one {incl. # sale} other {incl. # sales}}",
+    "recordNone": "no trades logged on this name"
   },
   "watchlist": {
     "addAnyway": "Add {query} anyway",
@@ -2149,6 +2152,95 @@
         "gap": "Gap"
       },
       "footnote": "<strong>Gap</strong> is predicted probability of profit minus realised win rate, in points. Positive means the engine over-promised, which is the direction that matters: sizing is derived from the predicted number, so over-promising compounds into over-betting. <strong>Ann.</strong> is annualised return on collateral as the engine estimated it at entry, priced at mid — an upper bound, since the market-data plan returns no bid/ask."
+    },
+    "trackRecord": {
+      "label": "You versus the engine",
+      "qualifier": "{count, plural, one {# settled trade} other {# settled trades}}",
+      "loading": "Grading your journal against the engine…",
+      "signedOut": "Sign in to grade your journal against the engine's calls.",
+      "empty": "Log a trade on this desk and resolve it at expiry to start a record.",
+      "onlyOpen": "{count, plural, one {# open trade} other {# open trades}} and nothing settled yet. The record starts at the first expiry.",
+      "nounPuts": "short puts",
+      "nounCalls": "covered calls",
+      "lead": "Your {settled} settled trades: {won} won, {winRate}.",
+      "fewLead": "{settled, plural, one {# settled trade} other {# settled trades}}: {won} won. {min} are needed before a rate is worth reading.",
+      "engineRate": "The engine won {rate} of the {n} {noun} it recommended.",
+      "engineNone": "The engine has no graded {noun} yet.",
+      "early": "You closed {count, plural, one {# trade} other {# trades}} early; holding to expiry would have {word} {amount}.",
+      "earlyAdded": "added",
+      "earlySaved": "cost",
+      "calib": "On the {matched} trades the engine priced, it predicted {pred} and you delivered {actual}: {gap} points {word}.",
+      "optimistic": "optimistic",
+      "conservative": "conservative",
+      "stat": {
+        "yours": "Your win rate",
+        "yoursSub": "{won} of {settled} settled",
+        "yoursFew": "{min} settled needed for a rate",
+        "engine": "Engine win rate",
+        "engineSub": "{n} recommended {noun}",
+        "engineNone": "no graded calls yet",
+        "gap": "Gap on your trades",
+        "gapSub": "predicted − delivered, {matched} priced",
+        "gapNone": "fewer than three priced trades",
+        "early": "Closing early",
+        "earlyNone": "none closed early",
+        "earlySaved": "saved vs holding, {count, plural, one {# trade} other {# trades}}",
+        "earlyCost": "cost vs holding, {count, plural, one {# trade} other {# trades}}"
+      },
+      "detailLabel": "Every settled trade, and the cohorts",
+      "detailQualifier": "engine view = its log row within 14 days before your entry",
+      "tableCaption": "Your trades against the engine",
+      "countLabel": "{count, plural, one {# trade} other {# trades}}",
+      "col": {
+        "ticker": "Ticker",
+        "strategy": "Strategy",
+        "expiry": "Expiry",
+        "strike": "Strike",
+        "engineStrike": "Engine strike",
+        "pop": "Engine PoP",
+        "agreement": "Agreement",
+        "outcome": "Outcome",
+        "pnl": "P&L",
+        "hold": "Held to expiry",
+        "delta": "Closing early"
+      },
+      "aria": {
+        "pop": "The engine's predicted probability of profit that day",
+        "hold": "What holding to expiry would have paid",
+        "delta": "What closing early gained or cost against holding to expiry"
+      },
+      "agreement": {
+        "same": "Same call",
+        "same_other_strike": "Same strategy, other strike",
+        "different": "Engine said otherwise",
+        "none": "No engine view"
+      },
+      "status": {
+        "closed": "closed early",
+        "expired": "expired",
+        "assigned": "assigned"
+      },
+      "strategy": {
+        "cash_secured_put": "Short puts",
+        "covered_call": "Covered calls",
+        "put_credit_spread": "Put spreads",
+        "call_credit_spread": "Call spreads"
+      },
+      "cohort": {
+        "cohort": "Cohort",
+        "n": "Settled",
+        "won": "Won",
+        "captured": "Captured",
+        "ann": "Annualised",
+        "assigned": "Assigned",
+        "predicted": "Predicted",
+        "gap": "Gap",
+        "byStrategy": "By strategy",
+        "byAgreement": "By agreement with the engine",
+        "byDte": "By days to expiry",
+        "engineRow": "The engine's own {noun}"
+      },
+      "reading": "A settled trade counts as won when its realised P&L is positive. Held to expiry uses the underlying's close on expiry and ignores commissions and the stock leg of a covered call. The engine's rates come from its own graded log over 400 days, not from your trades; the gap is measured on your trades it priced."
     }
   }
 }
