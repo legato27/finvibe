@@ -194,6 +194,17 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
       .sort((a, b) => a.time.localeCompare(b.time));
   }, [priceData?.data]);
 
+  // Frame the leg with context: from 30 bars before its origin to the last
+  // bar, so a five-day leg on a one-year view stops being a smear.
+  const zoomToLeg = useCallback(() => {
+    const chart = chartRef.current;
+    const leg = fib.leg;
+    if (!chart || !leg || !chartData.length) return;
+    const times = chartData.map((d) => d.time);
+    const startIdx = Math.max(0, times.findIndex((t) => t >= leg.from.date) - 30);
+    try { chart.timeScale().setVisibleRange({ from: times[startIdx], to: times[times.length - 1] }); } catch { /* ignore */ }
+  }, [fib.leg, chartData]);
+
   // ── Volume profile ───────────────────────────────────────
   // Volume-by-price over the lookback window. The window is measured in
   // calendar days, not bars, so "188D" covers the same stretch of history
@@ -378,31 +389,48 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         // ── Period change ──
         // ── Fibonacci levels and the golden pocket band ──
         if (fibOn && fib.leg && chartData.length) {
-          const long = fib.leg.direction === "long";
+          // One family, one colour, two pixels: the Fibonacci set is the
+          // protocol cyan throughout so it reads against the grey model
+          // levels and the MA lines. Targets in the long colour, the
+          // invalidation in the break colour, every axis tag prefixed "Fib".
           for (const lvl of fib.levels) {
             const isExt = lvl.kind === "extension";
-            const color = isExt ? pal.long : lvl.pocket ? pal.protocol : lvl.ratio === 0.236 ? pal.border : pal.mutedFg;
+            const color = isExt ? pal["long-strong"] : pal.protocol;
             const pctLabel = `${(lvl.ratio * 100).toFixed(1).replace(/\.0$/, "")}`;
             try {
               mainSeries.createPriceLine({
-                price: lvl.price, color, lineWidth: lvl.pocket ? 2 : 1,
-                lineStyle: isExt ? LineStyle.Dashed : LineStyle.Solid,
-                axisLabelVisible: true, title: `${pctLabel}${lvl.confluence.length ? " ✓" : ""}`,
+                price: lvl.price, color, lineWidth: lvl.ratio === 0.236 ? 1 : 2,
+                lineStyle: isExt ? LineStyle.Dashed : lvl.pocket ? LineStyle.Solid : LineStyle.LargeDashed,
+                axisLabelVisible: true, title: `Fib ${pctLabel}${lvl.confluence.length ? " ✓" : ""}`,
               });
             } catch { /* ignore */ }
           }
           try {
             mainSeries.createPriceLine({
-              price: fib.invalidation, color: pal.break, lineWidth: 1, lineStyle: LineStyle.Dotted,
-              axisLabelVisible: true, title: long ? "Fib invalid" : "Fib invalid",
+              price: fib.invalidation, color: pal.break, lineWidth: 2, lineStyle: LineStyle.Solid,
+              axisLabelVisible: true, title: "Fib invalid",
             });
+          } catch { /* ignore */ }
+          // The leg itself, origin to end, so the anchor is never a mystery.
+          try {
+            const legSeries = chart.addLineSeries({
+              color: pal.protocol, lineWidth: 2, lineStyle: LineStyle.Solid,
+              priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
+            });
+            const a = fib.leg.from, b = fib.leg.to;
+            const pts = a.date <= b.date ? [a, b] : [b, a];
+            legSeries.setData(pts.map((pt) => ({ time: pt.date, value: pt.price })));
+            legSeries.setMarkers([
+              { time: a.date, position: fib.leg.direction === "long" ? "belowBar" : "aboveBar", color: pal.protocol, shape: "square", text: "100%" },
+              { time: b.date, position: fib.leg.direction === "long" ? "aboveBar" : "belowBar", color: pal.protocol, shape: "square", text: "0%" },
+            ].sort((x, y) => x.time.localeCompare(y.time)) as any);
           } catch { /* ignore */ }
           // The band: a flat series at the pocket's top filled down to its bottom.
           try {
             const band = chart.addBaselineSeries({
               baseValue: { type: "price", price: fib.zone.low },
               topLineColor: tokenAlpha("--panel", 0), bottomLineColor: tokenAlpha("--panel", 0),
-              topFillColor1: tokenAlpha("--protocol", 0.18), topFillColor2: tokenAlpha("--protocol", 0.18),
+              topFillColor1: tokenAlpha("--protocol", 0.28), topFillColor2: tokenAlpha("--protocol", 0.28),
               bottomFillColor1: tokenAlpha("--panel", 0), bottomFillColor2: tokenAlpha("--panel", 0),
               lineWidth: 1, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false,
             });
@@ -757,37 +785,9 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
               {t('drawHint')}
             </span>
           )}
-          {fibAnchorMode && (
-            <span className="text-xs text-signal-caution animate-pulse">
-              {t('fibAnchorHint')}
-            </span>
-          )}
         </div>
 
         <div className="flex items-center gap-1">
-          <button
-            onClick={toggleFib}
-            title={t('fibToggleTitle')}
-            aria-pressed={fibOn}
-            className={`p-1 rounded transition-colors ${fibOn ? "text-protocol bg-protocol-bg" : "text-muted-foreground hover:text-signal"}`}
-          >
-            <Ruler className="w-3.5 h-3.5" />
-          </button>
-          {fibOn && (
-            <button
-              onClick={() => { fibFirstClickRef.current = null; setFibAnchorMode((m) => !m); }}
-              title={t('fibAnchorTitle')}
-              aria-pressed={fibAnchorMode}
-              className={`p-1 rounded transition-colors ${fibAnchorMode ? "text-signal-caution bg-signal-caution/10" : "text-muted-foreground hover:text-signal"}`}
-            >
-              <Crosshair className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {fibOn && fibManual && (
-            <button onClick={resetFibLeg} title={t('fibResetTitle')} className="p-1 rounded text-muted-foreground hover:text-signal transition-colors">
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          )}
           <button
             onClick={() => setDrawMode((m) => !m)}
             title={t('drawHLineTitle')}
@@ -939,6 +939,59 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
         </div>
       </div>
 
+      {/* ── Fibonacci controls: a labelled pill, not an icon ── */}
+      <div className="flex flex-wrap items-center gap-2 mt-1.5">
+        <button
+          onClick={toggleFib}
+          aria-pressed={fibOn}
+          title={t('fibToggleTitle')}
+          className={`text-[11px] px-2 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
+            fibOn ? "text-foreground border-protocol/60 bg-protocol-bg" : "text-muted-foreground border-border"
+          }`}
+        >
+          <Ruler className="w-3 h-3" aria-hidden="true" />
+          {t('fibPill')}
+        </button>
+        {fibOn && (
+          <button
+            onClick={() => { fibFirstClickRef.current = null; setFibAnchorMode((m) => !m); }}
+            aria-pressed={fibAnchorMode}
+            title={t('fibAnchorTitle')}
+            className={`text-[11px] px-2 py-0.5 rounded border transition-all inline-flex items-center gap-1 ${
+              fibAnchorMode ? "text-signal-caution border-signal-caution/60 bg-signal-caution/10" : "text-muted-foreground border-border"
+            }`}
+          >
+            <Crosshair className="w-3 h-3" aria-hidden="true" />
+            {fibAnchorMode ? t('fibAnchorHint') : t('fibAnchorPill')}
+          </button>
+        )}
+        {fibOn && fibManual && (
+          <button
+            onClick={resetFibLeg}
+            title={t('fibResetTitle')}
+            className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground transition-all inline-flex items-center gap-1 hover:text-signal"
+          >
+            <RotateCcw className="w-3 h-3" aria-hidden="true" />
+            {t('fibResetPill')}
+          </button>
+        )}
+        {fibOn && fib.leg && (
+          <>
+            <button
+              onClick={zoomToLeg}
+              title={t('fibZoomTitle')}
+              className="text-[11px] px-2 py-0.5 rounded border border-border text-muted-foreground transition-all inline-flex items-center gap-1 hover:text-signal"
+            >
+              <Maximize2 className="w-3 h-3" aria-hidden="true" />
+              {t('fibZoomPill')}
+            </button>
+            <span className="text-[10px] font-mono text-muted-foreground">
+              {t('fibLegSummary', { from: fib.leg.from.date, to: fib.leg.to.date, dir: fib.leg.direction === "long" ? "↑" : "↓" })}
+            </span>
+          </>
+        )}
+      </div>
+
       {/* ── Volume-profile controls ───────────────────────── */}
       <div className="flex flex-wrap items-center gap-2 mt-1.5">
         <button
@@ -1020,7 +1073,12 @@ export function PriceChart({ ticker, priceAction, currentPrice }: { ticker: stri
           </>
         )}
         {fibOn && (
-          <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-protocol/30"/>{t('fibLegendPocket')}</span>
+          <>
+            <span className="flex items-center gap-1"><span className="w-4 h-0.5 inline-block bg-protocol"/>{t('fibLegendLevels')}</span>
+            <span className="flex items-center gap-1"><span className="w-3 h-2 inline-block bg-protocol/40"/>{t('fibLegendPocket')}</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-0.5 inline-block bg-signal-long-strong"/>{t('fibLegendTargets')}</span>
+            <span className="flex items-center gap-1"><span className="w-4 h-0.5 inline-block bg-signal-break"/>{t('fibLegendInvalid')}</span>
+          </>
         )}
       </div>
 

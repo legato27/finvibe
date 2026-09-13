@@ -1488,7 +1488,16 @@
     "fibLegendPocket": "Golden pocket (61.8–65%)",
     "fibLevelsLabel": "Fibonacci levels",
     "fibInvalidChip": "invalid · ${price}",
-    "fibManualNote": "Leg anchored by hand."
+    "fibManualNote": "Leg anchored by hand.",
+    "fibPill": "Fibonacci",
+    "fibAnchorPill": "Anchor leg",
+    "fibResetPill": "Auto leg",
+    "fibLegSummary": "leg {from} → {to} {dir}",
+    "fibLegendLevels": "Fib levels",
+    "fibLegendTargets": "Fib targets",
+    "fibLegendInvalid": "Fib invalidation",
+    "fibZoomPill": "Zoom to leg",
+    "fibZoomTitle": "Frame the leg with thirty bars of context"
   },
   "watchlist": {
     "addAnyway": "Add {query} anyway",
