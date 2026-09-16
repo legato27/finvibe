@@ -257,3 +257,97 @@ export function summarize(rows: GradedTrade[]): Summary {
     realized: rows.reduce((s, r) => s + (r.realized_pnl ?? 0), 0),
   };
 }
+
+
+// ── Crypto scalp trades vs the engine's signals ───────────────────────
+// A paper scalp trade is graded beside the engine signal it followed
+// (engine_signal_id → the recommendation-log row): your realised R against
+// the engine's R at time-stop, and what closing early saved or cost.
+
+export type ScalpTradeInput = {
+  id: number; ticker: string; strategy: string; mode: string; status: string; side: string | null;
+  entry_ts: string | null; exit_ts: string | null; entry_px: number | null; exit_px: number | null; size: number | null;
+  r_planned: number | null; r_realised: number | null; realized_pnl: number | null; exit_reason: string | null;
+  session: string | null; engine_signal_id: string | null; mae: number | null; mfe: number | null;
+  slippage_modelled: number | null; slippage_realised: number | null;
+};
+export type EngineSignalRow = {
+  signal_id: string; symbol: string; setup: string; side: string; outcome: string | null; r_realised: number | null;
+  r_planned: number | null; p_win_assumed: number | null; time_stop_at: string | null; resolved_at: string | null; session: string | null;
+};
+export type GradedScalp = ScalpTradeInput & {
+  won: boolean; engine: EngineSignalRow | null; engineR: number | null;
+  /** engine R at time-stop minus your R: positive = closing early cost you, negative = it saved you. */
+  earlyCloseCost: number | null; pWin: number | null; slippageGap: number | null;
+};
+
+export function gradeScalpTrades(trades: ScalpTradeInput[], signals: EngineSignalRow[]): GradedScalp[] {
+  const byId = new Map(signals.map((s) => [s.signal_id, s]));
+  return trades.filter((t) => t.status !== "open").map((t) => {
+    const eng = t.engine_signal_id ? byId.get(t.engine_signal_id) ?? null : null;
+    const engineR = eng?.r_realised ?? null;
+    const mine = t.r_realised;
+    const early = t.exit_reason != null && t.exit_reason !== "time_stop" && t.exit_reason !== "target" && t.exit_reason !== "stop";
+    return {
+      ...t,
+      won: (t.realized_pnl ?? 0) > 0,
+      engine: eng, engineR,
+      earlyCloseCost: early && engineR != null && mine != null ? +(engineR - mine).toFixed(3) : null,
+      pWin: eng?.p_win_assumed ?? null,
+      slippageGap: t.slippage_realised != null && t.slippage_modelled != null ? +(t.slippage_realised - t.slippage_modelled).toFixed(3) : null,
+    };
+  });
+}
+
+export type ScalpBlock = {
+  n: number; win_rate: number | null; avg_r: number | null; median_r: number | null; realized: number;
+  mean_p_win: number | null; calibration_gap: number | null; avg_mae: number | null; avg_mfe: number | null; avg_slippage_gap: number | null;
+};
+
+export function aggregateScalps(rows: GradedScalp[]): ScalpBlock {
+  const n = rows.length;
+  const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+  const rs = rows.map((r) => r.r_realised).filter((x): x is number => x != null).sort((a, b) => a - b);
+  const p = rows.map((r) => r.pWin).filter((x): x is number => x != null);
+  const winRate = n ? rows.filter((r) => r.won).length / n : null;
+  const meanP = mean(p);
+  return {
+    n, win_rate: winRate == null ? null : +winRate.toFixed(3),
+    avg_r: rs.length ? +(mean(rs) as number).toFixed(3) : null,
+    median_r: rs.length ? +(rs.length % 2 ? rs[(rs.length - 1) / 2] : (rs[rs.length / 2 - 1] + rs[rs.length / 2]) / 2).toFixed(3) : null,
+    realized: +rows.reduce((s, r) => s + (r.realized_pnl ?? 0), 0).toFixed(2),
+    mean_p_win: meanP == null ? null : +meanP.toFixed(3),
+    calibration_gap: meanP != null && winRate != null ? +(meanP - winRate).toFixed(3) : null,
+    avg_mae: mean(rows.map((r) => r.mae).filter((x): x is number => x != null)),
+    avg_mfe: mean(rows.map((r) => r.mfe).filter((x): x is number => x != null)),
+    avg_slippage_gap: mean(rows.map((r) => r.slippageGap).filter((x): x is number => x != null)),
+  };
+}
+
+export function scalpCohorts(rows: GradedScalp[]) {
+  const by = (key: (r: GradedScalp) => string) => {
+    const groups: Record<string, GradedScalp[]> = {};
+    for (const r of rows) (groups[key(r)] ??= []).push(r);
+    return Object.fromEntries(Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => [k, aggregateScalps(v)]));
+  };
+  return {
+    overall: aggregateScalps(rows),
+    byStrategy: by((r) => r.strategy),
+    bySession: by((r) => r.session ?? "n/a"),
+    bySymbol: by((r) => r.ticker),
+    byExitReason: by((r) => r.exit_reason ?? "n/a"),
+  };
+}
+
+export function composeScalpTrackReading(rows: GradedScalp[], engine: Record<string, ScalpBlock | Record<string, unknown>> | null, strategy: string): string {
+  const o = aggregateScalps(rows);
+  if (!o.n) return `No settled ${strategy === "scalp" ? "scalp" : strategy} trades in the paper journal yet.`;
+  const early = rows.filter((r) => r.earlyCloseCost != null);
+  const cost = early.length ? early.reduce((s, r) => s + (r.earlyCloseCost ?? 0), 0) : null;
+  const parts = [`${o.n} settled ${strategy === "scalp" ? "scalp" : strategy} trades: win rate ${((o.win_rate ?? 0) * 100).toFixed(0)}%, average ${(o.avg_r ?? 0).toFixed(2)}R, ${o.realized >= 0 ? "+" : ""}${o.realized.toFixed(0)} realised.`];
+  if (o.calibration_gap != null) parts.push(`The gate assumed ${((o.mean_p_win ?? 0) * 100).toFixed(0)}% wins; the gap is ${o.calibration_gap >= 0 ? "+" : ""}${(o.calibration_gap * 100).toFixed(0)} points${o.calibration_gap > 0.05 ? " (over-confident)" : o.calibration_gap < -0.05 ? " (under-confident)" : ""}.`);
+  if (cost != null) parts.push(`Closing early ${cost > 0 ? "cost" : "saved"} ${Math.abs(cost).toFixed(2)}R against holding to the time-stop over ${early.length} trade${early.length === 1 ? "" : "s"}.`);
+  const engOverall = engine && (engine.overall as ScalpBlock | undefined);
+  if (engOverall && engOverall.n) parts.push(`The engine's own signals: ${((engOverall.win_rate ?? 0) * 100).toFixed(0)}% over ${engOverall.n}.`);
+  return parts.join(" ");
+}

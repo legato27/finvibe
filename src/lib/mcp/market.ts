@@ -216,7 +216,18 @@ export const market = {
   },
   assignmentBacktest: (dte: number, delta: number, type: "put" | "call") =>
     dgxJson<unknown>(`/api/options/backtest/assignment?dte=${dte}&delta=${delta}&type=${type}`),
-  scorecard: (window: number) => dgxJson<unknown>(`/api/models/options-reco/scorecard?window=${window}`),
+  scorecard: (window: number, assetClass: "options" | "crypto" = "options", mode?: string) =>
+    dgxJson<unknown>(`/api/models/options-reco/scorecard?window=${window}&asset_class=${assetClass}${mode ? `&mode=${mode}` : ""}`),
+  // Crypto module (app/crypto in the backend): remove with src/modules/crypto.
+  cryptoToday: () => dgxJson<unknown>(`/api/crypto-desk/today`),
+  scalpDesk: (symbol?: string) => dgxJson<unknown>(`/api/crypto-desk/scalp/desk${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`),
+  cryptoSignals: (status: "active" | "today" | "recent", limit: number) => dgxJson<unknown>(`/api/crypto-desk/signals?status=${status}&limit=${limit}`),
+  cryptoEvidence: (symbol: string) => dgxJson<unknown>(`/api/crypto-desk/evidence/${encodeURIComponent(symbol)}`),
+  cryptoRiskStatus: () => dgxJson<unknown>(`/api/crypto-desk/risk/status`),
+  cryptoRiskHalt: (reason: string, by: string) =>
+    dgxJson<unknown>(`/api/crypto-desk/risk/halt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reason, by }) }),
+  cryptoRiskResume: (by: string) =>
+    dgxJson<unknown>(`/api/crypto-desk/risk/resume`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by }) }),
   strategyLog: (ticker: string, limit: number) =>
     dgxJson<unknown>(`/api/options/${encodeURIComponent(ticker)}/strategy-log?limit=${limit}`),
   signalsToday: () => dgxJson<unknown>(`/api/stocks/signals/today`),

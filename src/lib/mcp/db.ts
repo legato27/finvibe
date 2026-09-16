@@ -711,72 +711,166 @@ export async function getStockCatalog(
   return data ?? null;
 }
 
-// ── Options trade journal (user-scoped) ───────────────────────
+// ── Trade journal (user-scoped; options and the crypto scalp family) ──
+//
+// One table, two families. The options path below is the original code:
+// same insert shape, same resolve arithmetic, and the alias tools select the
+// original column list so their payloads are byte-identical to before the
+// table gained the crypto columns. mode is a hard column, never inferred:
+// the readers default to live for options and paper for crypto.
 
 export type JournalStrategy = "cash_secured_put" | "covered_call" | "put_credit_spread" | "call_credit_spread";
+export type ScalpStrategy = "scalp_A" | "scalp_B" | "scalp_C";
 export type JournalStatus = "open" | "closed" | "expired" | "assigned";
+export type AssetClass = "options" | "crypto";
+export type TradeMode = "live" | "paper" | "backtest";
 
-export async function listOptionTrades(
+/** The columns options_trades had before migration 025 — what the option-named tools return. */
+export const OPTION_TRADE_COLUMNS =
+  "id, user_id, ticker, strategy, strike_price, premium, contracts, expiry_date, entry_date, underlying_price_at_entry, " +
+  "status, close_date, close_price, underlying_price_at_close, realized_pnl, return_on_capital, annualized_return, " +
+  "llm_recommendation, llm_confidence, llm_reasoning, llm_model_version, outcome_notes, was_profitable, created_at, updated_at";
+
+export const DEFAULT_MODE: Record<AssetClass, TradeMode> = { options: "live", crypto: "paper" };
+
+export async function listTrades(
   userId: string,
   supabase: ServiceSupabase,
-  args: { status?: JournalStatus; ticker?: string; limit?: number },
+  args: { asset_class?: AssetClass; strategy?: string; mode?: TradeMode; status?: JournalStatus; ticker?: string; limit?: number },
+  columns = "*",
 ) {
+  const assetClass: AssetClass = args.asset_class ?? "options";
+  const mode: TradeMode = args.mode ?? DEFAULT_MODE[assetClass];
   let q = supabase
     .from("options_trades")
-    .select("*")
+    .select(columns)
     .eq("user_id", userId)
+    .eq("asset_class", assetClass)
+    .eq("mode", mode)
     .order("status", { ascending: true })
-    .order("expiry_date", { ascending: false })
+    .order(assetClass === "options" ? "expiry_date" : "entry_ts", { ascending: false })
     .limit(args.limit ?? 100);
   if (args.status) q = q.eq("status", args.status);
+  if (args.strategy) q = q.eq("strategy", args.strategy);
   if (args.ticker) q = q.eq("ticker", tickerOf(args.ticker));
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return data ?? [];
 }
 
-export async function logOptionTrade(
+/** Alias kept for the option-named tool: options, live, original columns. */
+export async function listOptionTrades(
   userId: string,
   supabase: ServiceSupabase,
-  args: {
-    ticker: string; strategy: JournalStrategy; strike_price: number; premium: number; contracts?: number;
-    expiry_date: string; entry_date?: string; underlying_price_at_entry?: number | null; outcome_notes?: string | null;
-  },
+  args: { status?: JournalStatus; ticker?: string; limit?: number },
 ) {
+  return listTrades(userId, supabase, { ...args, asset_class: "options", mode: "live" }, OPTION_TRADE_COLUMNS);
+}
+
+export type LogOptionArgs = {
+  ticker: string; strategy: JournalStrategy; strike_price: number; premium: number; contracts?: number;
+  expiry_date: string; entry_date?: string; underlying_price_at_entry?: number | null; outcome_notes?: string | null;
+};
+export type LogCryptoArgs = {
+  symbol: string; strategy: ScalpStrategy; side: "long" | "short"; entry_px: number; size: number;
+  mode?: TradeMode; venue?: string; entry_ts?: string; fees?: number | null; stop_px?: number | null; target_px?: number | null;
+  r_planned?: number | null; slippage_modelled?: number | null; packet_id?: string | null; engine_signal_id?: string | null;
+  regime_at_entry?: Record<string, unknown> | null; session?: string | null; outcome_notes?: string | null;
+};
+
+export async function logTrade(
+  userId: string,
+  supabase: ServiceSupabase,
+  args: ({ asset_class?: "options" } & LogOptionArgs) | ({ asset_class: "crypto" } & LogCryptoArgs),
+  columns = "*",
+) {
+  if (args.asset_class === "crypto") {
+    const a = args;
+    const entryTs = a.entry_ts || new Date().toISOString();
+    const { data, error } = await supabase
+      .from("options_trades")
+      .insert({
+        user_id: userId,
+        ticker: assertValidTicker(a.symbol),
+        strategy: a.strategy,
+        asset_class: "crypto",
+        mode: a.mode ?? DEFAULT_MODE.crypto,
+        venue: a.venue ?? "binance-usdm",
+        side: a.side,
+        entry_ts: entryTs,
+        entry_date: entryTs.slice(0, 10),
+        entry_px: a.entry_px,
+        size: a.size,
+        fees: a.fees ?? null,
+        stop_px: a.stop_px ?? null,
+        target_px: a.target_px ?? null,
+        r_planned: a.r_planned ?? null,
+        slippage_modelled: a.slippage_modelled ?? null,
+        packet_id: a.packet_id ?? null,
+        engine_signal_id: a.engine_signal_id ?? null,
+        regime_at_entry: a.regime_at_entry ?? null,
+        session: a.session ?? null,
+        underlying_price_at_entry: a.entry_px,
+        outcome_notes: a.outcome_notes ?? null,
+        status: "open",
+      })
+      .select(columns)
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+  const a = args;
   const { data, error } = await supabase
     .from("options_trades")
     .insert({
       user_id: userId,
-      ticker: assertValidTicker(args.ticker),
-      strategy: args.strategy,
-      strike_price: args.strike_price,
-      premium: args.premium,
-      contracts: args.contracts ?? 1,
-      expiry_date: args.expiry_date,
-      entry_date: args.entry_date || new Date().toISOString().slice(0, 10),
-      underlying_price_at_entry: args.underlying_price_at_entry ?? null,
-      outcome_notes: args.outcome_notes ?? null,
+      ticker: assertValidTicker(a.ticker),
+      strategy: a.strategy,
+      strike_price: a.strike_price,
+      premium: a.premium,
+      contracts: a.contracts ?? 1,
+      expiry_date: a.expiry_date,
+      entry_date: a.entry_date || new Date().toISOString().slice(0, 10),
+      underlying_price_at_entry: a.underlying_price_at_entry ?? null,
+      outcome_notes: a.outcome_notes ?? null,
       status: "open",
     })
-    .select()
+    .select(columns)
     .single();
   if (error) throw new Error(error.message);
   return data;
 }
+
+/** Alias kept for the option-named tool. */
+export async function logOptionTrade(userId: string, supabase: ServiceSupabase, args: LogOptionArgs) {
+  return logTrade(userId, supabase, { ...args, asset_class: "options" }, OPTION_TRADE_COLUMNS);
+}
+
+export type ResolveOptionArgs = {
+  id: number; status: Exclude<JournalStatus, "open">; close_date?: string;
+  close_price?: number | null; underlying_price_at_close?: number | null; outcome_notes?: string | null;
+};
+export type ResolveCryptoArgs = {
+  id: number; exit_px: number; exit_ts?: string; exit_reason: "target" | "stop" | "time_stop" | "manual" | "risk" | "other";
+  fees?: number | null; funding?: number | null; slippage_realised?: number | null; mae?: number | null; mfe?: number | null;
+  outcome_notes?: string | null;
+};
 
 /**
  * Same arithmetic as the web journal's resolve: assigned and expired keep
  * the full credit, a buy-back keeps the difference; return on capital is
  * earned on the collateral; an assignment is judged on the position
  * (spot against strike minus premium), not on the option leg.
+ *
+ * A crypto row settles on its fill: P&L is the signed price move times size
+ * net of fees and funding, R is that P&L over the planned risk (entry to
+ * stop, times size), return on capital is on notional, annualised by hours.
  */
-export async function resolveOptionTrade(
+export async function resolveTrade(
   userId: string,
   supabase: ServiceSupabase,
-  args: {
-    id: number; status: Exclude<JournalStatus, "open">; close_date?: string;
-    close_price?: number | null; underlying_price_at_close?: number | null; outcome_notes?: string | null;
-  },
+  args: ({ asset_class?: "options" } & ResolveOptionArgs) | ({ asset_class: "crypto" } & ResolveCryptoArgs),
+  columns = "*",
 ) {
   const { data: t, error: readErr } = await supabase
     .from("options_trades")
@@ -787,36 +881,89 @@ export async function resolveOptionTrade(
   if (readErr) throw new Error(readErr.message);
   if (!t) throw new Error(`Trade ${args.id} not found`);
   if (t.status !== "open") throw new Error(`Trade ${args.id} is already ${t.status}`);
+  const rowClass: AssetClass = (t.asset_class as AssetClass) ?? "options";
+  const wantClass: AssetClass = args.asset_class ?? "options";
+  if (rowClass !== wantClass) throw new Error(`Trade ${args.id} is a ${rowClass} trade; resolve it as ${rowClass}`);
 
+  if (args.asset_class === "crypto") {
+    const a = args;
+    const sign = t.side === "short" ? -1 : 1;
+    const size = Number(t.size);
+    const entry = Number(t.entry_px);
+    const exitTs = a.exit_ts || new Date().toISOString();
+    const fees = a.fees ?? t.fees ?? 0;
+    const funding = a.funding ?? 0;
+    const gross = sign * (a.exit_px - entry) * size;
+    const realized = gross - Number(fees) - Number(funding);
+    const riskUsd = t.stop_px != null ? Math.abs(entry - Number(t.stop_px)) * size : null;
+    const rRealised = riskUsd && riskUsd > 0 ? realized / riskUsd : null;
+    const notional = entry * size;
+    const roc = notional > 0 ? realized / notional : null;
+    const hours = Math.max(1 / 60, (Date.parse(exitTs) - Date.parse(String(t.entry_ts))) / 3_600_000);
+    const { data, error } = await supabase
+      .from("options_trades")
+      .update({
+        status: "closed",
+        exit_ts: exitTs,
+        close_date: exitTs.slice(0, 10),
+        exit_px: a.exit_px,
+        underlying_price_at_close: a.exit_px,
+        exit_reason: a.exit_reason,
+        fees,
+        funding,
+        slippage_realised: a.slippage_realised ?? null,
+        mae: a.mae ?? null,
+        mfe: a.mfe ?? null,
+        realized_pnl: realized,
+        r_realised: rRealised,
+        return_on_capital: roc,
+        annualized_return: roc != null ? (roc * 365 * 24) / hours : null,
+        was_profitable: realized > 0,
+        outcome_notes: a.outcome_notes ?? t.outcome_notes ?? null,
+      })
+      .eq("id", args.id)
+      .eq("user_id", userId)
+      .select(columns)
+      .single();
+    if (error) throw new Error(error.message);
+    return data;
+  }
+
+  const a = args;
   const shares = Number(t.contracts) * 100;
   const credit = Number(t.premium) * shares;
-  const paidBack = (args.close_price ?? 0) * shares;
-  const realized = args.status === "closed" ? credit - paidBack : credit;
+  const paidBack = (a.close_price ?? 0) * shares;
+  const realized = a.status === "closed" ? credit - paidBack : credit;
   const capital = Number(t.strike_price) * shares;
-  const closeDate = args.close_date || new Date().toISOString().slice(0, 10);
+  const closeDate = a.close_date || new Date().toISOString().slice(0, 10);
   const days = Math.max(1, Math.round((Date.parse(closeDate) - Date.parse(String(t.entry_date))) / 86_400_000));
   const roc = capital > 0 ? realized / capital : null;
   const netBasis = Number(t.strike_price) - Number(t.premium);
-  const spot = args.underlying_price_at_close ?? null;
-  const profitable = args.status === "assigned" ? (spot != null ? spot >= netBasis : null) : realized > 0;
+  const spot = a.underlying_price_at_close ?? null;
+  const profitable = a.status === "assigned" ? (spot != null ? spot >= netBasis : null) : realized > 0;
 
   const { data, error } = await supabase
     .from("options_trades")
     .update({
-      status: args.status,
+      status: a.status,
       close_date: closeDate,
-      close_price: args.close_price ?? null,
+      close_price: a.close_price ?? null,
       underlying_price_at_close: spot,
       realized_pnl: realized,
       return_on_capital: roc,
       annualized_return: roc != null ? (roc * 365) / days : null,
       was_profitable: profitable,
-      outcome_notes: args.outcome_notes ?? t.outcome_notes ?? null,
+      outcome_notes: a.outcome_notes ?? t.outcome_notes ?? null,
     })
     .eq("id", args.id)
     .eq("user_id", userId)
-    .select()
+    .select(columns)
     .single();
   if (error) throw new Error(error.message);
   return data;
+}
+
+/** Alias kept for the option-named tool. */
+export async function resolveOptionTrade(userId: string, supabase: ServiceSupabase, args: ResolveOptionArgs) {
+  return resolveTrade(userId, supabase, { ...args, asset_class: "options" }, OPTION_TRADE_COLUMNS);
 }

@@ -6,16 +6,18 @@
  */
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import { market } from "@/lib/mcp/market";
+import { CRYPTO_MODULE_ENABLED } from "@/modules/crypto/flag";
 import { pooledMap } from "@/lib/util/pool";
 import { convert, inferCurrency, type Currency, type FxRates } from "@/lib/currency";
 import { computeBookRisk, logReturns, type PositionInput } from "@/lib/bookRisk";
-import { cohorts, gradeTrades, summarize, type LogRow, type TradeInput } from "@/lib/trackRecord";
+import { cohorts, gradeTrades, summarize, type LogRow, type TradeInput, gradeScalpTrades, scalpCohorts, aggregateScalps, composeScalpTrackReading, type ScalpTradeInput, type EngineSignalRow } from "@/lib/trackRecord";
 import { addDays, mergeEvents, scheduledEvents, weekOf, type CalEvent } from "@/lib/calendar/us";
 import { groupByQuadrant, relativeRotation, type Quadrant } from "@/lib/rotation";
 import {
   annotateInflation, closesOf, composeBookReading, composeSectorReading, composeTodayReading,
   composeTrackReading, composeWeekReading, joinList, KIND_LABEL,
   type DashboardPayload, type DigestPayload, type InflationPayload, type Scorecard, type SectorRow, type SectorWindow,
+  composeCryptoStrip, type CryptoToday,
 } from "@/lib/readings";
 
 type HistoryResponse = { data?: Array<Record<string, unknown>> };
@@ -24,11 +26,13 @@ const isoToday = () => new Date().toISOString().slice(0, 10);
 // ── Today ──────────────────────────────────────────────────────────────
 
 export async function readToday(detail: boolean) {
-  const [dash, digest] = await Promise.all([
+  const [dash, digest, cryptoToday] = await Promise.all([
     market.dashboard() as Promise<DashboardPayload>,
     (market.signalsToday() as Promise<DigestPayload>).catch(() => null),
+    // the crypto strip is best-effort: the equity reading never waits on the crypto box
+    CRYPTO_MODULE_ENABLED ? (market.cryptoToday() as Promise<CryptoToday>).catch(() => null) : Promise.resolve(null),
   ]);
-  const reading = composeTodayReading(dash, digest);
+  const reading = { ...composeTodayReading(dash, digest), crypto: CRYPTO_MODULE_ENABLED ? composeCryptoStrip(cryptoToday) : undefined };
   if (!detail) return reading;
   return {
     ...reading,
@@ -178,9 +182,10 @@ export async function readBookRisk(userId: string, supabase: ServiceSupabase, po
   const factors: Record<string, Record<string, number>> = {};
   for (const row of ranked?.ranked ?? []) if (row.factors) factors[row.ticker.toUpperCase()] = row.factors;
   const risk = computeBookRisk({ positions, returns, market: bench, factors });
+  const sleeve = CRYPTO_MODULE_ENABLED ? await paperCryptoSleeve(userId, supabase, risk.clusters.reduce((a, c) => a + (c.weight ?? 0), 0) > 0 ? positions.reduce((a, p) => a + p.value, 0) : 0).catch(() => null) : null;
   return {
     available: true,
-    reading: composeBookReading(risk),
+    reading: composeBookReading(risk) + (sleeve?.reading ? ` ${sleeve.reading}` : ""),
     currency,
     unconverted_lots: unconverted,
     names: risk.names,
@@ -193,7 +198,30 @@ export async function readBookRisk(userId: string, supabase: ServiceSupabase, po
     factor_tilt: risk.tilt,
     tilt_coverage: +risk.tiltCoverage.toFixed(2),
     threshold: risk.threshold,
+    // The paper crypto sleeve reported as its own bucket, never mixed into
+    // the live figures above: mode is a hard column.
+    sleeves: { live_book: { value: +positions.reduce((a, p) => a + p.value, 0).toFixed(2), names: risk.names }, crypto_paper: sleeve?.sleeve ?? null },
+    effective_bets_with_paper_sleeve: sleeve?.effectiveBetsWithSleeve ?? null,
   };
+}
+
+type PaperScalpRow = { ticker: string; side: string | null; entry_px: number | null; size: number | null; r_planned: number | null; stop_px: number | null };
+
+/** The open paper scalps as one bucket (long/short net notional in USD, planned risk), and what effective bets would be with it counted. */
+async function paperCryptoSleeve(userId: string, supabase: ServiceSupabase, liveBookValue: number) {
+  const { data } = await supabase.from("options_trades").select("ticker, side, entry_px, size, r_planned, stop_px")
+    .eq("user_id", userId).eq("asset_class", "crypto").eq("mode", "paper").eq("status", "open");
+  const rows = (data ?? []) as PaperScalpRow[];
+  const gross = rows.reduce((a, r) => a + Math.abs((r.entry_px ?? 0) * (r.size ?? 0)), 0);
+  const net = rows.reduce((a, r) => a + (r.side === "short" ? -1 : 1) * (r.entry_px ?? 0) * (r.size ?? 0), 0);
+  const riskUsd = rows.reduce((a, r) => a + (r.stop_px != null && r.entry_px != null && r.size != null ? Math.abs(r.entry_px - r.stop_px) * r.size : 0), 0);
+  const sleeve = { mode: "paper", open: rows.length, gross_notional: +gross.toFixed(2), net_notional: +net.toFixed(2), planned_risk_usd: +riskUsd.toFixed(2), symbols: [...new Set(rows.map((r) => r.ticker))].sort() };
+  if (!rows.length) return { sleeve, effectiveBetsWithSleeve: null, reading: "" };
+  const total = liveBookValue + gross;
+  const w = total > 0 ? gross / total : 1;
+  // one extra bet with weight w against a book treated as (1 - w) of concentrated weight: a floor on the effect
+  const bets = total > 0 && liveBookValue > 0 ? +(1 / (w * w + (1 - w) * (1 - w))).toFixed(2) : 1;
+  return { sleeve, effectiveBetsWithSleeve: bets, reading: `The paper crypto sleeve holds ${rows.length} open scalp${rows.length === 1 ? "" : "s"} (${sleeve.symbols.join(", ")}), ${gross.toFixed(0)} USD gross, kept as its own bucket.` };
 }
 
 // ── Quant ──────────────────────────────────────────────────────────────
@@ -280,5 +308,36 @@ export async function readTrackRecord(userId: string, supabase: ServiceSupabase,
       engine_pop: g.pop, agreement: g.agreement, hold_to_expiry_pnl: g.holdPnl, early_close_cost: g.earlyCloseCost, dte: g.dte,
     })),
     open_count: (trades ?? []).length - settled.length,
+  };
+}
+
+
+// ── Scalp track record (paper journal vs the engine's signals) ─────────
+
+export async function readScalpTrackRecord(userId: string, supabase: ServiceSupabase, strategy: string, mode: "live" | "paper" | "backtest") {
+  let q = supabase.from("options_trades").select("*").eq("user_id", userId).eq("asset_class", "crypto").eq("mode", mode).order("entry_ts", { ascending: false });
+  if (strategy !== "scalp") q = q.eq("strategy", strategy);
+  const { data: trades, error } = await q;
+  if (error) throw new Error(error.message);
+  const rows = (trades ?? []) as ScalpTradeInput[];
+  const [signals, engine] = await Promise.all([
+    (market.cryptoSignals("recent", 500) as Promise<{ signals?: EngineSignalRow[] }>).catch(() => null),
+    (market.scorecard(400, "crypto", mode) as Promise<Record<string, unknown>>).catch(() => null),
+  ]);
+  const graded = gradeScalpTrades(rows, signals?.signals ?? []);
+  const engineBlocks = engine ? { overall: engine.overall, by_strategy: engine.by_strategy, by_session: engine.by_session } : null;
+  return {
+    reading: composeScalpTrackReading(graded, engineBlocks as Record<string, never> | null, strategy),
+    strategy, mode, asset_class: "crypto",
+    summary: aggregateScalps(graded),
+    cohorts: scalpCohorts(graded),
+    engine: engineBlocks,
+    trades: graded.map((g) => ({
+      id: g.id, symbol: g.ticker, strategy: g.strategy, side: g.side, entry_ts: g.entry_ts, exit_ts: g.exit_ts, entry_px: g.entry_px, exit_px: g.exit_px,
+      size: g.size, r_planned: g.r_planned, r_realised: g.r_realised, realized_pnl: g.realized_pnl, exit_reason: g.exit_reason, session: g.session,
+      mae: g.mae, mfe: g.mfe, slippage_gap: g.slippageGap, won: g.won, engine_signal_id: g.engine_signal_id,
+      engine_outcome: g.engine?.outcome ?? null, engine_r: g.engineR, early_close_cost: g.earlyCloseCost, p_win_assumed: g.pWin,
+    })),
+    open_count: rows.filter((r) => r.status === "open").length,
   };
 }

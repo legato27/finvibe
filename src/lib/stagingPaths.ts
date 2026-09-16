@@ -143,6 +143,16 @@ export const PATH_FAMILIES: PathFamily[] = [
     timeoutMs: 45_000,
   },
   {
+    // Scalp desk, Today strip, signals, evidence packet, risk status: GET only,
+    // a minute old at most when live; the halt/resume POSTs are never staged.
+    pattern: /^\/api\/crypto-desk\/(today|scalp\/desk|signals|risk\/status|evidence\/[a-z0-9]+)$/i,
+    label: "scalp desk",
+    maxAge: 15 * MINUTE,
+    refreshAfter: 30_000,
+    sMaxAge: 30,
+    timeoutMs: 45_000,
+  },
+  {
     pattern: /^\/api\/crypto-desk\/coins\/[a-z0-9.-]+\/candles$/,
     label: "crypto candles",
     maxAge: 6 * HOUR,

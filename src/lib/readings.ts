@@ -213,3 +213,98 @@ export function composeTrackReading(graded: GradedTrade[], engine: Scorecard | n
   }
   return parts.join(" ");
 }
+
+
+// ── Crypto scalp family ────────────────────────────────────────────────
+// Composers for the scalp desk, the evidence packet and the Today strip.
+// Same rules as the rest of this file: pure, no fetching.
+
+export type ScalpDeskRow = {
+  symbol: string; setup: "A" | "B" | "C"; side: "long" | "short" | null; status: "fired" | "near" | "far";
+  met: number; total: number; conditions: Array<{ name: string; ok: boolean; detail: string }>;
+  gates: { passed: boolean; failed: string[] }; edge_bps: number | null; round_trip_bps: number | null;
+  confidence: number | null; levels: Record<string, unknown> | null; price: number | null; spread_bps: number | null;
+  regime: Record<string, string | null>; session: string; ts: number; score: number;
+};
+export type ScalpRisk = {
+  state: "active" | "paused" | "halted"; reason?: string | null; trading_allowed?: boolean;
+  budgets?: { sleeve_nav_usd: number; risk_per_trade_usd: number; max_daily_loss_r: number; max_trades_per_day: number; max_consecutive_losses: number };
+  today?: { trades_used: number; trades_remaining: number; realised_r: number; daily_loss_used_r: number; daily_loss_remaining_r: number; consecutive_losses: number; open_signals: number };
+};
+export type ScalpDesk = {
+  as_of: string | null; symbols: number; count: number; tiers: { fired: number; near: number; far: number };
+  gates?: Record<string, string>; risk: ScalpRisk; active_signals: Array<Record<string, unknown>>; rows: ScalpDeskRow[];
+};
+
+const SETUP_NAME: Record<string, string> = { A: "continuation", B: "flush fade", C: "funding reversion" };
+
+export function composeScalpDeskReading(desk: ScalpDesk): string {
+  const parts: string[] = [];
+  const st = desk.risk?.state ?? "active";
+  if (st !== "active") parts.push(`The scalp sleeve is ${st}${desk.risk?.reason ? ` (${desk.risk.reason})` : ""}; nothing new is recorded until it resumes.`);
+  const fired = desk.rows.filter((r) => r.status === "fired");
+  const near = desk.rows.filter((r) => r.status === "near");
+  if (fired.length) {
+    parts.push(`${fired.length === 1 ? "One setup fired" : `${fired.length} setups fired`} this minute: ${joinList(fired.slice(0, 4).map((r) => `${r.symbol} ${r.side} ${SETUP_NAME[r.setup] ?? r.setup}`))}.`);
+  } else if (near.length) {
+    const top = near[0];
+    const missing = top.conditions.find((c) => !c.ok);
+    parts.push(`Nothing fired. Closest is ${top.symbol} ${SETUP_NAME[top.setup] ?? top.setup} at ${top.met} of ${top.total} conditions${missing ? `, waiting on ${missing.name}${missing.detail ? ` (${missing.detail})` : ""}` : ""}.`);
+  } else {
+    parts.push("Nothing fired and nothing is close: every setup is missing most of its conditions.");
+  }
+  const t = desk.risk?.today;
+  if (t) parts.push(`Today: ${t.trades_used} of ${t.trades_used + t.trades_remaining} signals used, ${t.daily_loss_remaining_r.toFixed(1)}R of daily loss budget left, ${t.open_signals} open.`);
+  return parts.join(" ");
+}
+
+export type EvidencePacket = {
+  symbol: string; ts: number; as_of: string; price: number | null;
+  features: Record<string, number | null>; time: Record<string, unknown>;
+  regime: Record<string, string | null>; levels: Record<string, number | null>;
+  costs: Record<string, unknown>; data_quality: { gaps: Record<string, number>; staleness_s: Record<string, number | null> };
+};
+
+const HEADLINE_FEATURES = [
+  "cvd_session", "cvd_div_15m", "ofi_5lvl", "imb_top5", "spread_bps", "rv_gk_15m", "atr_5m", "atr_15m",
+  "oi_delta_1h", "oi_z_24h", "funding_bps", "funding_z_30d", "liq_long_usd_5m", "liq_short_usd_5m", "liq_burst",
+  "taker_ls_ratio", "top_trader_ls", "dist_to_cluster_bps",
+];
+
+/** The packet trimmed to what a reader acts on: regime, levels, costs, the headline features, data quality. */
+export function summarizePacket(p: Record<string, unknown>) {
+  const pk = p as unknown as EvidencePacket;
+  const f = pk.features ?? {};
+  return {
+    symbol: pk.symbol, as_of: pk.as_of, price: pk.price, available: true,
+    regime: pk.regime, time: pk.time, levels: pk.levels, costs: pk.costs,
+    features: Object.fromEntries(HEADLINE_FEATURES.filter((k) => k in f).map((k) => [k, f[k]])),
+    data_quality: pk.data_quality,
+  };
+}
+
+export type CryptoToday = {
+  as_of: string;
+  majors: Array<{ symbol: string; price: number | null; pam_1h?: string | null; pam_4h?: string | null; funding_regime?: string | null; oi_regime?: string | null; funding_z?: number | null }>;
+  funding_regime: string | null; oi_regime: string | null; btc_trend_1h: string | null;
+  liq_burst_minutes_24h: number; active_signals: Array<Record<string, unknown>>; signals_today: number;
+  paper_realised_r_today: number; risk: ScalpRisk;
+};
+
+const PAM_WORD: Record<string, string> = { UC: "trending up", DC: "trending down", UR: "at the range low", DR: "at the range high", RANGE: "ranging" };
+
+export function composeCryptoStrip(t: CryptoToday | null) {
+  if (!t) return { available: false, reading: "The crypto strip is not available: the box has not written a packet yet." };
+  const majors = t.majors.map((m) => `${m.symbol.replace("USDT", "")} ${PAM_WORD[m.pam_1h ?? ""] ?? "unread"} on 1h${m.pam_4h ? `, ${PAM_WORD[m.pam_4h] ?? m.pam_4h} on 4h` : ""}`);
+  const funding = t.funding_regime === "hot_long" ? "funding crowded long" : t.funding_regime === "hot_short" ? "funding crowded short" : "funding neutral";
+  const oi = t.oi_regime === "building" ? "OI building" : t.oi_regime === "unwinding" ? "OI unwinding" : "OI flat";
+  const risk = t.risk?.state && t.risk.state !== "active" ? ` The sleeve is ${t.risk.state}.` : "";
+  const reading = `${joinList(majors)}; ${funding}, ${oi}; ${t.liq_burst_minutes_24h} liquidation-burst minutes across the majors in 24h; ` +
+    `${t.active_signals.length} active signal${t.active_signals.length === 1 ? "" : "s"}, ${t.signals_today} today, paper ${t.paper_realised_r_today >= 0 ? "+" : ""}${t.paper_realised_r_today.toFixed(2)}R.${risk}`;
+  return {
+    available: true, reading, as_of: t.as_of, majors: t.majors, funding_regime: t.funding_regime, oi_regime: t.oi_regime,
+    btc_trend_1h: t.btc_trend_1h, liq_burst_minutes_24h: t.liq_burst_minutes_24h, active_signals: t.active_signals,
+    signals_today: t.signals_today, paper_realised_r_today: t.paper_realised_r_today,
+    risk_state: t.risk?.state ?? null, risk: t.risk,
+  };
+}

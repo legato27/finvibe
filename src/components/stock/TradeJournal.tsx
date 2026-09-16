@@ -33,6 +33,12 @@ import { NotebookPen, Plus, X } from "lucide-react";
 import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import Stat from "@/components/ui/Stat";
+import Chip from "@/components/ui/Chip";
+import { CRYPTO_MODULE_ENABLED } from "@/modules/crypto/flag";
+
+// Rows carry their family; mode is a column, never inferred (migration 025).
+const familyOf = (tr: OptionsTrade): "options" | "crypto" => tr.asset_class ?? "options";
+const SETUP_OF: Record<string, string> = { scalp_A: "A", scalp_B: "B", scalp_C: "C" };
 
 const STRATEGIES: OptionStrategy[] = [
   "cash_secured_put",
@@ -77,13 +83,33 @@ export default function TradeJournal({
 
   const [adding, setAdding] = useState(false);
   const [closingId, setClosingId] = useState<number | null>(null);
+  const [family, setFamily] = useState<"options" | "crypto">("options");
 
-  const open = (trades ?? []).filter((tr) => tr.status === "open");
-  const done = (trades ?? []).filter((tr) => tr.status !== "open");
+  // The family chip filters the rows; paper and live never mix because a
+  // crypto row is paper by construction until live crypto exists.
+  const all = trades ?? [];
+  const counts = { options: all.filter((tr) => familyOf(tr) === "options").length, crypto: all.filter((tr) => familyOf(tr) === "crypto").length };
+  const inFamily = all.filter((tr) => familyOf(tr) === family);
+  const open = inFamily.filter((tr) => tr.status === "open");
+  const done = inFamily.filter((tr) => tr.status !== "open");
+  const isCrypto = family === "crypto";
+
+  const cryptoStats = useMemo(() => {
+    const notional = open.reduce((a, tr) => a + Math.abs((tr.entry_px ?? 0) * (tr.size ?? 0)), 0);
+    const rs = done.map((tr) => tr.r_realised).filter((x): x is number => x != null);
+    const wins = done.filter((tr) => tr.was_profitable).length;
+    const early = done.filter((tr) => tr.exit_reason && !["target", "stop", "time_stop"].includes(tr.exit_reason)).length;
+    const gaps = done.map((tr) => (tr.slippage_realised != null && tr.slippage_modelled != null ? tr.slippage_realised - tr.slippage_modelled : null)).filter((x): x is number => x != null);
+    return {
+      notional, sumR: rs.reduce((a, b) => a + b, 0), nDone: done.length,
+      winRate: done.length ? wins / done.length : null, early,
+      slipGap: gaps.length ? gaps.reduce((a, b) => a + b, 0) / gaps.length : null,
+    };
+  }, [open, done]);
 
   const stats = useMemo(() => {
     const collateral = open.reduce(
-      (a, tr) => a + tr.strike_price * tr.contracts * 100, 0);
+      (a, tr) => a + (tr.strike_price ?? 0) * tr.contracts * 100, 0);
     const openCredit = open.reduce((a, tr) => a + tr.premium * tr.contracts * 100, 0);
     const realized = done.reduce((a, tr) => a + (tr.realized_pnl ?? 0), 0);
     const assigned = done.filter((tr) => tr.status === "assigned");
@@ -267,7 +293,19 @@ export default function TradeJournal({
     },
   ];
 
-  const hasTrades = (trades ?? []).length > 0;
+  const cryptoColumns: Column<OptionsTrade>[] = [
+    { key: "ticker", header: t("col.ticker"), sortable: true, sortValue: (tr) => tr.ticker, cell: (tr) => <span className="font-mono font-bold">{tr.ticker.replace("USDT", "")}</span> },
+    { key: "setup", header: t("col.setup"), sortable: true, sortValue: (tr) => tr.strategy, cell: (tr) => <span className="text-xs text-muted-foreground">{SETUP_OF[tr.strategy] ?? tr.strategy} · {tr.side ?? "—"} <Chip tone="plain">{t("paper")}</Chip></span> },
+    { key: "session", header: t("col.session"), hideBelow: "md", cell: (tr) => <span className="text-xs">{tr.session ?? "—"}</span> },
+    { key: "entry", header: t("col.strike"), align: "right", sortValue: (tr) => tr.entry_px ?? 0, cell: (tr) => <span className="nums">{tr.entry_px == null ? "—" : tr.entry_px.toLocaleString(undefined, { maximumFractionDigits: 4 })}{tr.exit_px != null ? <span className="text-muted-foreground"> → {tr.exit_px.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span> : null}</span> },
+    { key: "status", header: t("col.status"), cell: (tr) => <span className={`rounded-control border px-1.5 py-px text-[10px] font-semibold uppercase ${STATUS_STYLE[tr.status] ?? ""}`}>{tr.status === "open" ? t("status.open") : (tr.exit_reason ?? tr.status)}</span> },
+    { key: "r", header: t("col.r"), sortable: true, align: "right", sortValue: (tr) => tr.r_realised ?? 0, cell: (tr) => <span className={`nums font-semibold ${tr.r_realised == null ? "text-muted-foreground" : tr.r_realised > 0 ? "text-signal-long" : "text-signal-short"}`}>{tr.r_realised == null ? (tr.r_planned != null ? `plan ${tr.r_planned.toFixed(1)}R` : "—") : `${tr.r_realised >= 0 ? "+" : ""}${tr.r_realised.toFixed(2)}R`}</span> },
+    { key: "pnl", header: t("col.pnl"), sortable: true, align: "right", hideBelow: "md", sortValue: (tr) => tr.realized_pnl ?? 0, cell: (tr) => <span className="nums">{tr.realized_pnl == null ? "—" : usd(tr.realized_pnl)}</span> },
+    { key: "mae", header: t("col.mae"), align: "right", hideBelow: "lg", cell: (tr) => <span className="nums text-xs text-muted-foreground">{tr.mae == null && tr.mfe == null ? "—" : `${tr.mae?.toFixed(2) ?? "—"} / ${tr.mfe?.toFixed(2) ?? "—"}`}</span> },
+    { key: "slip", header: t("col.slip"), align: "right", hideBelow: "lg", optional: true, cell: (tr) => <span className="nums text-xs text-muted-foreground">{tr.slippage_realised != null && tr.slippage_modelled != null ? `${(tr.slippage_realised - tr.slippage_modelled) >= 0 ? "+" : ""}${(tr.slippage_realised - tr.slippage_modelled).toFixed(2)}` : "—"}</span> },
+  ];
+
+  const hasTrades = inFamily.length > 0;
 
   return (
     <Panel
@@ -287,7 +325,15 @@ export default function TradeJournal({
     >
       <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{t("lead")}</p>
 
-      {adding ? (
+      {CRYPTO_MODULE_ENABLED ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label={t("familyLabel")}>
+          {(["options", "crypto"] as const).map((f) => (
+            <Chip key={f} active={family === f} onClick={() => setFamily(f)}>{t(`family.${f}`)} {counts[f]}</Chip>
+          ))}
+        </div>
+      ) : null}
+
+      {adding && !isCrypto ? (
         <AddForm
           defaultStrategy={defaultStrategy}
           pending={addTrade.isPending}
@@ -298,8 +344,23 @@ export default function TradeJournal({
 
       {!hasTrades ? (
         <p className="rounded-control border border-dashed border-border p-4 text-sm text-muted-foreground">
-          {t("empty")}
+          {isCrypto ? t("cryptoEmpty") : t("empty")}
         </p>
+      ) : isCrypto ? (
+        <>
+          <div className="mb-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <Stat size="sm" label={t("stat.cryptoOpen")} value={String(open.length)} sub={t("stat.cryptoOpenSub", { notional: usd(cryptoStats.notional) })} />
+            <Stat size="sm" label={t("stat.cryptoR")} value={`${cryptoStats.sumR >= 0 ? "+" : ""}${cryptoStats.sumR.toFixed(2)}R`} sub={t("stat.cryptoRSub", { count: cryptoStats.nDone })} tone={cryptoStats.sumR > 0 ? "long" : cryptoStats.sumR < 0 ? "short" : "plain"} />
+            <Stat size="sm" label={t("stat.cryptoWon")} value={cryptoStats.winRate == null ? "—" : `${(cryptoStats.winRate * 100).toFixed(0)}%`} sub={t("stat.cryptoWonSub", { early: cryptoStats.early })} />
+            <Stat size="sm" label={t("stat.cryptoSlip")} value={cryptoStats.slipGap == null ? "—" : `${cryptoStats.slipGap >= 0 ? "+" : ""}${cryptoStats.slipGap.toFixed(2)}`} sub={t("stat.cryptoSlipSub")} />
+          </div>
+          <DataTable<OptionsTrade>
+            caption={t("tableCaption")}
+            columns={cryptoColumns}
+            rows={[...open, ...done]}
+            rowKey={(tr) => String(tr.id)}
+          />
+        </>
       ) : (
         <>
           <div className="mb-3 grid grid-cols-2 gap-4 sm:grid-cols-4">

@@ -956,7 +956,13 @@ export type OptionStrategy =
   | "cash_secured_put"
   | "covered_call"
   | "put_credit_spread"
-  | "call_credit_spread";
+  | "call_credit_spread"
+  | "scalp_A"
+  | "scalp_B"
+  | "scalp_C";
+
+export type TradeAssetClass = "options" | "crypto";
+export type TradeMode = "live" | "paper" | "backtest";
 
 export type TradeStatus = "open" | "closed" | "expired" | "assigned";
 
@@ -980,6 +986,32 @@ export interface OptionsTrade {
   outcome_notes: string | null;
   was_profitable: boolean | null;
   created_at: string;
+  // Strategy-family columns (migration 025). Options rows: options/live and
+  // the crypto columns null; crypto scalps carry the fill and its outcome.
+  asset_class?: TradeAssetClass;
+  mode?: TradeMode;
+  venue?: string | null;
+  side?: "long" | "short" | null;
+  entry_ts?: string | null;
+  exit_ts?: string | null;
+  entry_px?: number | null;
+  exit_px?: number | null;
+  size?: number | null;
+  fees?: number | null;
+  funding?: number | null;
+  slippage_modelled?: number | null;
+  slippage_realised?: number | null;
+  stop_px?: number | null;
+  target_px?: number | null;
+  r_planned?: number | null;
+  r_realised?: number | null;
+  mae?: number | null;
+  mfe?: number | null;
+  exit_reason?: string | null;
+  regime_at_entry?: Record<string, unknown> | null;
+  packet_id?: string | null;
+  engine_signal_id?: string | null;
+  session?: string | null;
 }
 
 export function useOptionsTrades() {

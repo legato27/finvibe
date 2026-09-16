@@ -461,7 +461,39 @@
     "futuresSettled": "settled {day} · rolls in {days}d",
     "futuresUnavailable": "no settlement available",
     "futuresTitle": "Contract {ticker}",
-    "futuresReading": "S&P futures settled {esChg} on {day}; Nasdaq futures {nqChg}. End-of-day settlement, not the overnight session."
+    "futuresReading": "S&P futures settled {esChg} on {day}; Nasdaq futures {nqChg}. End-of-day settlement, not the overnight session.",
+    "cryptoStrip": {
+      "label": "Crypto",
+      "loading": "Reading the crypto box…",
+      "unavailable": "The crypto box has not written a packet.",
+      "asOf": "as of",
+      "state": {
+        "active": "sleeve active",
+        "paused": "sleeve paused",
+        "halted": "sleeve halted"
+      },
+      "funding": {
+        "hot_long": "Crowded long",
+        "hot_short": "Crowded short",
+        "neutral": "Neutral"
+      },
+      "oi": {
+        "building": "OI building",
+        "unwinding": "OI unwinding",
+        "flat": "OI flat"
+      },
+      "stat": {
+        "funding": "Funding",
+        "fundingSub": "{oi}",
+        "bursts": "Burst minutes",
+        "burstsSub": "majors, last 24h",
+        "signals": "Active signals",
+        "signalsSub": "{today} today",
+        "paper": "Paper today",
+        "paperSub": "engine signals, R"
+      },
+      "openDesk": "Open the scalp desk →"
+    }
   },
   "errors": {
     "loadFailed": "Failed to load",
@@ -1938,7 +1970,9 @@
     "annAriaCsp": "Annualized return on cash collateral",
     "annAriaCc": "Annualized premium yield on the shares held",
     "crypto": "Crypto",
-    "cryptoCaption": "Bitcoin market maker"
+    "cryptoCaption": "Bitcoin market maker",
+    "scalp": "Scalp",
+    "scalpCaption": "Crypto setups A/B/C · paper"
   },
   "deskPanels": {
     "sizedBook": {
@@ -2053,7 +2087,15 @@
         "realisedSub": "{count} resolved",
         "won": "Won / assigned",
         "wonSub": "{count} assigned",
-        "wonSubRate": "{count} assigned ({pct}%)"
+        "wonSubRate": "{count} assigned ({pct}%)",
+        "cryptoOpen": "Open scalps",
+        "cryptoOpenSub": "paper · {notional} notional",
+        "cryptoR": "Realised R",
+        "cryptoRSub": "{count} settled",
+        "cryptoWon": "Won",
+        "cryptoWonSub": "{early} closed early",
+        "cryptoSlip": "Slippage gap",
+        "cryptoSlipSub": "realised − modelled, bps"
       },
       "tableCaption": "Logged option trades",
       "col": {
@@ -2064,7 +2106,13 @@
         "expiry": "Expiry",
         "status": "Status",
         "pnl": "P&L",
-        "ann": "Ann."
+        "ann": "Ann.",
+        "setup": "Setup",
+        "session": "Session",
+        "r": "R",
+        "mae": "MAE / MFE",
+        "slip": "Slippage gap",
+        "exitReason": "Exit"
       },
       "aria": {
         "pnl": "Profit and loss",
@@ -2110,7 +2158,14 @@
         "spotAtAssignment": "Spot at assignment",
         "record": "Record",
         "assignedNote": "You keep the ${credit} credit, and now hold {shares} shares at a net basis of ${basis}. This will not count as a win."
-      }
+      },
+      "family": {
+        "options": "Options",
+        "crypto": "Crypto scalps"
+      },
+      "familyLabel": "Family",
+      "paper": "paper",
+      "cryptoEmpty": "No crypto scalps in the journal yet. The paper broker (phase 5) writes them through log_trade; until then nothing is here."
     },
     "assignmentBacktest": {
       "label": "If I get assigned, can I live with it?",
@@ -2208,7 +2263,11 @@
         "won": "Won",
         "gap": "Gap"
       },
-      "footnote": "<strong>Gap</strong> is predicted probability of profit minus realised win rate, in points. Positive means the engine over-promised, which is the direction that matters: sizing is derived from the predicted number, so over-promising compounds into over-betting. <strong>Ann.</strong> is annualised return on collateral as the engine estimated it at entry, priced at mid — an upper bound, since the market-data plan returns no bid/ask."
+      "footnote": "<strong>Gap</strong> is predicted probability of profit minus realised win rate, in points. Positive means the engine over-promised, which is the direction that matters: sizing is derived from the predicted number, so over-promising compounds into over-betting. <strong>Ann.</strong> is annualised return on collateral as the engine estimated it at entry, priced at mid — an upper bound, since the market-data plan returns no bid/ask.",
+      "cryptoCohorts": "Crypto scalps",
+      "cryptoCohortsSub": "the scalp engine's signals graded at time-stop",
+      "paperBadge": "paper",
+      "cryptoNone": "no graded scalp signals yet"
     },
     "trackRecord": {
       "label": "You versus the engine",
@@ -2399,6 +2458,92 @@
       "high": "24h high",
       "low": "24h low",
       "volume": "24h volume"
-    }
+    },
+    "switchScalp": "Scalp"
+  },
+  "scalp": {
+    "title": "Scalp desk",
+    "subtitle": "Binance USDⓈ-M setups A/B/C on the phase 2 features · paper until live crypto exists · nothing here places an order",
+    "deskSwitch": "Desk",
+    "switchPuts": "Sell puts",
+    "switchCalls": "Covered calls",
+    "switchCrypto": "Crypto",
+    "switchScalp": "Scalp",
+    "loading": "Reading the box…",
+    "unavailable": "The box did not answer and there is no recent snapshot.",
+    "asOf": "as of",
+    "riskLabel": "The sleeve",
+    "riskReading": {
+      "active": "Trading: the engine records a signal when a setup fires and the gates pass.",
+      "paused": "Paused by the risk manager: {reason}. Resume when you have read why.",
+      "halted": "Halted: {reason}. Nothing is recorded until you resume."
+    },
+    "state": {
+      "active": "Active",
+      "paused": "Paused",
+      "halted": "Halted"
+    },
+    "stat": {
+      "state": "State",
+      "stateSince": "since {since} UTC",
+      "stateAlways": "no halt on record",
+      "nav": "Sleeve NAV",
+      "navSub": "${risk} risk per trade",
+      "loss": "Daily loss used",
+      "lossSub": "of {max}R",
+      "trades": "Signals today",
+      "tradesSub": "{open} open",
+      "streak": "Consecutive losses",
+      "streakSub": "pauses at {max}"
+    },
+    "haltReasonPlaceholder": "Why halt? (kept with the state)",
+    "haltDefaultReason": "halted from the desk",
+    "haltButton": "Halt the sleeve",
+    "resumeButton": "Resume",
+    "haltConfirmTitle": "Halt the scalp sleeve?",
+    "haltConfirmBody": "The engine stops recording new signals until you resume. Reason: {reason}",
+    "haltConfirm": "Halt",
+    "actionFailed": "The box did not accept the change.",
+    "deskLabel": "Setups, ranked",
+    "deskQualifier": "{symbols} symbols × 3 setups at the newest minute",
+    "deskReading": "{fired} fired, {near} within reach. Hard gates first, then how many of the setup's conditions hold.",
+    "tier": {
+      "all": "All",
+      "fired": "Fired",
+      "near": "Near",
+      "far": "Far"
+    },
+    "side": {
+      "long": "Long",
+      "short": "Short"
+    },
+    "setupA": "A · continuation",
+    "setupB": "B · flush fade",
+    "setupC": "C · funding reversion",
+    "col": {
+      "symbol": "Symbol",
+      "setup": "Setup",
+      "status": "Status",
+      "side": "Side",
+      "price": "Price",
+      "edge": "Edge bps",
+      "levels": "Entry / stop / target",
+      "gates": "Gates",
+      "waiting": "Waiting on",
+      "entry": "Entry",
+      "stop": "Stop",
+      "target": "Target",
+      "r": "R",
+      "timeStop": "Time-stop"
+    },
+    "gatesOk": "pass",
+    "allConditions": "all conditions hold",
+    "tableCaption": "Every symbol and setup at the newest minute",
+    "empty": "No rows in this tier.",
+    "gatesLabel": "What the gates are",
+    "signalsLabel": "Active signals",
+    "signalsQualifier": "{count} inside their time-stop",
+    "signalsCaption": "Signals the engine recorded that are still inside their time-stop",
+    "signalsEmpty": "No active signals. The engine writes one when a setup fires and the gates pass; each is graded at its time-stop."
   }
 }

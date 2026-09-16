@@ -606,9 +606,14 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "the calibration gap, overall and by strategy, model agreement, agreement within a strategy, and days to " +
       "expiry. `coverage` says what the window actually spans: tracking began 2026-06, so until the log is " +
       "older than the window every window returns the same rows.",
-    params: [{ name: "window_days", type: "integer", required: false, description: "Grading window. Default 400." }],
+    params: [
+      { name: "window_days", type: "integer", required: false, description: "Grading window. Default 400." },
+      { name: "asset_class", type: "string", required: false, description: "options (default) | crypto. Crypto grades the scalp engine's signals at time-stop or exit: cohorts by strategy (scalp_A/B/C), session, symbol and side, with fill rate and the calibration gap between the gate's p_win_assumed and realised wins." },
+      { name: "mode", type: "string", required: false, description: "live | paper | backtest. Never inferred: options default to live, crypto to paper." },
+    ],
     returns:
-      "{ window_days, coverage, overall, by_strategy, by_agreement, by_strategy_agreement, by_dte, latest_review }",
+      "options: { window_days, coverage, overall, by_strategy, by_agreement, by_strategy_agreement, by_dte, latest_review }; " +
+      "crypto: { window_days, asset_class, mode, coverage, overall, by_strategy, by_session, by_symbol, by_side, by_strategy_session }",
   },
   {
     name: "get_track_record",
@@ -618,16 +623,73 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "The token's settled option trades graded beside the engine: your win rate against the engine's on the " +
       "same strategy, what closing early saved or cost against holding to expiry, the calibration gap on the " +
       "trades the engine priced, and cohorts by strategy, agreement and days to expiry.",
-    params: [{ name: "strategy", type: "string", required: false, description: "csp | covered_call, for the engine comparison. Default csp." }],
+    params: [
+      { name: "strategy", type: "string", required: false, description: "csp | covered_call | scalp | scalp_A | scalp_B | scalp_C. Default csp. The scalp strategies grade your paper scalp trades beside the engine's signals, including what closing early saved or cost against holding to the time-stop." },
+      { name: "mode", type: "string", required: false, description: "For scalp strategies: live | paper | backtest. Default paper." },
+    ],
     returns: "{ reading, summary, cohorts, engine, trades[], open_count }",
   },
 
   // ── Journal ──────────────────────────────────────────────
   {
+    name: "list_trades",
+    group: "Journal",
+    title: "List journal trades (any family)",
+    description:
+      "The token's trade journal for one strategy family: options or crypto scalps. mode is never inferred — " +
+      "options default to live, crypto to paper — so paper and live rows are never mixed. Open first, then settled.",
+    params: [
+      { name: "asset_class", type: "string", required: false, description: "options (default) | crypto." },
+      { name: "strategy", type: "string", required: false, description: "cash_secured_put | covered_call | put_credit_spread | call_credit_spread | scalp_A | scalp_B | scalp_C." },
+      { name: "mode", type: "string", required: false, description: "live | paper | backtest. Default live for options, paper for crypto." },
+      { name: "status", type: "string", required: false, description: "open | closed | expired | assigned." },
+      { name: "ticker", type: "string", required: false, description: "Ticker or perp symbol (BTCUSDT)." },
+      { name: "limit", type: "integer", required: false, description: "Default 100." },
+    ],
+    returns: "options_trades rows (both families' columns; unused ones null)",
+  },
+  {
+    name: "log_trade",
+    group: "Journal",
+    title: "Log a trade (any family)",
+    description:
+      "Record a trade in the shared journal. asset_class options takes the option fields (ticker, strategy, strike, " +
+      "premium, expiry); asset_class crypto takes a scalp fill (symbol, scalp_A/B/C, side, entry_px, size) with mode " +
+      "(default paper), venue, fees, stop and target, planned R, modelled slippage, the evidence packet_id, the " +
+      "engine_signal_id it followed and the regime at entry. The paper broker calls this. Nothing here places an order.",
+    params: [
+      { name: "asset_class", type: "string", required: true, description: "options | crypto" },
+      { name: "strategy", type: "string", required: true, description: "option strategy or scalp_A | scalp_B | scalp_C" },
+      { name: "ticker / strike_price / premium / expiry_date", type: "…", required: false, description: "Required for options (as log_option_trade)." },
+      { name: "symbol / side / entry_px / size", type: "…", required: false, description: "Required for crypto." },
+      { name: "mode", type: "string", required: false, description: "live | paper | backtest. Default paper for crypto." },
+      { name: "stop_px, target_px, r_planned, fees, slippage_modelled, packet_id, engine_signal_id, regime_at_entry, session, entry_ts, venue, outcome_notes", type: "…", required: false },
+    ],
+    returns: "The new options_trades row.",
+  },
+  {
+    name: "resolve_trade",
+    group: "Journal",
+    title: "Resolve a trade (any family)",
+    description:
+      "Settle a journal row. Options: expired / assigned / closed with the web journal's arithmetic. Crypto: the exit " +
+      "fill (exit_px, exit_reason target | stop | time_stop | manual | risk) with fees, funding, realised slippage, MAE " +
+      "and MFE; P&L is the signed move times size net of costs, R is P&L over the planned risk to the stop, return is on " +
+      "notional and annualised by hours.",
+    params: [
+      { name: "asset_class", type: "string", required: true, description: "options | crypto" },
+      { name: "id", type: "integer", required: true },
+      { name: "status / close_date / close_price / underlying_price_at_close", type: "…", required: false, description: "Options (as resolve_option_trade)." },
+      { name: "exit_px / exit_reason / exit_ts / fees / funding / slippage_realised / mae / mfe", type: "…", required: false, description: "Crypto." },
+      { name: "outcome_notes", type: "string", required: false },
+    ],
+    returns: "The updated options_trades row.",
+  },
+  {
     name: "list_option_trades",
     group: "Journal",
     title: "List journal trades",
-    description: "The token's option trade journal: open first, then settled, newest expiry first.",
+    description: "The token's option trade journal: open first, then settled, newest expiry first. Alias of list_trades with asset_class options, mode live, original columns.",
     params: [
       { name: "status", type: "string", required: false, description: "open | closed | expired | assigned." },
       { name: "ticker", type: "string", required: false },
@@ -641,7 +703,7 @@ export const TOOL_CATALOG: ToolDoc[] = [
     title: "Log an option trade",
     description:
       "Record a trade you placed elsewhere: short put, covered call or a credit spread, with strike, premium " +
-      "received per share, contracts and expiry. Nothing here places an order.",
+      "received per share, contracts and expiry. Nothing here places an order. Alias of log_trade with asset_class options.",
     params: [
       { name: "ticker", type: "string", required: true },
       { name: "strategy", type: "string", required: true, description: "cash_secured_put | covered_call | put_credit_spread | call_credit_spread" },
@@ -661,7 +723,7 @@ export const TOOL_CATALOG: ToolDoc[] = [
     title: "Resolve a journal trade",
     description:
       "Close a trade as expired, assigned or bought back, with the same arithmetic the web journal uses: " +
-      "realised P&L, return on collateral, annualised return, and whether it was profitable.",
+      "realised P&L, return on collateral, annualised return, and whether it was profitable. Alias of resolve_trade with asset_class options.",
     params: [
       { name: "id", type: "integer", required: true },
       { name: "status", type: "string", required: true, description: "closed | expired | assigned" },
@@ -682,8 +744,11 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "The crypto desk's composed reading: Bitcoin price and day change from Binance, the market-maker setup " +
       "(type, bias, confidence, entry zone, stop, targets, invalidation), the premium-or-discount zone and the " +
       "session clock, plus the liquidity map (pools, order blocks, fair-value gaps). Nothing places an order.",
-    params: [{ name: "timeframe", type: "string", required: false, description: "1h | 4h | 1d | 1w. Default 4h." }],
-    returns: "{ reading, price, session, setup, premium_discount, counts, liquidity, as_of }",
+    params: [
+      { name: "timeframe", type: "string", required: false, description: "1h | 4h | 1d | 1w. Default 4h." },
+      { name: "symbol", type: "string", required: false, description: "Perp symbol or BTC-USD form for the evidence packet. Default BTCUSDT." },
+    ],
+    returns: "{ reading, price, session, setup, premium_discount, counts, liquidity, as_of, evidence: { symbol, as_of, price, regime, levels, costs, features (headline), data_quality } }",
   },
   {
     name: "get_crypto_tickers",
@@ -694,6 +759,46 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "for any coins passed as yfinance-style symbols such as BTC-USD.",
     params: [{ name: "symbols", type: "string[]", required: false, description: "Up to 50 symbols. Default: the token's crypto watchlist names." }],
     returns: "{ as_of, source, tickers: { <symbol>: {...} }, missing[] }",
+  },
+  {
+    name: "get_scalp_desk",
+    group: "Crypto",
+    title: "The scalp desk",
+    description:
+      "Every symbol × setup (A continuation, B sweep-and-reclaim fade, C funding reversion) at the newest minute, " +
+      "ranked: fired first, then by how many of the setup's conditions hold, with each condition's verdict, the " +
+      "gates passed or failed (spread cap, fresh book, funding blackout, positive expected edge), the levels and net " +
+      "edge it would sign, the active signals and the risk budget remaining today. Same shape philosophy as the " +
+      "options desk: hard gates, then a score.",
+    params: [
+      { name: "symbol", type: "string", required: false, description: "One perp symbol (BTCUSDT or BTC-USD). Default: the whole universe." },
+      { name: "limit", type: "integer", required: false, description: "Rows returned. Default 40." },
+    ],
+    returns: "{ reading, as_of, symbols, count, tiers: { fired, near, far }, gates, risk, active_signals[], rows[] }",
+  },
+  {
+    name: "crypto_risk_status",
+    group: "Crypto",
+    title: "Scalp risk-manager state",
+    description: "active / paused / halted, the sleeve's budgets (NAV, per-trade risk, daily loss, trades per day, consecutive losses) and today's usage from the paper signal log.",
+    params: [],
+    returns: "{ state, reason, since, by, budgets, today: { trades_used, trades_remaining, realised_r, daily_loss_used_r, daily_loss_remaining_r, consecutive_losses, open_signals }, trading_allowed, as_of }",
+  },
+  {
+    name: "crypto_halt",
+    group: "Crypto",
+    title: "Halt the scalp sleeve",
+    description: "Stop the engine recording new scalp signals until crypto_resume. The reason is kept with the state. One of the family's three mutating tools.",
+    params: [{ name: "reason", type: "string", required: true }],
+    returns: "The risk status after the halt.",
+  },
+  {
+    name: "crypto_resume",
+    group: "Crypto",
+    title: "Resume the scalp sleeve",
+    description: "Clear a halt or an automatic pause; the engine records signals again from the next minute.",
+    params: [],
+    returns: "The risk status after resuming.",
   },
 ];
 
@@ -724,6 +829,10 @@ export const SCOPE_LABELS: Record<McpScope, string> = {
 export const WRITE_USER_TOOLS = new Set<string>([
   "log_option_trade",
   "resolve_option_trade",
+  "log_trade",
+  "resolve_trade",
+  "crypto_halt",
+  "crypto_resume",
   "create_watchlist",
   "delete_watchlist",
   "add_to_watchlist",

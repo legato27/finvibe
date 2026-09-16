@@ -505,17 +505,132 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
 
   reg(
     "get_engine_scorecard",
-    { ...meta("get_engine_scorecard"), inputSchema: { window_days: z.number().int().min(30).max(2000).optional() } },
-    async (args) => ok(await market.scorecard(args.window_days ?? 400)),
+    {
+      ...meta("get_engine_scorecard"),
+      inputSchema: {
+        window_days: z.number().int().min(30).max(2000).optional(),
+        asset_class: z.enum(["options", "crypto"]).optional(),
+        mode: z.enum(["live", "paper", "backtest"]).optional(),
+      },
+    },
+    // mode is never inferred: options default to live, crypto to paper (the backend applies the same defaults).
+    async (args) => ok(await market.scorecard(args.window_days ?? 400, args.asset_class ?? "options", args.mode)),
   );
 
   reg(
     "get_track_record",
-    { ...meta("get_track_record"), inputSchema: { strategy: z.enum(["csp", "covered_call"]).optional() } },
-    async (args) => ok(await readings.readTrackRecord(ctx.userId, ctx.supabase, args.strategy ?? "csp")),
+    { ...meta("get_track_record"), inputSchema: { strategy: z.enum(["csp", "covered_call", "scalp", "scalp_A", "scalp_B", "scalp_C"]).optional(), mode: z.enum(["live", "paper", "backtest"]).optional() } },
+    async (args) => {
+      const strategy = args.strategy ?? "csp";
+      if (strategy.startsWith("scalp")) return ok(await readings.readScalpTrackRecord(ctx.userId, ctx.supabase, strategy, args.mode ?? "paper"));
+      return ok(await readings.readTrackRecord(ctx.userId, ctx.supabase, strategy as "csp" | "covered_call"));
+    },
   );
 
   // ── Journal ──────────────────────────────────────────────
+  // Generalised tools (asset_class options | crypto). The option-named tools
+  // below stay as thin aliases with their original payloads.
+  const scalpStrategy = z.enum(["scalp_A", "scalp_B", "scalp_C"]);
+  const isoTs = z.string().min(10);
+  reg(
+    "list_trades",
+    {
+      ...meta("list_trades"),
+      inputSchema: {
+        asset_class: z.enum(["options", "crypto"]).optional(),
+        strategy: z.string().min(1).optional(),
+        mode: z.enum(["live", "paper", "backtest"]).optional(),
+        status: z.enum(["open", "closed", "expired", "assigned"]).optional(),
+        ticker: z.string().min(1).optional(),
+        limit: z.number().int().min(1).max(500).optional(),
+      },
+    },
+    async (args) => ok(await db.listTrades(ctx.userId, ctx.supabase, args)),
+  );
+
+  reg(
+    "log_trade",
+    {
+      ...meta("log_trade"),
+      inputSchema: {
+        asset_class: z.enum(["options", "crypto"]),
+        // options
+        ticker: z.string().min(1).optional(),
+        strategy: z.string().min(1),
+        strike_price: z.number().positive().optional(),
+        premium: z.number().positive().optional(),
+        expiry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD").optional(),
+        contracts: z.number().int().positive().optional(),
+        entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD").optional(),
+        underlying_price_at_entry: z.number().positive().optional(),
+        // crypto
+        symbol: z.string().min(3).optional(),
+        side: z.enum(["long", "short"]).optional(),
+        entry_px: z.number().positive().optional(),
+        size: z.number().positive().optional(),
+        mode: z.enum(["live", "paper", "backtest"]).optional(),
+        venue: z.string().min(1).optional(),
+        entry_ts: isoTs.optional(),
+        fees: z.number().min(0).optional(),
+        stop_px: z.number().positive().optional(),
+        target_px: z.number().positive().optional(),
+        r_planned: z.number().optional(),
+        slippage_modelled: z.number().optional(),
+        packet_id: z.string().optional(),
+        engine_signal_id: z.string().optional(),
+        regime_at_entry: z.record(z.string(), z.unknown()).optional(),
+        session: z.string().optional(),
+        outcome_notes: z.string().optional(),
+      },
+    },
+    async (args) => {
+      if (args.asset_class === "crypto") {
+        const missing = ["symbol", "side", "entry_px", "size"].filter((k) => (args as Record<string, unknown>)[k] == null);
+        if (missing.length) throw new Error(`crypto trade needs ${missing.join(", ")}`);
+        const strategy = scalpStrategy.parse(args.strategy);
+        return ok(await db.logTrade(ctx.userId, ctx.supabase, { ...args, asset_class: "crypto", strategy, symbol: args.symbol!, side: args.side!, entry_px: args.entry_px!, size: args.size! }));
+      }
+      const missing = ["ticker", "strike_price", "premium", "expiry_date"].filter((k) => (args as Record<string, unknown>)[k] == null);
+      if (missing.length) throw new Error(`options trade needs ${missing.join(", ")}`);
+      const strategy = z.enum(["cash_secured_put", "covered_call", "put_credit_spread", "call_credit_spread"]).parse(args.strategy);
+      return ok(await db.logTrade(ctx.userId, ctx.supabase, { ...args, asset_class: "options", strategy, ticker: args.ticker!, strike_price: args.strike_price!, premium: args.premium!, expiry_date: args.expiry_date! }));
+    },
+  );
+
+  reg(
+    "resolve_trade",
+    {
+      ...meta("resolve_trade"),
+      inputSchema: {
+        asset_class: z.enum(["options", "crypto"]),
+        id: z.number().int().positive(),
+        // options
+        status: z.enum(["closed", "expired", "assigned"]).optional(),
+        close_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "YYYY-MM-DD").optional(),
+        close_price: z.number().min(0).optional(),
+        underlying_price_at_close: z.number().positive().optional(),
+        // crypto
+        exit_px: z.number().positive().optional(),
+        exit_ts: isoTs.optional(),
+        exit_reason: z.enum(["target", "stop", "time_stop", "manual", "risk", "other"]).optional(),
+        fees: z.number().min(0).optional(),
+        funding: z.number().optional(),
+        slippage_realised: z.number().optional(),
+        mae: z.number().optional(),
+        mfe: z.number().optional(),
+        outcome_notes: z.string().optional(),
+      },
+    },
+    async (args) => {
+      if (args.asset_class === "crypto") {
+        if (args.exit_px == null || !args.exit_reason) throw new Error("crypto resolve needs exit_px and exit_reason");
+        return ok(await db.resolveTrade(ctx.userId, ctx.supabase, { ...args, asset_class: "crypto", exit_px: args.exit_px, exit_reason: args.exit_reason }));
+      }
+      if (!args.status) throw new Error("options resolve needs status");
+      return ok(await db.resolveTrade(ctx.userId, ctx.supabase, { ...args, asset_class: "options", status: args.status }));
+    },
+  );
+
   reg(
     "list_option_trades",
     {

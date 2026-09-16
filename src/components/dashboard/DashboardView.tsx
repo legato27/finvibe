@@ -19,6 +19,7 @@ import { ThisWeekPanel } from "@/components/dashboard/ThisWeekPanel";
 import { SectorHeatmapCard } from "@/components/dashboard/SectorHeatmapCard";
 import { SectorRotationHeatmap } from "@/components/dashboard/SectorRotationHeatmap";
 import { CryptoIndicators } from "@/components/dashboard/CryptoIndicators";
+import CryptoStrip from "@/components/dashboard/CryptoStrip";
 import { RealtimeNewsFeed } from "@/components/shared/RealtimeNewsFeed";
 import { MarketTickerTape } from "@/components/dashboard/MarketTickerTape";
 
@@ -103,6 +104,8 @@ export function DashboardView() {
           <SectorRotationHeatmap />
 
           <CryptoIndicators />
+
+          <CryptoStrip />
         </div>
       </div>
 
