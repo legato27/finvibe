@@ -97,6 +97,7 @@ interface DeskRow {
   iv_n_days: number | null;
   expected_move_30d_pct: number | null;
   summary_date: string | null;
+  summary_at: string | null;
 
   strike: number | null;
   strike_oi: number | null;
@@ -177,8 +178,14 @@ export default function OptionDeskPage() {
     if (s === "covered_call" || s === "csp") setStrategy(s);
   }, []);
 
+  // Freshness from when the summary was written, not its UTC date: the
+  // snapshot lands at ~21:38 UTC (05:38 SGT), and dating it by snap_date
+  // read "updated yesterday" every evening for data a few hours old.
   const deskAsOf = allRows.reduce<string | null>(
-    (max, r) => (r.summary_date && (!max || r.summary_date > max) ? r.summary_date : max),
+    (max, r) => {
+      const at = r.summary_at ?? r.summary_date;
+      return at && (!max || at > max) ? at : max;
+    },
     null,
   );
 
