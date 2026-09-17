@@ -118,12 +118,13 @@ export function ScalpDeskPage() {
         <Segmented
           ariaLabel={t("deskSwitch")}
           value="scalp"
-          onChange={(v) => { if (v === "crypto") router.push("/desk/crypto"); else if (v !== "scalp") router.push(`/desk?strategy=${v}`); }}
+          onChange={(v) => { if (v === "crypto") router.push("/desk/crypto"); else if (v === "journal") router.push("/desk/journal"); else if (v !== "scalp") router.push(`/desk?strategy=${v}`); }}
           options={[
             { value: "csp", label: t("switchPuts") },
             { value: "covered_call", label: t("switchCalls") },
             { value: "crypto", label: t("switchCrypto") },
             { value: "scalp", label: t("switchScalp") },
+            { value: "journal", label: t("switchJournal") },
           ]}
         />
       </header>

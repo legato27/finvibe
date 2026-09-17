@@ -58,12 +58,13 @@ export function CryptoDeskPage() {
         <Segmented
           ariaLabel={t("deskSwitch")}
           value="crypto"
-          onChange={(v) => { if (v === "scalp") router.push("/desk/scalp"); else if (v !== "crypto") router.push(`/desk?strategy=${v}`); }}
+          onChange={(v) => { if (v === "scalp") router.push("/desk/scalp"); else if (v === "journal") router.push("/desk/journal"); else if (v !== "crypto") router.push(`/desk?strategy=${v}`); }}
           options={[
             { value: "csp", label: t("switchPuts") },
             { value: "covered_call", label: t("switchCalls") },
             { value: "crypto", label: t("switchCrypto") },
             { value: "scalp", label: t("switchScalp") },
+            { value: "journal", label: t("switchJournal") },
           ]}
         />
       </header>

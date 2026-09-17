@@ -586,13 +586,15 @@ export default function OptionDeskPage() {
           <Segmented
             ariaLabel={t("strategyLabel")}
             value={strategy}
-            onChange={(v) => { if ((v as string) === "crypto") { router.push("/desk/crypto"); return; } if ((v as string) === "scalp") { router.push("/desk/scalp"); return; } setStrategy(v as Strategy); }}
+            onChange={(v) => { if ((v as string) === "crypto") { router.push("/desk/crypto"); return; } if ((v as string) === "scalp") { router.push("/desk/scalp"); return; } if ((v as string) === "journal") { router.push("/desk/journal"); return; } setStrategy(v as Strategy); }}
             options={[
               { value: "csp", label: <span className="flex flex-col items-start leading-tight"><span>{t("sellPuts")}</span><span className="text-[10px] font-normal opacity-70">{t("sellPutsCaption")}</span></span> },
               { value: "covered_call", label: <span className="flex flex-col items-start leading-tight"><span>{t("coveredCalls")}</span><span className="text-[10px] font-normal opacity-70">{t("coveredCallsCaption")}</span></span> },
               // Crypto module (src/modules/crypto): a third choice that is its own route.
               ...(CRYPTO_MODULE_ENABLED ? [{ value: "crypto" as const, label: <span className="flex flex-col items-start leading-tight"><span>{t("crypto")}</span><span className="text-[10px] font-normal opacity-70">{t("cryptoCaption")}</span></span> }] : []),
     ...(CRYPTO_MODULE_ENABLED ? [{ value: "scalp" as const, label: <span className="flex flex-col items-start leading-tight"><span>{t("scalp")}</span><span className="text-[10px] font-normal opacity-70">{t("scalpCaption")}</span></span> }] : []),
+              // The journal as a page of its own: every family, with its activity.
+              { value: "journal" as const, label: <span className="flex flex-col items-start leading-tight"><span>{t("journal")}</span><span className="text-[10px] font-normal opacity-70">{t("journalCaption")}</span></span> },
             ]}
           />
         </div>

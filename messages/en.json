@@ -1972,7 +1972,9 @@
     "crypto": "Crypto",
     "cryptoCaption": "Bitcoin market maker",
     "scalp": "Scalp",
-    "scalpCaption": "Crypto setups A/B/C · paper"
+    "scalpCaption": "Crypto setups A/B/C · paper",
+    "journal": "Journal",
+    "journalCaption": "Every trade, every family"
   },
   "deskPanels": {
     "sizedBook": {
@@ -2478,7 +2480,8 @@
       "low": "24h low",
       "volume": "24h volume"
     },
-    "switchScalp": "Scalp"
+    "switchScalp": "Scalp",
+    "switchJournal": "Journal"
   },
   "scalp": {
     "title": "Scalp desk",
@@ -2583,6 +2586,19 @@
         "exits": "Target / stop / time",
         "gap": "Gap pts"
       }
-    }
+    },
+    "switchJournal": "Journal"
+  },
+  "journalPage": {
+    "title": "Trade journal",
+    "subtitle": "Every trade you logged and every trade the paper broker executed, one family per section, each stamped to the minute. The desks keep a journal for the family they trade; this is the whole book.",
+    "deskSwitch": "Desk",
+    "switchPuts": "Sell puts",
+    "switchCalls": "Covered calls",
+    "switchCrypto": "Crypto",
+    "switchScalp": "Scalp",
+    "switchJournal": "Journal",
+    "optionsSection": "Options journal",
+    "cryptoSection": "Crypto scalps journal"
   }
 }
