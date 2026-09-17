@@ -863,8 +863,12 @@ export type ResolveCryptoArgs = {
  * (spot against strike minus premium), not on the option leg.
  *
  * A crypto row settles on its fill: P&L is the signed price move times size
- * net of fees and funding, R is that P&L over the planned risk (entry to
- * stop, times size), return on capital is on notional, annualised by hours.
+ * net of fees and funding, R is that P&L over the planned loss all in (entry
+ * to stop, times size, plus the fees), return on capital is on notional,
+ * annualised by hours. Fees sit in the R denominator because on a scalp
+ * they are a large share of the risk (up to 86% on 2026-09-17): over the
+ * stop distance alone a stop-out read −1.9R on a trade that lost exactly
+ * its budget. The paper broker on the box uses the same arithmetic.
  */
 export async function resolveTrade(
   userId: string,
@@ -895,7 +899,7 @@ export async function resolveTrade(
     const funding = a.funding ?? 0;
     const gross = sign * (a.exit_px - entry) * size;
     const realized = gross - Number(fees) - Number(funding);
-    const riskUsd = t.stop_px != null ? Math.abs(entry - Number(t.stop_px)) * size : null;
+    const riskUsd = t.stop_px != null ? Math.abs(entry - Number(t.stop_px)) * size + Number(fees) : null;
     const rRealised = riskUsd && riskUsd > 0 ? realized / riskUsd : null;
     const notional = entry * size;
     const roc = notional > 0 ? realized / notional : null;
