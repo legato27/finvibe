@@ -27,9 +27,6 @@ import { modelsApi } from "@/lib/api";
 import { ClipboardList } from "lucide-react";
 import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
-import Chip from "@/components/ui/Chip";
-import { cryptoApi, type CryptoScorecard } from "@/modules/crypto/api";
-import { CRYPTO_MODULE_ENABLED } from "@/modules/crypto/flag";
 
 interface Block {
   n: number;
@@ -63,7 +60,7 @@ const signedPts = (gap: number) => `${gap > 0 ? "+" : ""}${(gap * 100).toFixed(1
 /** A win rate this close to a coin flip is not an edge, whatever the yield. */
 const NO_EDGE_BAND = 0.55;
 
-type TrackRow = { key: string; label: string; b: Block; paper?: boolean };
+type TrackRow = { key: string; label: string; b: Block };
 type BreakdownRow = { label: string; b: Block };
 
 export default function RecoTrackRecord({
@@ -78,15 +75,6 @@ export default function RecoTrackRecord({
     queryKey: ["options-reco-scorecard", 400],
     queryFn: () => modelsApi.optionsRecoScorecard(400),
     staleTime: 60 * 60_000,
-  });
-  // The crypto scalp family (paper) as three more cohorts on the same table;
-  // best-effort, never blocks the options scorecard.
-  const { data: crypto } = useQuery<CryptoScorecard>({
-    queryKey: ["crypto-reco-scorecard", 400, "paper"],
-    queryFn: () => cryptoApi.scorecard(400, "paper"),
-    staleTime: 60 * 60_000,
-    retry: 1,
-    enabled: CRYPTO_MODULE_ENABLED,
   });
 
   const focusKey = strategy === "covered_call" ? "sell_calls" : "sell_puts";
@@ -120,17 +108,10 @@ export default function RecoTrackRecord({
       label: isStrategyKey(k) ? t(`strategy.${k}`) : k,
       b,
     })),
-    // scalp_A/B/C mapped onto the Block shape: captured ← average R, POP ← the
-    // gate's p_win_assumed, assignment ← stop rate. n counts graded signals.
-    ...Object.entries(crypto?.by_strategy ?? {}).map(([k, b]) => ({
-      key: `crypto:${k}`,
-      label: `${k.replace("scalp_", "Scalp ")}`,
-      paper: true,
-      b: {
-        n: b.n, win_rate: b.win_rate ?? 0, avg_captured_pct: b.avg_r ?? 0, avg_annualized_pct: 0,
-        assignment_rate: b.stop_rate ?? 0, mean_pop_pred: b.mean_p_win_assumed ?? 0, calibration_gap: b.calibration_gap ?? 0,
-      } as Block,
-    })),
+    // Options only. The crypto scalp family used to be appended here as
+    // three more cohorts with a paper badge; it has its own engine record on
+    // the scalp desk now (a scalp's "captured" is an R multiple and its
+    // "assigned" a stop rate — not the same table).
   ];
 
   const columns: Column<TrackRow>[] = [
@@ -142,7 +123,6 @@ export default function RecoTrackRecord({
       cell: (r) => (
         <span>
           <span className="font-medium">{r.label}</span>
-          {r.paper ? <Chip tone="plain" className="ml-2">{t("paperBadge")}</Chip> : null}
           {r.b.win_rate < NO_EDGE_BAND ? (
             <span
               className="ml-2 rounded border border-signal-short/40 bg-signal-short-bg px-1.5 py-px text-[10px] font-semibold uppercase text-signal-short"

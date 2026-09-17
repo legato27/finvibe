@@ -19,10 +19,13 @@ import Disclosure from "@/components/ui/Disclosure";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import Freshness from "@/components/ui/Freshness";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
-import { cryptoApi, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
+import { cryptoApi, type CryptoScorecardBlock, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
 
 const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", unlogged: "caution", near: "protocol", far: "plain" };
 const EXECUTION_TONE: Record<ScalpSignal["execution"], ChipTone> = { pending: "protocol", filled: "signal", closed: "plain", unfilled: "caution" };
+const pct = (n: number | null | undefined) => (n == null ? "—" : `${(n * 100).toFixed(0)}%`);
+const rr = (n: number | null | undefined) => (n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(2)}R`);
+type RecordRow = { key: string; label: string; b: CryptoScorecardBlock };
 const hhmm = (iso: string | null | undefined) => (iso ? `${new Date(iso).toUTCString().slice(17, 22)} UTC` : "—");
 const STATE_TONE: Record<string, ChipTone> = { active: "signal", paused: "caution", halted: "short" };
 const SETUP_KEY: Record<string, string> = { A: "setupA", B: "setupB", C: "setupC" };
@@ -72,6 +75,31 @@ export function ScalpDeskPage() {
     { key: "target", header: t("col.target"), align: "right", hideBelow: "md", cell: (s) => <span className="nums">{px(s.target_px)}</span> },
     { key: "r", header: t("col.r"), align: "right", cell: (s) => <span className="nums">{s.r_planned == null ? "—" : `${s.r_planned.toFixed(1)}R`}</span> },
     { key: "timeStop", header: t("col.timeStop"), hideBelow: "lg", cell: (s) => <span className="text-xs">{hhmm(s.time_stop_at)}</span> },
+  ];
+
+  // The engine's own record for this family, graded at fill and exit by the
+  // paper broker: signals, fills, wins, average R and how each exit came.
+  // Lives here and not on the options desk, whose table is in premium terms.
+  const record = useQuery({
+    queryKey: ["crypto-reco-scorecard", 400, "paper"],
+    queryFn: () => cryptoApi.scorecard(400, "paper"),
+    staleTime: 60 * 60_000,
+    retry: 1,
+  });
+  const recordRows: RecordRow[] = record.data
+    ? [
+        { key: "all", label: t("record.all"), b: record.data.overall },
+        ...Object.entries(record.data.by_strategy ?? {}).map(([k, b]) => ({ key: k, label: t(SETUP_KEY[k.replace("scalp_", "")] as never) || k, b })),
+      ]
+    : [];
+  const recordColumns: Column<RecordRow>[] = [
+    { key: "setup", header: t("record.col.setup"), cell: (r) => <span className="font-medium">{r.label}</span> },
+    { key: "signals", header: t("record.col.signals"), align: "right", cell: (r) => <span className="nums">{r.b.n_signals}</span> },
+    { key: "filled", header: t("record.col.filled"), align: "right", cell: (r) => <span className="nums">{pct(r.b.fill_rate)}</span> },
+    { key: "won", header: t("record.col.won"), align: "right", cell: (r) => <span className="nums">{pct(r.b.win_rate)}</span> },
+    { key: "avgR", header: t("record.col.avgR"), align: "right", cell: (r) => <span className={`nums ${(r.b.avg_r ?? 0) < 0 ? "text-signal-short" : ""}`}>{rr(r.b.avg_r)}</span> },
+    { key: "exits", header: t("record.col.exits"), hideBelow: "md", cell: (r) => <span className="nums text-xs">{pct(r.b.target_rate)} / {pct(r.b.stop_rate)} / {pct(r.b.time_stop_rate)}</span> },
+    { key: "gap", header: t("record.col.gap"), align: "right", hideBelow: "md", cell: (r) => <span className="nums">{r.b.calibration_gap == null ? "—" : `${r.b.calibration_gap > 0 ? "+" : ""}${(r.b.calibration_gap * 100).toFixed(0)}`}</span> },
   ];
 
   async function onHalt() {
@@ -179,6 +207,20 @@ export function ScalpDeskPage() {
           <p className="rounded-control border border-dashed border-border p-4 text-sm text-muted-foreground">{t("signalsEmpty")}</p>
         )}
       </Panel>
+
+      {/* ── The engine's record for this family ── */}
+      {record.error ? (
+        <PanelUnavailable label={t("record.label")} reason={t("unavailable")} />
+      ) : (
+        <Panel label={t("record.label")} qualifier={record.data ? t("record.qualifier", { count: record.data.overall.n, days: record.data.window_days }) : undefined}>
+          <p className="mb-3 text-sm text-muted-foreground">{t("record.lead")}</p>
+          {recordRows.length ? (
+            <DataTable<RecordRow> caption={t("record.caption")} columns={recordColumns} rows={recordRows} rowKey={(r) => r.key} />
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("loading")}</p>
+          )}
+        </Panel>
+      )}
     </div>
   );
 }

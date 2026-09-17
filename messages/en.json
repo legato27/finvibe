@@ -2266,7 +2266,6 @@
       "footnote": "<strong>Gap</strong> is predicted probability of profit minus realised win rate, in points. Positive means the engine over-promised, which is the direction that matters: sizing is derived from the predicted number, so over-promising compounds into over-betting. <strong>Ann.</strong> is annualised return on collateral as the engine estimated it at entry, priced at mid — an upper bound, since the market-data plan returns no bid/ask.",
       "cryptoCohorts": "Crypto scalps",
       "cryptoCohortsSub": "the scalp engine's signals graded at time-stop",
-      "paperBadge": "paper",
       "cryptoNone": "no graded scalp signals yet"
     },
     "trackRecord": {
@@ -2548,6 +2547,22 @@
     "signalsLabel": "Active signals",
     "signalsQualifier": "{count} inside their time-stop",
     "signalsCaption": "Signals the engine recorded that are still inside their time-stop",
-    "signalsEmpty": "No active signals. The engine writes one when a setup fires and the gates pass; each is graded at its time-stop."
+    "signalsEmpty": "No active signals. The engine writes one when a setup fires and the gates pass; each is graded at its time-stop.",
+    "record": {
+      "label": "What the engine called here",
+      "qualifier": "{count} graded over {days} days · paper",
+      "lead": "Every scalp signal the engine logged, executed by the paper broker and graded at its exit. Fills are maker limits; wins are net R above zero.",
+      "caption": "Scalp engine record by setup",
+      "all": "All setups",
+      "col": {
+        "setup": "Setup",
+        "signals": "Signals",
+        "filled": "Filled",
+        "won": "Won",
+        "avgR": "Avg R",
+        "exits": "Target / stop / time",
+        "gap": "Gap pts"
+      }
+    }
   }
 }
