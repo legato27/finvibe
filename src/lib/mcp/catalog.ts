@@ -637,7 +637,10 @@ export const TOOL_CATALOG: ToolDoc[] = [
     title: "List journal trades (any family)",
     description:
       "The token's trade journal for one strategy family: options or crypto scalps. mode is never inferred — " +
-      "options default to live, crypto to paper — so paper and live rows are never mixed. Open first, then settled.",
+      "options default to live, crypto to paper — so paper and live rows are never mixed. Open first, then settled. " +
+      "Crypto paper rows are written by the engine's paper broker as each signal fills (entry_ts, the bar that touched " +
+      "the limit) and exits (exit_ts, exit_reason), sized to the sleeve's risk per trade and settled net of modelled " +
+      "fees; engine_signal_id links every row to its signal.",
     params: [
       { name: "asset_class", type: "string", required: false, description: "options (default) | crypto." },
       { name: "strategy", type: "string", required: false, description: "cash_secured_put | covered_call | put_credit_spread | call_credit_spread | scalp_A | scalp_B | scalp_C." },
@@ -769,7 +772,10 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "ranked: fired first, then by how many of the setup's conditions hold, with each condition's verdict, the " +
       "gates passed or failed (spread cap, fresh book, funding blackout, positive expected edge), the levels and net " +
       "edge it would sign, the active signals and the risk budget remaining today. Same shape philosophy as the " +
-      "options desk: hard gates, then a score.",
+      "options desk: hard gates, then a score. `fired` means the detector logged a signal for that bar; a bar whose " +
+      "checks all pass with no signal on record is `unlogged` (a restart's warm-up, or a write that failed). Each " +
+      "signal carries its execution from the paper broker: pending (limit resting), filled with `fill_at`, closed " +
+      "with `exit_at` and `exit_reason`, or unfilled, plus the journal row it became.",
     params: [
       { name: "symbol", type: "string", required: false, description: "One perp symbol (BTCUSDT or BTC-USD). Default: the whole universe." },
       { name: "limit", type: "integer", required: false, description: "Rows returned. Default 40." },

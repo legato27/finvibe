@@ -24,7 +24,7 @@ export type Backtest = { timeframe: string; run_at: string | null; summary?: Rec
 // ── Scalp family (phase 4 desk integration) ──
 export type ScalpCondition = { name: string; ok: boolean; detail: string };
 export type ScalpRow = {
-  symbol: string; setup: "A" | "B" | "C"; side: "long" | "short" | null; status: "fired" | "near" | "far"; met: number; total: number;
+  symbol: string; setup: "A" | "B" | "C"; side: "long" | "short" | null; status: "fired" | "unlogged" | "near" | "far"; met: number; total: number;
   conditions: ScalpCondition[]; gates: { passed: boolean; failed: string[] }; edge_bps: number | null; round_trip_bps: number | null;
   confidence: number | null; levels: { entry?: number; invalidation?: number; target?: number; anchor?: string; time_stop_min?: number; size_hint?: number; tranches?: number[] } | null;
   price: number | null; spread_bps: number | null; regime: { pam_1h: string | null; pam_4h: string | null; btc_trend_1h: string | null }; session: string; ts: number; score: number;
@@ -39,9 +39,12 @@ export type ScalpSignal = {
   entry_px: number | null; invalidation_px: number | null; target_px: number | null; r_planned: number | null; time_stop_at: string | null;
   session: string | null; confidence: number | null; p_win_assumed: number | null; packet_id: string | null; resolved_at: string | null;
   outcome: string | null; r_realised: number | null; exit_px: number | null; mfe_r: number | null; mae_r: number | null; reason: string | null;
+  // Execution, from the paper broker: the resting limit, its fill bar, the bar that closed it, and the journal row.
+  execution: "pending" | "filled" | "closed" | "unfilled"; fill_at: string | null; exit_at: string | null; exit_reason: string | null;
+  journal_trade_id: number | null;
 };
 export type ScalpDesk = {
-  as_of: string | null; symbols: number; count: number; tiers: { fired: number; near: number; far: number };
+  as_of: string | null; symbols: number; count: number; tiers: { fired: number; unlogged: number; near: number; far: number };
   gates: Record<string, string>; risk: ScalpRisk; active_signals: ScalpSignal[]; rows: ScalpRow[];
 };
 export type CryptoToday = {

@@ -2479,9 +2479,10 @@
       "halted": "Halted: {reason}. Nothing is recorded until you resume."
     },
     "state": {
-      "active": "Active",
-      "paused": "Paused",
-      "halted": "Halted"
+      "pending": "Resting",
+      "filled": "Filled",
+      "closed": "Closed",
+      "unfilled": "Unfilled"
     },
     "stat": {
       "state": "State",
@@ -2511,7 +2512,8 @@
       "all": "All",
       "fired": "Fired",
       "near": "Near",
-      "far": "Far"
+      "far": "Far",
+      "unlogged": "Unlogged"
     },
     "side": {
       "long": "Long",
@@ -2534,7 +2536,9 @@
       "stop": "Stop",
       "target": "Target",
       "r": "R",
-      "timeStop": "Time-stop"
+      "timeStop": "Time-stop",
+      "state": "State",
+      "filled": "Filled"
     },
     "gatesOk": "pass",
     "allConditions": "all conditions hold",

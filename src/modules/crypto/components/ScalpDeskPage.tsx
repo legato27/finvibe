@@ -21,7 +21,9 @@ import Freshness from "@/components/ui/Freshness";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { cryptoApi, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
 
-const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", near: "protocol", far: "plain" };
+const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", unlogged: "caution", near: "protocol", far: "plain" };
+const EXECUTION_TONE: Record<ScalpSignal["execution"], ChipTone> = { pending: "protocol", filled: "signal", closed: "plain", unfilled: "caution" };
+const hhmm = (iso: string | null | undefined) => (iso ? `${new Date(iso).toUTCString().slice(17, 22)} UTC` : "—");
 const STATE_TONE: Record<string, ChipTone> = { active: "signal", paused: "caution", halted: "short" };
 const SETUP_KEY: Record<string, string> = { A: "setupA", B: "setupB", C: "setupC" };
 
@@ -63,11 +65,13 @@ export function ScalpDeskPage() {
     { key: "symbol", header: t("col.symbol"), cell: (s) => <span className="font-semibold">{s.symbol.replace("USDT", "")}</span> },
     { key: "setup", header: t("col.setup"), cell: (s) => t(SETUP_KEY[s.setup] as never) },
     { key: "side", header: t("col.side"), cell: (s) => t(`side.${s.side}` as never) },
+    { key: "state", header: t("col.state"), cell: (s) => <Chip tone={EXECUTION_TONE[s.execution]}>{t(`state.${s.execution}` as never)}</Chip> },
+    { key: "filled", header: t("col.filled"), hideBelow: "md", cell: (s) => <span className="text-xs">{hhmm(s.fill_at)}</span> },
     { key: "entry", header: t("col.entry"), align: "right", cell: (s) => <span className="nums">{px(s.entry_px)}</span> },
     { key: "stop", header: t("col.stop"), align: "right", hideBelow: "md", cell: (s) => <span className="nums">{px(s.invalidation_px)}</span> },
     { key: "target", header: t("col.target"), align: "right", hideBelow: "md", cell: (s) => <span className="nums">{px(s.target_px)}</span> },
     { key: "r", header: t("col.r"), align: "right", cell: (s) => <span className="nums">{s.r_planned == null ? "—" : `${s.r_planned.toFixed(1)}R`}</span> },
-    { key: "timeStop", header: t("col.timeStop"), hideBelow: "lg", cell: (s) => <span className="text-xs">{s.time_stop_at ? new Date(s.time_stop_at).toUTCString().slice(17, 22) : "—"} UTC</span> },
+    { key: "timeStop", header: t("col.timeStop"), hideBelow: "lg", cell: (s) => <span className="text-xs">{hhmm(s.time_stop_at)}</span> },
   ];
 
   async function onHalt() {
@@ -147,7 +151,7 @@ export function ScalpDeskPage() {
         <Panel label={t("deskLabel")} qualifier={t("deskQualifier", { symbols: data.symbols })} reading={t("deskReading", { fired: data.tiers.fired, near: data.tiers.near })}>
           <div className="mb-3 flex flex-wrap gap-2">
             <Chip active={tier === "all"} onClick={() => setTier("all")}>{t("tier.all")} {data.count}</Chip>
-            {(["fired", "near", "far"] as const).map((k) => (
+            {(["fired", "unlogged", "near", "far"] as const).map((k) => (
               <Chip key={k} active={tier === k} onClick={() => setTier(k)} tone={STATUS_TONE[k]}>{t(`tier.${k}` as never)} {data.tiers[k]}</Chip>
             ))}
           </div>
