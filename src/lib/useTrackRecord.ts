@@ -62,8 +62,18 @@ function closeOn(res: HistoryResponse | undefined, date: string): number | null 
 export function useTrackRecord(enabled = true): TrackRecordState {
   const { data: user, isPending: userPending } = useUser();
   const trades = useOptionsTrades();
-  const settled = useMemo(() => (trades.data ?? []).filter((t) => t.status !== "open") as TradeInput[], [trades.data]);
-  const openCount = (trades.data ?? []).filter((t) => t.status === "open").length;
+  // Options rows only. The journal is shared with the crypto scalp family
+  // (asset_class crypto, no expiry_date, perp symbols): the first paper
+  // trades the broker booked on 2026-09-17 reached this hook, which fetched
+  // equity price history for TRXUSDT (500) and then read expiry_date off a
+  // row that has none, taking the whole Desk page down. The scalp family
+  // is graded by its own reader.
+  const optionRows = useMemo(
+    () => (trades.data ?? []).filter((t) => (t.asset_class ?? "options") === "options" && !!t.expiry_date),
+    [trades.data],
+  );
+  const settled = useMemo(() => optionRows.filter((t) => t.status !== "open") as TradeInput[], [optionRows]);
+  const openCount = optionRows.filter((t) => t.status === "open").length;
 
   const tickers = useMemo(() => [...new Set(settled.map((t) => t.ticker.toUpperCase()))].sort(), [settled]);
   const closedTickers = useMemo(

@@ -146,7 +146,9 @@ export function gradeTrades(
   expiryCloses: Record<string, number>,
 ): GradedTrade[] {
   return trades
-    .filter((t) => t.status !== "open")
+    // An option row always carries an expiry; a crypto scalp row never does,
+    // and everything below keys on it. Skip rather than throw.
+    .filter((t) => t.status !== "open" && !!t.expiry_date)
     .map((t) => {
       const ticker = t.ticker.toUpperCase();
       const engine = matchLogRow(t, logs[ticker] ?? []);

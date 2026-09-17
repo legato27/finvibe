@@ -166,3 +166,12 @@ test("cohorts and summarize", () => {
   assert.equal(s.realized, 250);
   assert.equal(s.matched, 2);
 });
+
+test("a crypto scalp row (no expiry) in the shared journal is skipped, not thrown on", () => {
+  // 2026-09-17: the paper broker's first journal rows reached the desk's
+  // track record and `expiry_date.slice` on null took the whole page down.
+  const scalp = { ...trade({ id: 9, ticker: "TRXUSDT", status: "closed", realized_pnl: -191 }), strategy: "scalp_A", expiry_date: null } as unknown as TradeInput;
+  const g = gradeTrades([trade({ id: 1 }), scalp], {}, {});
+  assert.equal(g.length, 1);
+  assert.equal(g[0].id, 1);
+});
