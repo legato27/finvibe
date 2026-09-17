@@ -25,16 +25,18 @@ import {
   useAddOptionsTrade,
   useCloseOptionsTrade,
   useDeleteOptionsTrade,
+  useTradeEvents,
   type OptionsTrade,
   type OptionStrategy,
+  type TradeEvent,
 } from "@/lib/supabase/hooks";
 import { useUser } from "@/lib/supabase/hooks";
 import { NotebookPen, Plus, X } from "lucide-react";
 import Panel, { PanelPending, PanelUnavailable } from "@/components/ui/Panel";
 import DataTable, { type Column } from "@/components/ui/DataTable";
+import Disclosure from "@/components/ui/Disclosure";
 import Stat from "@/components/ui/Stat";
 import Chip from "@/components/ui/Chip";
-import { CRYPTO_MODULE_ENABLED } from "@/modules/crypto/flag";
 
 // Rows carry their family; mode is a column, never inferred (migration 025).
 const familyOf = (tr: OptionsTrade): "options" | "crypto" => tr.asset_class ?? "options";
@@ -60,6 +62,15 @@ const usd = (v: number | null | undefined, d = 0) =>
 const daysTo = (iso: string) =>
   Math.round((new Date(iso).getTime() - Date.now()) / 86_400_000);
 
+/** "17 Sep 10:36" in UTC — the minute something happened, not just its date. */
+const stamp = (iso: string | null | undefined) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const day = d.toUTCString().slice(5, 11).trim();
+  return `${day} ${d.toUTCString().slice(17, 22)}`;
+};
+
 const INPUT_CLS =
   "rounded-control border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring";
 const PRIMARY_CLS =
@@ -68,28 +79,36 @@ const SECONDARY_CLS =
   "rounded-control border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:bg-accent";
 
 export default function TradeJournal({
+  family,
   defaultStrategy = "cash_secured_put",
 }: {
+  /** One family per desk: the options desk shows option trades, the scalp
+   *  desk shows crypto scalps. The journal table is shared; a family chip
+   *  that let scalps surface on the options desk was conceptually off. */
+  family: "options" | "crypto";
   /** What the new-trade form opens on. The desk passes its own strategy so a
    *  covered-call desk does not hand you a cash-secured-put form. */
   defaultStrategy?: OptionStrategy;
-} = {}) {
+}) {
   const t = useTranslations("deskPanels.tradeJournal");
   const { data: user, isLoading: userLoading } = useUser();
   const { data: trades, isLoading, error } = useOptionsTrades();
+  const { data: events } = useTradeEvents(300);
   const addTrade = useAddOptionsTrade();
   const closeTrade = useCloseOptionsTrade();
   const delTrade = useDeleteOptionsTrade();
 
   const [adding, setAdding] = useState(false);
   const [closingId, setClosingId] = useState<number | null>(null);
-  const [family, setFamily] = useState<"options" | "crypto">("options");
 
-  // The family chip filters the rows; paper and live never mix because a
-  // crypto row is paper by construction until live crypto exists.
+  // Paper and live never mix because a crypto row is paper by construction
+  // until live crypto exists.
   const all = trades ?? [];
-  const counts = { options: all.filter((tr) => familyOf(tr) === "options").length, crypto: all.filter((tr) => familyOf(tr) === "crypto").length };
   const inFamily = all.filter((tr) => familyOf(tr) === family);
+  const byId = useMemo(() => new Map(inFamily.map((tr) => [tr.id, tr])), [inFamily]);
+  // The activity log for this family: every timestamped thing that happened
+  // to one of its trades, newest first.
+  const activity = useMemo(() => (events ?? []).filter((e) => byId.has(e.trade_id)).slice(0, 60), [events, byId]);
   const open = inFamily.filter((tr) => tr.status === "open");
   const done = inFamily.filter((tr) => tr.status !== "open");
   const isCrypto = family === "crypto";
@@ -206,6 +225,24 @@ export default function TradeJournal({
       },
     },
     {
+      key: "opened",
+      header: t("col.opened"),
+      sortable: true,
+      hideBelow: "lg",
+      optional: true,
+      sortValue: (tr) => tr.entry_ts ?? tr.entry_date,
+      cell: (tr) => <span className="nums text-xs text-muted-foreground">{stamp(tr.entry_ts ?? null) === "—" ? tr.entry_date : stamp(tr.entry_ts)}</span>,
+    },
+    {
+      key: "closed",
+      header: t("col.closed"),
+      sortable: true,
+      hideBelow: "lg",
+      optional: true,
+      sortValue: (tr) => tr.exit_ts ?? tr.close_date ?? "",
+      cell: (tr) => <span className="nums text-xs text-muted-foreground">{tr.exit_ts ? stamp(tr.exit_ts) : tr.close_date ?? "—"}</span>,
+    },
+    {
       key: "status",
       header: t("col.status"),
       sortable: true,
@@ -297,6 +334,8 @@ export default function TradeJournal({
     { key: "ticker", header: t("col.ticker"), sortable: true, sortValue: (tr) => tr.ticker, cell: (tr) => <span className="font-mono font-bold">{tr.ticker.replace("USDT", "")}</span> },
     { key: "setup", header: t("col.setup"), sortable: true, sortValue: (tr) => tr.strategy, cell: (tr) => <span className="text-xs text-muted-foreground">{SETUP_OF[tr.strategy] ?? tr.strategy} · {tr.side ?? "—"} <Chip tone="plain">{t("paper")}</Chip></span> },
     { key: "session", header: t("col.session"), hideBelow: "md", cell: (tr) => <span className="text-xs">{tr.session ?? "—"}</span> },
+    { key: "filled", header: t("col.filled"), sortable: true, sortValue: (tr) => tr.entry_ts ?? "", cell: (tr) => <span className="nums text-xs text-muted-foreground">{stamp(tr.entry_ts)}</span> },
+    { key: "exited", header: t("col.exited"), sortable: true, hideBelow: "md", sortValue: (tr) => tr.exit_ts ?? "", cell: (tr) => <span className="nums text-xs text-muted-foreground">{stamp(tr.exit_ts)}</span> },
     { key: "entry", header: t("col.strike"), align: "right", sortValue: (tr) => tr.entry_px ?? 0, cell: (tr) => <span className="nums">{tr.entry_px == null ? "—" : tr.entry_px.toLocaleString(undefined, { maximumFractionDigits: 4 })}{tr.exit_px != null ? <span className="text-muted-foreground"> → {tr.exit_px.toLocaleString(undefined, { maximumFractionDigits: 4 })}</span> : null}</span> },
     { key: "status", header: t("col.status"), cell: (tr) => <span className={`rounded-control border px-1.5 py-px text-[10px] font-semibold uppercase ${STATUS_STYLE[tr.status] ?? ""}`}>{tr.status === "open" ? t("status.open") : (tr.exit_reason ?? tr.status)}</span> },
     { key: "r", header: t("col.r"), sortable: true, align: "right", sortValue: (tr) => tr.r_realised ?? 0, cell: (tr) => <span className={`nums font-semibold ${tr.r_realised == null ? "text-muted-foreground" : tr.r_realised > 0 ? "text-signal-long" : "text-signal-short"}`}>{tr.r_realised == null ? (tr.r_planned != null ? `plan ${tr.r_planned.toFixed(1)}R` : "—") : `${tr.r_realised >= 0 ? "+" : ""}${tr.r_realised.toFixed(2)}R`}</span> },
@@ -312,26 +351,20 @@ export default function TradeJournal({
       label={label}
       qualifier={hasTrades ? t("qualifier", { count: open.length }) : undefined}
       aside={
-        <button
-          type="button"
-          onClick={() => setAdding((v) => !v)}
-          className={`flex items-center gap-1.5 ${adding ? SECONDARY_CLS : PRIMARY_CLS}`}
-        >
-          {adding ? <X className="h-3.5 w-3.5" aria-hidden="true" /> : <Plus className="h-3.5 w-3.5" aria-hidden="true" />}
-          {adding ? t("cancel") : t("logTrade")}
-        </button>
+        isCrypto ? undefined : (
+          <button
+            type="button"
+            onClick={() => setAdding((v) => !v)}
+            className={`flex items-center gap-1.5 ${adding ? SECONDARY_CLS : PRIMARY_CLS}`}
+          >
+            {adding ? <X className="h-3.5 w-3.5" aria-hidden="true" /> : <Plus className="h-3.5 w-3.5" aria-hidden="true" />}
+            {adding ? t("cancel") : t("logTrade")}
+          </button>
+        )
       }
       reading={hasTrades ? t.rich("reading", { em: (chunks) => <em>{chunks}</em> }) : undefined}
     >
-      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{t("lead")}</p>
-
-      {CRYPTO_MODULE_ENABLED ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2" role="group" aria-label={t("familyLabel")}>
-          {(["options", "crypto"] as const).map((f) => (
-            <Chip key={f} active={family === f} onClick={() => setFamily(f)}>{t(`family.${f}`)} {counts[f]}</Chip>
-          ))}
-        </div>
-      ) : null}
+      <p className="mb-3 max-w-2xl text-xs text-muted-foreground">{isCrypto ? t("cryptoLead") : t("lead")}</p>
 
       {adding && !isCrypto ? (
         <AddForm
@@ -404,7 +437,41 @@ export default function TradeJournal({
           />
         </>
       )}
+
+      {hasTrades ? (
+        <Disclosure label={t("activity.label")} qualifier={t("activity.qualifier", { count: activity.length })} className="mt-4">
+          {activity.length ? (
+            <ol className="divide-y divide-border text-xs">
+              {activity.map((e) => <ActivityRow key={e.id} e={e} trade={byId.get(e.trade_id)} crypto={isCrypto} />)}
+            </ol>
+          ) : (
+            <p className="text-xs text-muted-foreground">{t("activity.empty")}</p>
+          )}
+        </Disclosure>
+      ) : null}
     </Panel>
+  );
+}
+
+function ActivityRow({ e, trade, crypto }: { e: TradeEvent; trade: OptionsTrade | undefined; crypto: boolean }) {
+  const t = useTranslations("deskPanels.tradeJournal");
+  const d = e.detail ?? {};
+  const px = (v: unknown) => (typeof v === "number" ? v.toLocaleString(undefined, { maximumFractionDigits: 4 }) : null);
+  const bits: string[] = [];
+  if (px(d.entry_px)) bits.push(`@ ${px(d.entry_px)}`);
+  if (px(d.exit_px)) bits.push(`→ ${px(d.exit_px)}`);
+  if (typeof d.exit_reason === "string") bits.push(d.exit_reason);
+  if (typeof d.r_realised === "number") bits.push(`${d.r_realised >= 0 ? "+" : ""}${d.r_realised.toFixed(2)}R`);
+  if (typeof d.realized_pnl === "number") bits.push(usd(d.realized_pnl));
+  if (d.backfilled) bits.push(t("activity.backfilled"));
+  return (
+    <li className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5">
+      <span className="nums w-28 shrink-0 text-muted-foreground">{stamp(e.at)}</span>
+      <span className="font-mono font-bold">{trade ? (crypto ? trade.ticker.replace("USDT", "") : trade.ticker) : `#${e.trade_id}`}</span>
+      <span className={`rounded border px-1.5 py-px text-[10px] font-semibold uppercase ${STATUS_STYLE[e.kind] ?? "text-muted-foreground border-border"}`}>{t(`activity.kind.${e.kind}` as never)}</span>
+      <span className="text-muted-foreground">{bits.join(" · ")}</span>
+      <span className="ml-auto text-[10px] uppercase text-muted-foreground">{t(`activity.actor.${e.actor}` as never) || e.actor}</span>
+    </li>
   );
 }
 

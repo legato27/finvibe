@@ -20,6 +20,7 @@ import DataTable, { type Column } from "@/components/ui/DataTable";
 import Freshness from "@/components/ui/Freshness";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { cryptoApi, type CryptoScorecardBlock, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
+import TradeJournal from "@/components/stock/TradeJournal";
 
 const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", unlogged: "caution", near: "protocol", far: "plain" };
 const EXECUTION_TONE: Record<ScalpSignal["execution"], ChipTone> = { pending: "protocol", filled: "signal", closed: "plain", unfilled: "caution" };
@@ -207,6 +208,10 @@ export function ScalpDeskPage() {
           <p className="rounded-control border border-dashed border-border p-4 text-sm text-muted-foreground">{t("signalsEmpty")}</p>
         )}
       </Panel>
+
+      {/* ── The journal: what the paper broker executed, with every fill and
+             exit timestamped. Scalps belong here, not on the options desk. ── */}
+      <TradeJournal family="crypto" />
 
       {/* ── The engine's record for this family ── */}
       {record.error ? (

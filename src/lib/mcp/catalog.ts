@@ -640,7 +640,8 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "options default to live, crypto to paper — so paper and live rows are never mixed. Open first, then settled. " +
       "Crypto paper rows are written by the engine's paper broker as each signal fills (entry_ts, the bar that touched " +
       "the limit) and exits (exit_ts, exit_reason), sized to the sleeve's risk per trade and settled net of modelled " +
-      "fees; engine_signal_id links every row to its signal.",
+      "fees; engine_signal_id links every row to its signal. Every row carries `events`: its timestamped activity log " +
+      "(opened / filled / closed / expired / assigned / exited, with who did it: you, an assistant, or the paper broker).",
     params: [
       { name: "asset_class", type: "string", required: false, description: "options (default) | crypto." },
       { name: "strategy", type: "string", required: false, description: "cash_secured_put | covered_call | put_credit_spread | call_credit_spread | scalp_A | scalp_B | scalp_C." },

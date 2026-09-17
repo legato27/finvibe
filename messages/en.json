@@ -2112,7 +2112,11 @@
         "r": "R",
         "mae": "MAE / MFE",
         "slip": "Slippage gap",
-        "exitReason": "Exit"
+        "exitReason": "Exit",
+        "opened": "Logged",
+        "closed": "Settled",
+        "filled": "Filled",
+        "exited": "Exited"
       },
       "aria": {
         "pnl": "Profit and loss",
@@ -2159,13 +2163,29 @@
         "record": "Record",
         "assignedNote": "You keep the ${credit} credit, and now hold {shares} shares at a net basis of ${basis}. This will not count as a win."
       },
-      "family": {
-        "options": "Options",
-        "crypto": "Crypto scalps"
-      },
-      "familyLabel": "Family",
       "paper": "paper",
-      "cryptoEmpty": "No crypto scalps in the journal yet. The paper broker (phase 5) writes them through log_trade; until then nothing is here."
+      "cryptoEmpty": "No crypto scalps in the journal yet. The paper broker (phase 5) writes them through log_trade; until then nothing is here.",
+      "cryptoLead": "What the paper broker executed from the engine's signals: every fill and exit stamped to the minute. Scalps live here, with the scalp desk, not on the options desk.",
+      "activity": {
+        "label": "Activity",
+        "qualifier": "{count, plural, =0 {nothing yet} one {# event} other {# events}}",
+        "empty": "No activity recorded yet. New trades, fills and settlements are stamped to the minute from here on.",
+        "backfilled": "backfilled",
+        "kind": {
+          "opened": "logged",
+          "filled": "filled",
+          "closed": "closed",
+          "expired": "expired",
+          "assigned": "assigned",
+          "exited": "exited",
+          "note": "note"
+        },
+        "actor": {
+          "web": "you",
+          "mcp": "assistant",
+          "paper-broker": "paper broker"
+        }
+      }
     },
     "assignmentBacktest": {
       "label": "If I get assigned, can I live with it?",

@@ -729,9 +729,54 @@ export type TradeMode = "live" | "paper" | "backtest";
 export const OPTION_TRADE_COLUMNS =
   "id, user_id, ticker, strategy, strike_price, premium, contracts, expiry_date, entry_date, underlying_price_at_entry, " +
   "status, close_date, close_price, underlying_price_at_close, realized_pnl, return_on_capital, annualized_return, " +
-  "llm_recommendation, llm_confidence, llm_reasoning, llm_model_version, outcome_notes, was_profitable, created_at, updated_at";
+  "llm_recommendation, llm_confidence, llm_reasoning, llm_model_version, outcome_notes, was_profitable, created_at, updated_at, " +
+  "entry_ts, exit_ts";
 
 export const DEFAULT_MODE: Record<AssetClass, TradeMode> = { options: "live", crypto: "paper" };
+
+export type TradeEventKind = "opened" | "filled" | "closed" | "expired" | "assigned" | "exited" | "note";
+
+/**
+ * The journal's activity log (migration 026): one timestamped event per thing
+ * that happened to a trade. A failed event write never fails the trade write
+ * it describes — the row is the record, the event is the timeline.
+ */
+export async function recordTradeEvent(
+  userId: string,
+  supabase: ServiceSupabase,
+  tradeId: number,
+  kind: TradeEventKind,
+  detail?: Record<string, unknown> | null,
+  at?: string,
+  actor = "mcp",
+) {
+  try {
+    const { error } = await supabase
+      .from("trade_events")
+      .insert({ trade_id: tradeId, user_id: userId, kind, actor, detail: detail ?? null, ...(at ? { at } : {}) });
+    if (error) console.warn("trade_events:", error.message);
+  } catch (e) {
+    console.warn("trade_events:", e);
+  }
+}
+
+/** Events for a set of trades, oldest first, keyed by trade id. */
+export async function tradeEventsFor(userId: string, supabase: ServiceSupabase, tradeIds: number[]) {
+  const out: Record<number, Array<{ at: string; kind: string; actor: string; detail: Record<string, unknown> | null }>> = {};
+  if (!tradeIds.length) return out;
+  const { data, error } = await supabase
+    .from("trade_events")
+    .select("trade_id, at, kind, actor, detail")
+    .eq("user_id", userId)
+    .in("trade_id", tradeIds)
+    .order("at", { ascending: true });
+  if (error) {
+    console.warn("trade_events:", error.message);
+    return out;
+  }
+  for (const e of data ?? []) (out[e.trade_id] ??= []).push({ at: e.at, kind: e.kind, actor: e.actor, detail: e.detail });
+  return out;
+}
 
 export async function listTrades(
   userId: string,
@@ -755,7 +800,10 @@ export async function listTrades(
   if (args.ticker) q = q.eq("ticker", tickerOf(args.ticker));
   const { data, error } = await q;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  const rows = (data ?? []) as unknown as Array<Record<string, unknown> & { id: number }>;
+  // Each row carries its timeline: when it was logged, filled, closed.
+  const events = await tradeEventsFor(userId, supabase, rows.map((r) => r.id));
+  return rows.map((r) => ({ ...r, events: events[r.id] ?? [] }));
 }
 
 /** Alias kept for the option-named tool: options, live, original columns. */
@@ -817,9 +865,12 @@ export async function logTrade(
       .select(columns)
       .single();
     if (error) throw new Error(error.message);
+    await recordTradeEvent(userId, supabase, (data as unknown as { id: number }).id, "filled",
+      { entry_px: a.entry_px, size: a.size, stop_px: a.stop_px ?? null, target_px: a.target_px ?? null }, entryTs);
     return data;
   }
   const a = args;
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("options_trades")
     .insert({
@@ -830,7 +881,9 @@ export async function logTrade(
       premium: a.premium,
       contracts: a.contracts ?? 1,
       expiry_date: a.expiry_date,
-      entry_date: a.entry_date || new Date().toISOString().slice(0, 10),
+      entry_date: a.entry_date || now.slice(0, 10),
+      // entry_date is the trade date; entry_ts the minute it was logged.
+      entry_ts: now,
       underlying_price_at_entry: a.underlying_price_at_entry ?? null,
       outcome_notes: a.outcome_notes ?? null,
       status: "open",
@@ -838,6 +891,9 @@ export async function logTrade(
     .select(columns)
     .single();
   if (error) throw new Error(error.message);
+  await recordTradeEvent(userId, supabase, (data as unknown as { id: number }).id, "opened",
+    { strategy: a.strategy, strike_price: a.strike_price, premium: a.premium, contracts: a.contracts ?? 1, expiry_date: a.expiry_date,
+      entry_px: a.underlying_price_at_entry ?? null }, now);
   return data;
 }
 
@@ -930,6 +986,8 @@ export async function resolveTrade(
       .select(columns)
       .single();
     if (error) throw new Error(error.message);
+    await recordTradeEvent(userId, supabase, args.id, "exited",
+      { exit_px: a.exit_px, exit_reason: a.exit_reason, realized_pnl: realized, r_realised: rRealised }, exitTs);
     return data;
   }
 
@@ -946,11 +1004,13 @@ export async function resolveTrade(
   const spot = a.underlying_price_at_close ?? null;
   const profitable = a.status === "assigned" ? (spot != null ? spot >= netBasis : null) : realized > 0;
 
+  const now = new Date().toISOString();
   const { data, error } = await supabase
     .from("options_trades")
     .update({
       status: a.status,
       close_date: closeDate,
+      exit_ts: now,
       close_price: a.close_price ?? null,
       underlying_price_at_close: spot,
       realized_pnl: realized,
@@ -964,6 +1024,8 @@ export async function resolveTrade(
     .select(columns)
     .single();
   if (error) throw new Error(error.message);
+  await recordTradeEvent(userId, supabase, args.id, a.status,
+    { close_price: a.close_price ?? null, underlying_price_at_close: spot, realized_pnl: realized }, now);
   return data;
 }
 

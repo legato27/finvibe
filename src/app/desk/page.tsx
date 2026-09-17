@@ -610,7 +610,7 @@ export default function OptionDeskPage() {
         <CoveredCallBook />
       )}
 
-      <TradeJournal defaultStrategy={isCsp ? "cash_secured_put" : "covered_call"} />
+      <TradeJournal family="options" defaultStrategy={isCsp ? "cash_secured_put" : "covered_call"} />
 
       <AssignmentBacktest strategy={strategy} />
 

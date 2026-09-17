@@ -968,6 +968,7 @@ export type TradeStatus = "open" | "closed" | "expired" | "assigned";
 
 export interface OptionsTrade {
   id: number;
+  user_id: string;
   ticker: string;
   strategy: OptionStrategy;
   strike_price: number;
@@ -1014,6 +1015,50 @@ export interface OptionsTrade {
   session?: string | null;
 }
 
+/** One thing that happened to a journal trade, and when (migration 026). */
+export type TradeEventKind = "opened" | "filled" | "closed" | "expired" | "assigned" | "exited" | "note";
+export interface TradeEvent {
+  id: number;
+  trade_id: number;
+  at: string;
+  kind: TradeEventKind;
+  actor: "web" | "mcp" | "paper-broker" | string;
+  detail: Record<string, unknown> | null;
+}
+
+/**
+ * Write one activity event. Never lets a missing table or a policy refusal
+ * fail the trade write it describes — the row is the record, the event is
+ * the timeline — so it logs and moves on.
+ */
+async function recordTradeEvent(userId: string, tradeId: number, kind: TradeEventKind, detail?: Record<string, unknown>, at?: string) {
+  try {
+    const { error } = await supabase.from("trade_events").insert({
+      trade_id: tradeId, user_id: userId, kind, actor: "web", detail: detail ?? null, ...(at ? { at } : {}),
+    });
+    if (error) console.warn("trade_events:", error.message);
+  } catch (e) {
+    console.warn("trade_events:", e);
+  }
+}
+
+/** The activity log for the signed-in user's trades, newest first. */
+export function useTradeEvents(limit = 200) {
+  return useQuery<TradeEvent[]>({
+    queryKey: ["trade-events", limit],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("trade_events")
+        .select("id, trade_id, at, kind, actor, detail")
+        .order("at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as TradeEvent[];
+    },
+    staleTime: 30_000,
+  });
+}
+
 export function useOptionsTrades() {
   return useQuery<OptionsTrade[]>({
     queryKey: ["options-trades"],
@@ -1046,21 +1091,31 @@ export function useAddOptionsTrade() {
     }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("options_trades")
         .insert({
           ...t,
           ticker: t.ticker.toUpperCase(),
-          entry_date: t.entry_date || new Date().toISOString().slice(0, 10),
+          entry_date: t.entry_date || now.slice(0, 10),
+          // entry_date is the trade date the user chose; entry_ts is the
+          // minute it was written down.
+          entry_ts: now,
           status: "open",
           user_id: user.id,
         })
         .select()
         .single();
       if (error) throw error;
+      await recordTradeEvent(user.id, (data as OptionsTrade).id, "opened", {
+        strategy: t.strategy, strike_price: t.strike_price, premium: t.premium, contracts: t.contracts, expiry_date: t.expiry_date,
+      }, now);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["options-trades"] });
+      qc.invalidateQueries({ queryKey: ["trade-events"] });
+    },
   });
 }
 
@@ -1134,11 +1189,13 @@ export function useCloseOptionsTrade() {
             : null
           : realized > 0;
 
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("options_trades")
         .update({
           status: args.status,
           close_date: closeDate,
+          exit_ts: now,
           close_price: args.close_price ?? null,
           underlying_price_at_close: spot,
           realized_pnl: realized,
@@ -1151,9 +1208,15 @@ export function useCloseOptionsTrade() {
         .select()
         .single();
       if (error) throw error;
+      await recordTradeEvent(t.user_id, args.id, args.status, {
+        close_price: args.close_price ?? null, underlying_price_at_close: spot, realized_pnl: realized,
+      }, now);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["options-trades"] });
+      qc.invalidateQueries({ queryKey: ["trade-events"] });
+    },
   });
 }
 
@@ -1164,7 +1227,10 @@ export function useDeleteOptionsTrade() {
       const { error } = await supabase.from("options_trades").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["options-trades"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["options-trades"] });
+      qc.invalidateQueries({ queryKey: ["trade-events"] });
+    },
   });
 }
 
