@@ -608,12 +608,12 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "older than the window every window returns the same rows.",
     params: [
       { name: "window_days", type: "integer", required: false, description: "Grading window. Default 400." },
-      { name: "asset_class", type: "string", required: false, description: "options (default) | crypto. Crypto grades the scalp engine's signals at time-stop or exit: cohorts by strategy (scalp_A/B/C), session, symbol and side, with fill rate and the calibration gap between the gate's p_win_assumed and realised wins." },
+      { name: "asset_class", type: "string", required: false, description: "options (default) | crypto. Crypto grades the scalp engine's signals at time-stop or exit: cohorts by strategy (scalp_A/B/C), session, symbol, side and, for setup A, the order flow behind the trigger (by_trigger: scalp_A/strong_flow is OFI z ≥ 1.5 with volume z > 1.5, scalp_A/weak_flow the rest), with fill rate and the calibration gap between the gate's p_win_assumed and realised wins." },
       { name: "mode", type: "string", required: false, description: "live | paper | backtest. Never inferred: options default to live, crypto to paper." },
     ],
     returns:
       "options: { window_days, coverage, overall, by_strategy, by_agreement, by_strategy_agreement, by_dte, latest_review }; " +
-      "crypto: { window_days, asset_class, mode, coverage, overall, by_strategy, by_session, by_symbol, by_side, by_strategy_session }",
+      "crypto: { window_days, asset_class, mode, coverage, overall, by_strategy, by_session, by_symbol, by_side, by_strategy_session, by_trigger }",
   },
   {
     name: "get_track_record",

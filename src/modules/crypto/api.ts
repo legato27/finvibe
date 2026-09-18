@@ -59,6 +59,8 @@ export type CryptoScorecardBlock = {
 export type CryptoScorecard = {
   window_days: number; asset_class: "crypto"; mode: string; coverage: Record<string, unknown>; overall: CryptoScorecardBlock;
   by_strategy: Record<string, CryptoScorecardBlock>; by_session: Record<string, CryptoScorecardBlock>; by_symbol: Record<string, CryptoScorecardBlock>; by_side: Record<string, CryptoScorecardBlock>;
+  // setup A by the order flow behind its trigger: "scalp_A/strong_flow" | "scalp_A/weak_flow" (absent on older backends)
+  by_trigger?: Record<string, CryptoScorecardBlock>;
 };
 
 export const cryptoApi = {

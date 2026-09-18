@@ -91,6 +91,10 @@ export function ScalpDeskPage() {
     ? [
         { key: "all", label: t("record.all"), b: record.data.overall },
         ...Object.entries(record.data.by_strategy ?? {}).map(([k, b]) => ({ key: k, label: t(SETUP_KEY[k.replace("scalp_", "")] as never) || k, b })),
+        // the retune's kept hypothesis: A signals with strong order flow behind the trigger, against the rest
+        ...Object.entries(record.data.by_trigger ?? {})
+          .sort(([a], [b]) => (a.endsWith("strong_flow") ? -1 : 0) - (b.endsWith("strong_flow") ? -1 : 0))
+          .map(([k, b]) => ({ key: k, label: t(`record.trigger.${k.split("/")[1]}` as never) || k, b })),
       ]
     : [];
   const recordColumns: Column<RecordRow>[] = [

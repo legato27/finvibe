@@ -2574,7 +2574,7 @@
     "record": {
       "label": "What the engine called here",
       "qualifier": "{count} graded over {days} days · paper",
-      "lead": "Every scalp signal the engine logged, executed by the paper broker and graded at its exit. Fills are maker limits; wins are net R above zero.",
+      "lead": "Every scalp signal the engine logged, executed by the paper broker and graded at its exit. Fills are maker limits; wins are net R above zero. The strong-flow rows split setup A by the order flow behind its trigger, the one hypothesis kept from the 2026-09-18 retune, tracked here until the book says whether it holds.",
       "caption": "Scalp engine record by setup",
       "all": "All setups",
       "col": {
@@ -2585,6 +2585,10 @@
         "avgR": "Avg R",
         "exits": "Target / stop / time",
         "gap": "Gap pts"
+      },
+      "trigger": {
+        "strong_flow": "A · strong flow (OFI z ≥ 1.5, volume z > 1.5)",
+        "weak_flow": "A · the rest"
       }
     },
     "switchJournal": "Journal"
