@@ -47,7 +47,7 @@ export default function Segmented<T extends string>({
     <div
       role={mode === "tabs" ? "tablist" : "group"}
       aria-label={ariaLabel}
-      className={`inline-flex max-w-full gap-0.5 overflow-x-auto rounded-control border border-border bg-card p-0.5 ${className}`}
+      className={`inline-flex min-w-0 max-w-full gap-0.5 overflow-x-auto rounded-control border border-border bg-card p-0.5 ${className}`}
     >
       {options.map((o, i) => {
         const on = o.value === value;

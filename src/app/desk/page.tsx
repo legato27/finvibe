@@ -581,7 +581,7 @@ export default function OptionDeskPage() {
           <h1 className="text-2xl font-black tracking-tight sm:text-3xl">{t("title")}</h1>
           <p className="mt-1 max-w-3xl text-xs text-muted-foreground">{t("subtitle")}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-3">
           <Freshness at={deskAsOf} />
           <Segmented
             ariaLabel={t("strategyLabel")}
