@@ -6,8 +6,8 @@
  * The scalp family reuses the desk's tools (journal, scorecard, track
  * record, Today, book risk) through asset_class / strategy dimensions; what
  * lives here is only what has no options counterpart: the market-maker read
- * with the evidence packet, the scalp desk, and the three risk tools — the
- * only mutating tools in the family.
+ * with the evidence packet, the scalp desk, the funding-carry reading and
+ * its paper run, and the three risk tools — the only mutating tools in the family.
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -89,6 +89,18 @@ export function registerCryptoTools(reg: McpServer["registerTool"], ctx: { userI
       const desk = (await market.scalpDesk(args.symbol ? toPerpSymbol(args.symbol) : undefined)) as ScalpDesk;
       const limit = args.limit ?? 40;
       return ok({ reading: composeScalpDeskReading(desk), ...desk, rows: (desk.rows ?? []).slice(0, limit) });
+    },
+  );
+
+  reg(
+    "get_carry",
+    { ...meta("get_carry"), inputSchema: {} },
+    async () => {
+      const [card, paper] = await Promise.all([
+        dgxJson<unknown>("/api/crypto-desk/carry").catch((e) => ({ error: String(e) })),
+        dgxJson<unknown>("/api/crypto-desk/carry/paper").catch((e) => ({ error: String(e) })),
+      ]);
+      return ok({ card, paper });
     },
   );
 

@@ -2503,6 +2503,37 @@
       "explain": "Buy the coin, short the same amount of its perpetual: price moves cancel, and you collect funding whenever longs pay shorts. The yield here is trailing funding divided by 1.5, because the trade ties up the full spot amount plus half of it as futures margin. Fees (about 0.3% to get in and out) are left out; they matter only if you switch often.",
       "backtest": "Backtested on 2024–2025: {apr} a year, worst drawdown {mdd}, passing its pre-registered gate. By half-year it earned {h1}, {h2}, {h3}, {h4}, and the yield has been fading. This card shows today's level so the decision is visible; it is not a trading rule.",
       "asOf": "last settlement"
+    },
+    "carryPaper": {
+      "label": "Carry paper run",
+      "qualifier": "day {day} of {total} · ${capital} on paper",
+      "qualifierPending": "30 days · ${capital} on paper",
+      "notStarted": "No carry paper run has been started.",
+      "starting": "The run starts at {time} UTC on {date}. The first hour's prices open the book: BTC and ETH bought spot and shorted on the perp, half the paper capital each.",
+      "reading": {
+        "running": "{sign}${pnl} so far ({pct}) after the cost of closing today, {ann} a year. The run passes if this is at or above zero when it ends on {end}.",
+        "passed": "Passed: {sign}${pnl} ({pct}) over the 30 days, closed and net of every cost. Carry goes on to a capital decision.",
+        "dropped": "Dropped: {sign}${pnl} ({pct}) over the 30 days, closed and net of every cost. Carry does not go on to a capital decision.",
+        "runningEarly": "{sign}${pnl} so far ({pct}) after the cost of closing today: the entry fees, before any funding has come in. A yearly rate shows after the first day. The run passes if this is at or above zero when it ends on {end}."
+      },
+      "stat": {
+        "pnl": "After closing",
+        "ann": "A year",
+        "funding": "Funding earned",
+        "costs": "Fees paid",
+        "costsSub": "exit now {exit}"
+      },
+      "chartAria": "Paper book value since the start of the run",
+      "detailLabel": "Lines and positions",
+      "line": {
+        "funding": "Funding",
+        "basis": "Basis (perp − spot)",
+        "costs": "Entry fees",
+        "topups": "Margin top-ups",
+        "exit": "Closing now would cost"
+      },
+      "position": "{sym}: ${notional} a side, basis {basis} bps",
+      "rule": "Pre-registered in CARRY_GATE.md: a 30-day paper stage before any capital, dropped if the realised return is below 0. Nothing is ordered; the book is recomputed every few minutes from Binance's own prices and funding with the backtest's accounting."
     }
   },
   "scalp": {

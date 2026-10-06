@@ -22,7 +22,7 @@ import Freshness from "@/components/ui/Freshness";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { useMyWatchlistTickers, useUser } from "@/lib/supabase/hooks";
 import { usePalette } from "@/components/heatmap/palette";
-import { cryptoApi, type CarryCard } from "@/modules/crypto/api";
+import { cryptoApi, type CarryCard, type CarryPaper } from "@/modules/crypto/api";
 import { isCryptoTicker } from "@/modules/crypto/flag";
 import { equityPath, leanFromBias, liquidityRows, sessionLine, setupAsPriceAction, setupLabel, type LiquidityRow } from "@/modules/crypto/lib/desk";
 
@@ -110,6 +110,7 @@ export function CryptoDeskPage() {
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-[104px]">
           <SessionPanel session={reading?.session ?? liquidity?.session} />
           <CarryPanel />
+          <CarryPaperPanel />
           <YourCoinsPanel />
         </aside>
       </div>
@@ -308,6 +309,86 @@ function CarrySpark({ card, colors, cashColor, zeroColor }: { card: CarryCard; c
       {lo < 0 && <line x1={P} x2={W - P} y1={y(0)} y2={y(0)} stroke={zeroColor} strokeWidth={1} />}
       <line x1={P} x2={W - P} y1={y(card.cash_apr)} y2={y(card.cash_apr)} stroke={cashColor} strokeWidth={1} strokeDasharray="4 3" />
       {series.map((pts, i) => pts.length > 1 && <path key={i} d={path(pts)} fill="none" stroke={colors[i]} strokeWidth={1.5} />)}
+    </svg>
+  );
+}
+
+// The 30-day paper stage the carry gate requires before any capital: the
+// backend recomputes the book from its start hour, so this only renders it.
+const money = (v: number | null | undefined) => (v == null ? "—" : Math.abs(v).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+const signOf = (v: number | null | undefined) => (v != null && v < 0 ? "−" : "+");
+
+function CarryPaperPanel() {
+  const t = useTranslations("crypto");
+  const pal = usePalette();
+  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-desk", "carry-paper"], queryFn: cryptoApi.carryPaper, staleTime: 5 * 60_000, refetchInterval: 15 * 60_000, retry: 1 });
+  if (isLoading) return <PanelPending label={t("carryPaper.label")} text={t("loading")} />;
+  if (isError || !data) return <PanelUnavailable label={t("carryPaper.label")} reason={t("unavailable")} />;
+  if (data.status === "not_started") return <PanelUnavailable label={t("carryPaper.label")} reason={t("carryPaper.notStarted")} />;
+  const capital = (data.capital_usd ?? 0).toLocaleString();
+  if (data.status === "starting") {
+    const at = data.started_at ?? "";
+    return (
+      <Panel label={t("carryPaper.label")} qualifier={t("carryPaper.qualifierPending", { capital })}
+             reading={t("carryPaper.starting", { time: at.slice(11, 16), date: at.slice(0, 10) })}>
+        <p className="font-mono text-[11px] text-muted-foreground">{t("carryPaper.rule")}</p>
+      </Panel>
+    );
+  }
+  const r = data.return_after_exit ?? 0;
+  const pnl = data.pnl_usd_after_exit;
+  const args = { sign: signOf(pnl), pnl: money(pnl), pct: `${r >= 0 ? "+" : "−"}${Math.abs(r * 100).toFixed(2)}%`, ann: apr(data.annualised_after_exit), end: (data.ends_at ?? "").slice(0, 10) };
+  const reading = data.status === "passed" ? t("carryPaper.reading.passed", args)
+    : data.status === "dropped" ? t("carryPaper.reading.dropped", args)
+      : data.annualised_after_exit == null ? t("carryPaper.reading.runningEarly", args)
+        : t("carryPaper.reading.running", args);
+  const lines = data.lines_usd;
+  const fees = lines ? lines.costs + lines.topups : null;
+  const nav = data.nav ?? [];
+  return (
+    <Panel label={t("carryPaper.label")}
+           qualifier={t("carryPaper.qualifier", { day: Math.min(Math.floor(data.days_elapsed ?? 0) + 1, data.days_total ?? 30), total: data.days_total ?? 30, capital })}
+           tone={data.status === "passed" ? "signal" : "plain"}
+           aside={data.as_of ? <Freshness at={data.as_of} /> : undefined}
+           reading={reading}>
+      <div className="grid grid-cols-2 gap-3">
+        <Stat size="sm" label={t("carryPaper.stat.pnl")} value={`${signOf(pnl)}$${money(pnl)}`} tone={r >= 0 ? "long" : "short"} />
+        <Stat size="sm" label={t("carryPaper.stat.ann")} value={apr(data.annualised_after_exit)} />
+        <Stat size="sm" label={t("carryPaper.stat.funding")} value={lines ? `$${money(lines.funding)}` : "—"} />
+        <Stat size="sm" label={t("carryPaper.stat.costs")} value={fees == null ? "—" : `$${money(fees)}`} sub={t("carryPaper.stat.costsSub", { exit: `$${money(data.exit_cost_usd)}` })} />
+      </div>
+      {pal && nav.length > 1 && <PaperSpark nav={nav} color={r >= 0 ? pal.long : pal.short} baseColor={pal.mutedFg} />}
+      <Disclosure label={t("carryPaper.detailLabel")} className="mt-3">
+        <dl className="space-y-1 font-mono text-xs">
+          {lines && (["funding", "basis", "costs", "topups"] as const).map((k) => (
+            <div key={k} className="flex items-baseline justify-between gap-3"><dt className="text-muted-foreground">{t(`carryPaper.line.${k}`)}</dt><dd className="nums">{signOf(lines[k])}${money(lines[k])}</dd></div>
+          ))}
+          {data.status === "running" && (
+            <div className="flex items-baseline justify-between gap-3"><dt className="text-muted-foreground">{t("carryPaper.line.exit")}</dt><dd className="nums">−${money(data.exit_cost_usd)}</dd></div>
+          )}
+        </dl>
+        <ul className="mt-2 space-y-0.5 font-mono text-[11px] text-muted-foreground">
+          {Object.entries(data.positions ?? {}).map(([s, p]) => (
+            <li key={s}>{t("carryPaper.position", { sym: s.replace("USDT", ""), notional: money(p.notional_usd), basis: p.basis_bps.toFixed(1) })}</li>
+          ))}
+        </ul>
+        <p className="mt-2 text-xs text-muted-foreground">{t("carryPaper.rule")}</p>
+      </Disclosure>
+    </Panel>
+  );
+}
+
+function PaperSpark({ nav, color, baseColor }: { nav: Array<{ t: string; v: number }>; color: string; baseColor: string }) {
+  const t = useTranslations("crypto");
+  const W = 320, H = 56, P = 4;
+  const vs = nav.map((p) => p.v);
+  const lo = Math.min(1, ...vs), hi = Math.max(1, ...vs);
+  const y = (v: number) => H - P - ((v - lo) / (hi - lo || 1)) * (H - 2 * P);
+  const x = (i: number) => P + (i / (nav.length - 1)) * (W - 2 * P);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 block h-14 w-full" role="img" aria-label={t("carryPaper.chartAria")}>
+      <line x1={P} x2={W - P} y1={y(1)} y2={y(1)} stroke={baseColor} strokeWidth={1} strokeDasharray="4 3" />
+      <path d={nav.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join("")} fill="none" stroke={color} strokeWidth={1.5} />
     </svg>
   );
 }

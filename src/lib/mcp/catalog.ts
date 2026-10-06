@@ -784,6 +784,22 @@ export const TOOL_CATALOG: ToolDoc[] = [
     returns: "{ reading, as_of, symbols, count, tiers: { fired, near, far }, gates, risk, active_signals[], rows[] }",
   },
   {
+    name: "get_carry",
+    group: "Crypto",
+    title: "Funding carry: live yield and the paper run",
+    description:
+      "What long spot / short perp on BTC and ETH pays now, and how its 30-day paper run is doing. `card`: trailing " +
+      "7- and 30-day funding per coin and for the pair, as a yield a year on capital (funding / 1.5, since the trade ties " +
+      "up the spot amount plus half of it as margin) against an assumed 4.5 % cash rate, a 90-day path, the latest and " +
+      "next settlement, and the 2024-2025 backtest's verdict. `paper`: the pre-registered paper stage for C1-majors " +
+      "($10,000 nominal, 30 days, dropped if the realised return is below 0), recomputed from its start hour on Binance's " +
+      "hourly prices and funding: status (starting / running / passed / dropped), day, P&L marked and after the cost of " +
+      "closing now, annualised, funding / basis / fees / top-ups in dollars, positions with their basis. Read-only; " +
+      "nothing is ordered.",
+    params: [],
+    returns: "{ card: { state, cash_apr, book_capital_apr_7d, book_capital_apr_30d, symbols, backtest }, paper: { status, days_elapsed, pnl_usd_after_exit, return_after_exit, annualised_after_exit, lines_usd, positions, nav[] } }",
+  },
+  {
     name: "crypto_risk_status",
     group: "Crypto",
     title: "Scalp risk-manager state",

@@ -79,9 +79,24 @@ export type CarryCard = {
   backtest: { passed: boolean | null; apr_2024_2025: number | null; halves: Record<string, number>; sharpe: number | null; mdd: number | null } | null;
 };
 
+// The 30-day carry paper stage: C1-majors recomputed from its start hour on Binance's own data.
+// Returns are fractions of capital; *_usd on the nominal capital.
+export type CarryPaper = {
+  status: "not_started" | "starting" | "running" | "passed" | "dropped";
+  id?: string; variant?: string; symbols?: string[]; capital_usd?: number; started_at?: string; ends_at?: string; rule?: string;
+  as_of?: string; days_elapsed?: number; days_total?: number;
+  return_marked?: number; return_after_exit?: number; pnl_usd_marked?: number; pnl_usd_after_exit?: number; exit_cost_usd?: number;
+  annualised_after_exit?: number | null;
+  lines_usd?: { funding: number; basis: number; costs: number; topups: number };
+  by_symbol_usd?: Record<string, number>;
+  positions?: Record<string, { notional_usd: number; qty: number; spot: number; perp: number; basis_bps: number }>;
+  nav?: Array<{ t: string; v: number }>;
+};
+
 export const cryptoApi = {
   today: () => api.get("/api/crypto-desk/today").then((r) => r.data as CryptoToday),
   carry: () => api.get("/api/crypto-desk/carry").then((r) => r.data as CarryCard),
+  carryPaper: () => api.get("/api/crypto-desk/carry/paper", { timeout: 60_000 }).then((r) => r.data as CarryPaper),
   scalpDesk: (symbol?: string) => api.get(`/api/crypto-desk/scalp/desk${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`, { timeout: 60_000 }).then((r) => r.data as ScalpDesk),
   signals: (status: "active" | "today" | "recent" = "active", limit = 50) => api.get(`/api/crypto-desk/signals?status=${status}&limit=${limit}`).then((r) => r.data as { status: string; count: number; signals: ScalpSignal[] }),
   riskStatus: () => api.get("/api/crypto-desk/risk/status").then((r) => r.data as ScalpRisk),
