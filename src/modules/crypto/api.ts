@@ -93,9 +93,23 @@ export type CarryPaper = {
   nav?: Array<{ t: string; v: number }>;
 };
 
+// The 8-week trend paper stage: rule T1 against the 50/50 BTC/ETH hold, rebuilt from its first Monday.
+export type TrendSignal = { ret_4w: number | null; vol_30d: number | null; weight_if_rebalanced: number };
+export type TrendPaper = {
+  status: "not_started" | "starting" | "running" | "passed" | "dropped";
+  id?: string; variant?: string; capital_usd?: number; started_at?: string; ends_at?: string; weeks_total?: number; rule?: string;
+  as_of?: string; rebalances_done?: number;
+  return_marked?: number; return_after_exit?: number; bench_marked?: number; bench_after_exit?: number; gap_pp?: number;
+  pnl_usd_after_exit?: number; bench_pnl_usd_after_exit?: number; costs_usd?: number; exit_cost_usd?: number;
+  holdings?: Record<string, number>; cash_weight?: number;
+  nav?: Array<{ t: string; rule: number; bench: number }>;
+  next_rebalance?: string; signal_preview?: Record<string, TrendSignal>;
+};
+
 export const cryptoApi = {
   today: () => api.get("/api/crypto-desk/today").then((r) => r.data as CryptoToday),
   carry: () => api.get("/api/crypto-desk/carry").then((r) => r.data as CarryCard),
+  trendPaper: () => api.get("/api/crypto-desk/trend/paper", { timeout: 60_000 }).then((r) => r.data as TrendPaper),
   carryPaper: () => api.get("/api/crypto-desk/carry/paper", { timeout: 60_000 }).then((r) => r.data as CarryPaper),
   scalpDesk: (symbol?: string) => api.get(`/api/crypto-desk/scalp/desk${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`, { timeout: 60_000 }).then((r) => r.data as ScalpDesk),
   signals: (status: "active" | "today" | "recent" = "active", limit = 50) => api.get(`/api/crypto-desk/signals?status=${status}&limit=${limit}`).then((r) => r.data as { status: string; count: number; signals: ScalpSignal[] }),

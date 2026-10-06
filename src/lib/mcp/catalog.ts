@@ -800,6 +800,21 @@ export const TOOL_CATALOG: ToolDoc[] = [
     returns: "{ card: { state, cash_apr, book_capital_apr_7d, book_capital_apr_30d, symbols, backtest }, paper: { status, days_elapsed, pnl_usd_after_exit, return_after_exit, annualised_after_exit, lines_usd, positions, nav[] } }",
   },
   {
+    name: "get_trend",
+    group: "Crypto",
+    title: "Trend rule T1: the paper run",
+    description:
+      "The 8-week paper stage for trend rule T1, which passed its pre-registered gate on 2022-2026: BTC and ETH, each " +
+      "held while its 4-week return is positive and sized to a 40 % volatility target, otherwise cash, rebalanced every " +
+      "Monday at the open. It runs against simply holding 50/50 on a $10,000 nominal book and is dropped if it trails " +
+      "the hold by more than 10 percentage points or falls below -10 %. Both books are rebuilt from the run's first " +
+      "Monday on Binance daily prices: status (starting / running / passed / dropped), rebalances done, each return " +
+      "marked and after the cost of closing, the gap, current holdings and cash, the daily path of both, and the coming " +
+      "Monday's signal (4-week return, 30-day volatility, the weight it would set). Read-only; nothing is ordered.",
+    params: [],
+    returns: "{ status, rebalances_done, return_after_exit, bench_after_exit, gap_pp, holdings, cash_weight, nav[], next_rebalance, signal_preview }",
+  },
+  {
     name: "crypto_risk_status",
     group: "Crypto",
     title: "Scalp risk-manager state",

@@ -2534,6 +2534,34 @@
       },
       "position": "{sym}: ${notional} a side, basis {basis} bps",
       "rule": "Pre-registered in CARRY_GATE.md: a 30-day paper stage before any capital, dropped if the realised return is below 0. Nothing is ordered; the book is recomputed every few minutes from Binance's own prices and funding with the backtest's accounting."
+    },
+    "trendPaper": {
+      "label": "Trend paper run",
+      "qualifier": "week {week} of {total} · ${capital} on paper",
+      "qualifierPending": "8 weeks · ${capital} on paper",
+      "notStarted": "No trend paper run has been started.",
+      "starting": "The run starts at the Monday open on {date}. Rule T1 holds BTC and ETH while each is up over 4 weeks, scaled down when volatility runs above 40 % a year, otherwise cash. Against it: simply holding 50/50.",
+      "reading": {
+        "running": "T1 is {rule} after the cost of closing, holding 50/50 is {bench}: {gap} points {side}. It is dropped if it falls more than 10 points behind or below −10 % by {end}.",
+        "passed": "Passed: T1 made {rule} over the 8 weeks against {bench} for holding, both closed and net of costs. It goes on to a capital decision.",
+        "dropped": "Dropped: T1 made {rule} over the 8 weeks against {bench} for holding, both closed and net of costs. It does not go on to a capital decision."
+      },
+      "ahead": "ahead",
+      "behind": "behind",
+      "stat": {
+        "rule": "T1",
+        "bench": "Hold 50/50",
+        "gap": "Gap",
+        "holding": "Holding now",
+        "cash": "cash {pct}"
+      },
+      "previewLabel": "Next rebalance · {date}",
+      "previewRow": "{sym}: 4 weeks {ret}, volatility {vol} → {weight}",
+      "previewNote": "From the latest daily close; the real decision uses Sunday's close.",
+      "chartAria": "T1 against the 50/50 hold since the start of the run",
+      "legendRule": "T1",
+      "legendBench": "hold 50/50",
+      "rule": "Pre-registered in TREND_GATE.md: 8 weekly rebalances on paper before any capital. Nothing is ordered; both books are rebuilt every few minutes from Binance's daily prices with the backtest's engine and costs."
     }
   },
   "scalp": {

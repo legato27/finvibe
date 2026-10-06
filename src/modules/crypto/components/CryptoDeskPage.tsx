@@ -22,7 +22,7 @@ import Freshness from "@/components/ui/Freshness";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { useMyWatchlistTickers, useUser } from "@/lib/supabase/hooks";
 import { usePalette } from "@/components/heatmap/palette";
-import { cryptoApi, type CarryCard, type CarryPaper } from "@/modules/crypto/api";
+import { cryptoApi, type CarryCard, type CarryPaper, type TrendPaper } from "@/modules/crypto/api";
 import { isCryptoTicker } from "@/modules/crypto/flag";
 import { equityPath, leanFromBias, liquidityRows, sessionLine, setupAsPriceAction, setupLabel, type LiquidityRow } from "@/modules/crypto/lib/desk";
 
@@ -111,6 +111,7 @@ export function CryptoDeskPage() {
           <SessionPanel session={reading?.session ?? liquidity?.session} />
           <CarryPanel />
           <CarryPaperPanel />
+          <TrendPaperPanel />
           <YourCoinsPanel />
         </aside>
       </div>
@@ -389,6 +390,88 @@ function PaperSpark({ nav, color, baseColor }: { nav: Array<{ t: string; v: numb
     <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 block h-14 w-full" role="img" aria-label={t("carryPaper.chartAria")}>
       <line x1={P} x2={W - P} y1={y(1)} y2={y(1)} stroke={baseColor} strokeWidth={1} strokeDasharray="4 3" />
       <path d={nav.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join("")} fill="none" stroke={color} strokeWidth={1.5} />
+    </svg>
+  );
+}
+
+// The 8-week paper stage for trend rule T1 against the 50/50 hold; the backend
+// rebuilds both books from the run's first Monday, this only renders them.
+const pctS = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${v >= 0 ? "+" : "−"}${Math.abs(v * 100).toFixed(d)}%`);
+
+function TrendPaperPanel() {
+  const t = useTranslations("crypto");
+  const pal = usePalette();
+  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-desk", "trend-paper"], queryFn: cryptoApi.trendPaper, staleTime: 5 * 60_000, refetchInterval: 15 * 60_000, retry: 1 });
+  if (isLoading) return <PanelPending label={t("trendPaper.label")} text={t("loading")} />;
+  if (isError || !data) return <PanelUnavailable label={t("trendPaper.label")} reason={t("unavailable")} />;
+  if (data.status === "not_started") return <PanelUnavailable label={t("trendPaper.label")} reason={t("trendPaper.notStarted")} />;
+  const capital = (data.capital_usd ?? 0).toLocaleString();
+  const preview = (titled: boolean) => data.signal_preview && data.next_rebalance ? (
+    <div className={titled ? "mt-3" : ""}>
+      {titled && <p className="card-title">{t("trendPaper.previewLabel", { date: data.next_rebalance.slice(0, 10) })}</p>}
+      <ul className="mt-1 space-y-0.5 font-mono text-[11px]">
+        {Object.entries(data.signal_preview).map(([s, x]) => (
+          <li key={s}>{t("trendPaper.previewRow", { sym: s.replace("USDT", ""), ret: pctS(x.ret_4w), vol: x.vol_30d == null ? "—" : `${Math.round(x.vol_30d * 100)}%`, weight: `${Math.round(x.weight_if_rebalanced * 100)}%` })}</li>
+        ))}
+      </ul>
+      <p className="mt-1 text-[11px] text-muted-foreground">{t("trendPaper.previewNote")}</p>
+    </div>
+  ) : null;
+  if (data.status === "starting") {
+    return (
+      <Panel label={t("trendPaper.label")} qualifier={t("trendPaper.qualifierPending", { capital })}
+             reading={t("trendPaper.starting", { date: (data.started_at ?? "").slice(0, 10) })}>
+        {preview(true)}
+        <p className="mt-2 font-mono text-[11px] text-muted-foreground">{t("trendPaper.rule")}</p>
+      </Panel>
+    );
+  }
+  const gap = data.gap_pp ?? 0;
+  const args = { rule: pctS(data.return_after_exit), bench: pctS(data.bench_after_exit), gap: Math.abs(gap * 100).toFixed(1),
+                 side: gap >= 0 ? t("trendPaper.ahead") : t("trendPaper.behind"), end: (data.ends_at ?? "").slice(0, 10) };
+  const reading = data.status === "passed" ? t("trendPaper.reading.passed", args) : data.status === "dropped" ? t("trendPaper.reading.dropped", args) : t("trendPaper.reading.running", args);
+  const holding = Object.entries(data.holdings ?? {}).map(([s, w]) => `${s.replace("USDT", "")} ${Math.round(w * 100)}%`).join(" · ") || "—";
+  return (
+    <Panel label={t("trendPaper.label")}
+           qualifier={t("trendPaper.qualifier", { week: Math.max(1, data.rebalances_done ?? 1), total: data.weeks_total ?? 8, capital })}
+           tone={data.status === "passed" ? "signal" : "plain"}
+           aside={data.as_of ? <Freshness at={data.as_of} /> : undefined}
+           reading={reading}>
+      <div className="grid grid-cols-3 gap-3">
+        <Stat size="sm" label={t("trendPaper.stat.rule")} value={pctS(data.return_after_exit)} tone={(data.return_after_exit ?? 0) >= 0 ? "long" : "short"} />
+        <Stat size="sm" label={t("trendPaper.stat.bench")} value={pctS(data.bench_after_exit)} />
+        <Stat size="sm" label={t("trendPaper.stat.gap")} value={`${gap >= 0 ? "+" : "−"}${Math.abs(gap * 100).toFixed(1)} pts`} tone={gap >= 0 ? "long" : gap < -0.1 ? "short" : "caution"} />
+      </div>
+      <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+        {t("trendPaper.stat.holding")}: {holding} · {t("trendPaper.stat.cash", { pct: `${Math.round((data.cash_weight ?? 0) * 100)}%` })}
+      </p>
+      {pal && (data.nav?.length ?? 0) > 1 && <TrendSpark nav={data.nav!} ruleColor={pal.chart[0]} benchColor={pal.mutedFg} />}
+      {pal && (data.nav?.length ?? 0) > 1 && (
+        <p className="mt-1 flex gap-3 font-mono text-[11px] text-muted-foreground">
+          <span><span aria-hidden style={{ color: pal.chart[0] }}>━</span> {t("trendPaper.legendRule")}</span>
+          <span><span aria-hidden>┅</span> {t("trendPaper.legendBench")}</span>
+        </p>
+      )}
+      <Disclosure label={t("trendPaper.previewLabel", { date: (data.next_rebalance ?? "").slice(0, 10) })} className="mt-3">
+        {preview(false)}
+        <p className="mt-2 text-xs text-muted-foreground">{t("trendPaper.rule")}</p>
+      </Disclosure>
+    </Panel>
+  );
+}
+
+function TrendSpark({ nav, ruleColor, benchColor }: { nav: Array<{ t: string; rule: number; bench: number }>; ruleColor: string; benchColor: string }) {
+  const t = useTranslations("crypto");
+  const W = 320, H = 64, P = 4;
+  const vs = nav.flatMap((p) => [p.rule, p.bench]);
+  const lo = Math.min(1, ...vs), hi = Math.max(1, ...vs);
+  const y = (v: number) => H - P - ((v - lo) / (hi - lo || 1)) * (H - 2 * P);
+  const x = (i: number) => P + (i / (nav.length - 1)) * (W - 2 * P);
+  const path = (k: "rule" | "bench") => nav.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join("");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 block h-16 w-full" role="img" aria-label={t("trendPaper.chartAria")}>
+      <path d={path("bench")} fill="none" stroke={benchColor} strokeWidth={1} strokeDasharray="4 3" />
+      <path d={path("rule")} fill="none" stroke={ruleColor} strokeWidth={1.5} />
     </svg>
   );
 }

@@ -7,7 +7,7 @@
  * record, Today, book risk) through asset_class / strategy dimensions; what
  * lives here is only what has no options counterpart: the market-maker read
  * with the evidence packet, the scalp desk, the funding-carry reading and
- * its paper run, and the three risk tools — the only mutating tools in the family.
+ * its paper run, the trend rule's paper run, and the three risk tools — the only mutating tools in the family.
  */
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -102,6 +102,12 @@ export function registerCryptoTools(reg: McpServer["registerTool"], ctx: { userI
       ]);
       return ok({ card, paper });
     },
+  );
+
+  reg(
+    "get_trend",
+    { ...meta("get_trend"), inputSchema: {} },
+    async () => ok(await dgxJson<unknown>("/api/crypto-desk/trend/paper")),
   );
 
   reg(
