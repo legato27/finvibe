@@ -55,6 +55,8 @@ export type CryptoToday = {
 export type CryptoScorecardBlock = {
   n: number; n_signals: number; fill_rate: number | null; win_rate: number | null; avg_r: number | null; median_r: number | null; avg_pnl_pct: number | null;
   target_rate: number | null; stop_rate: number | null; time_stop_rate: number | null; mean_p_win_assumed: number | null; calibration_gap: number | null; avg_mfe_r: number | null; avg_mae_r: number | null;
+  // after the modelled round trip (absent on older backends); avg_r / median_r / win_rate are before fees
+  avg_r_net?: number | null; median_r_net?: number | null; win_rate_net?: number | null; avg_fee_r?: number | null;
 };
 export type CryptoScorecard = {
   window_days: number; asset_class: "crypto"; mode: string; coverage: Record<string, unknown>; overall: CryptoScorecardBlock;

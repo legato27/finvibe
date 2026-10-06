@@ -101,8 +101,11 @@ export function ScalpDeskPage() {
     { key: "setup", header: t("record.col.setup"), cell: (r) => <span className="font-medium">{r.label}</span> },
     { key: "signals", header: t("record.col.signals"), align: "right", cell: (r) => <span className="nums">{r.b.n_signals}</span> },
     { key: "filled", header: t("record.col.filled"), align: "right", cell: (r) => <span className="nums">{pct(r.b.fill_rate)}</span> },
-    { key: "won", header: t("record.col.won"), align: "right", cell: (r) => <span className="nums">{pct(r.b.win_rate)}</span> },
-    { key: "avgR", header: t("record.col.avgR"), align: "right", cell: (r) => <span className={`nums ${(r.b.avg_r ?? 0) < 0 ? "text-signal-short" : ""}`}>{rr(r.b.avg_r)}</span> },
+    // after fees first: the round trip is ~0.2R a trade, the gap between "roughly flat" and a losing sleeve
+    { key: "won", header: t("record.col.won"), align: "right", cell: (r) => <span className="nums">{pct(r.b.win_rate_net ?? r.b.win_rate)}</span> },
+    { key: "avgR", header: t("record.col.avgR"), align: "right", cell: (r) => { const v = r.b.avg_r_net ?? r.b.avg_r; return <span className={`nums ${(v ?? 0) < 0 ? "text-signal-short" : ""}`}>{rr(v)}</span>; } },
+    { key: "grossR", header: t("record.col.grossR"), align: "right", hideBelow: "md", cell: (r) => <span className="nums text-muted-foreground">{rr(r.b.avg_r)}</span> },
+    { key: "feeR", header: t("record.col.feeR"), align: "right", hideBelow: "lg", cell: (r) => <span className="nums text-muted-foreground">{r.b.avg_fee_r == null ? "—" : `${r.b.avg_fee_r.toFixed(2)}R`}</span> },
     { key: "exits", header: t("record.col.exits"), hideBelow: "md", cell: (r) => <span className="nums text-xs">{pct(r.b.target_rate)} / {pct(r.b.stop_rate)} / {pct(r.b.time_stop_rate)}</span> },
     { key: "gap", header: t("record.col.gap"), align: "right", hideBelow: "md", cell: (r) => <span className="nums">{r.b.calibration_gap == null ? "—" : `${r.b.calibration_gap > 0 ? "+" : ""}${(r.b.calibration_gap * 100).toFixed(0)}`}</span> },
   ];

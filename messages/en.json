@@ -2574,7 +2574,7 @@
     "record": {
       "label": "What the engine called here",
       "qualifier": "{count} graded over {days} days · paper",
-      "lead": "Every scalp signal the engine logged, executed by the paper broker and graded at its exit. Fills are maker limits; wins are net R above zero. The strong-flow rows split setup A by the order flow behind its trigger, the one hypothesis kept from the 2026-09-18 retune, tracked here until the book says whether it holds.",
+      "lead": "Every scalp signal the engine logged, executed by the paper broker and graded at its exit. Fills are maker limits. Won and Avg R are after the modelled round trip (fees, spread and slippage, in R of the trade's own risk); Before fees is the raw move, and Fees is what the round trip cost per trade. The strong-flow rows split setup A by the order flow behind its trigger.",
       "caption": "Scalp engine record by setup",
       "all": "All setups",
       "col": {
@@ -2583,6 +2583,8 @@
         "filled": "Filled",
         "won": "Won",
         "avgR": "Avg R",
+        "grossR": "Before fees",
+        "feeR": "Fees",
         "exits": "Target / stop / time",
         "gap": "Gap pts"
       },

@@ -608,7 +608,7 @@ export const TOOL_CATALOG: ToolDoc[] = [
       "older than the window every window returns the same rows.",
     params: [
       { name: "window_days", type: "integer", required: false, description: "Grading window. Default 400." },
-      { name: "asset_class", type: "string", required: false, description: "options (default) | crypto. Crypto grades the scalp engine's signals at time-stop or exit: cohorts by strategy (scalp_A/B/C), session, symbol, side and, for setup A, the order flow behind the trigger (by_trigger: scalp_A/strong_flow is OFI z ≥ 1.5 with volume z > 1.5, scalp_A/weak_flow the rest), with fill rate and the calibration gap between the gate's p_win_assumed and realised wins." },
+      { name: "asset_class", type: "string", required: false, description: "options (default) | crypto. Crypto grades the scalp engine's signals at time-stop or exit: cohorts by strategy (scalp_A/B/C), session, symbol, side and, for setup A, the order flow behind the trigger (by_trigger: scalp_A/strong_flow is OFI z ≥ 1.5 with volume z > 1.5, scalp_A/weak_flow the rest), with fill rate and the calibration gap between the gate's p_win_assumed and realised wins. avg_r / median_r / win_rate are before fees (R in units of the stop); avg_r_net / median_r_net / win_rate_net are after the modelled round trip, all in, the number that moves the sleeve, and avg_fee_r is the round trip's cost in R." },
       { name: "mode", type: "string", required: false, description: "live | paper | backtest. Never inferred: options default to live, crypto to paper." },
     ],
     returns:
