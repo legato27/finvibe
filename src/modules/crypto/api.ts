@@ -65,8 +65,23 @@ export type CryptoScorecard = {
   by_trigger?: Record<string, CryptoScorecardBlock>;
 };
 
+// Desk → Crypto funding-carry card: what long spot / short perp on BTC and ETH
+// pays now. Yields are fractions a year on capital (funding / 1.5) unless named funding_*.
+export type CarrySymbol = {
+  last_rate: number; last_at: string; next_at: string; interval_h: number;
+  funding_apr_7d: number | null; funding_apr_30d: number | null; capital_apr_7d: number | null; capital_apr_30d: number | null;
+  series: Array<{ t: string; capital_apr: number }>;
+};
+export type CarryCard = {
+  as_of: string | null; cash_apr: number; capital_per_notional: number;
+  book_capital_apr_7d: number | null; book_capital_apr_30d: number | null; state: "above_cash" | "positive" | "negative" | null;
+  symbols: Record<string, CarrySymbol | null>;
+  backtest: { passed: boolean | null; apr_2024_2025: number | null; halves: Record<string, number>; sharpe: number | null; mdd: number | null } | null;
+};
+
 export const cryptoApi = {
   today: () => api.get("/api/crypto-desk/today").then((r) => r.data as CryptoToday),
+  carry: () => api.get("/api/crypto-desk/carry").then((r) => r.data as CarryCard),
   scalpDesk: (symbol?: string) => api.get(`/api/crypto-desk/scalp/desk${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`, { timeout: 60_000 }).then((r) => r.data as ScalpDesk),
   signals: (status: "active" | "today" | "recent" = "active", limit = 50) => api.get(`/api/crypto-desk/signals?status=${status}&limit=${limit}`).then((r) => r.data as { status: string; count: number; signals: ScalpSignal[] }),
   riskStatus: () => api.get("/api/crypto-desk/risk/status").then((r) => r.data as ScalpRisk),

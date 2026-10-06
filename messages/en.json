@@ -2481,7 +2481,29 @@
       "volume": "24h volume"
     },
     "switchScalp": "Scalp",
-    "switchJournal": "Journal"
+    "switchJournal": "Journal",
+    "carry": {
+      "label": "Funding carry",
+      "qualifier": "BTC + ETH · long spot, short perp",
+      "reading": {
+        "above_cash": "Carry pays {yield} a year on capital over the last week, above cash at {cash}. Funding is rich enough that holding the hedged pair earns more than parking the money.",
+        "positive": "Carry pays {yield} a year on capital over the last week, below cash at {cash}. Funding is positive but thin: the hedged pair earns something, just less than a savings rate.",
+        "negative": "Funding is negative over the last week: shorts are paying longs. Carry would cost money right now."
+      },
+      "unavailable": "No funding settlements in the lake yet.",
+      "stat": {
+        "book": "Book · 7 days",
+        "book30": "Book · 30 days",
+        "funding": "funding {value} on size",
+        "next": "next {time} UTC · last {rate}"
+      },
+      "chartAria": "Carry yield on capital over 90 days for BTC and ETH, with the cash line",
+      "legendCash": "cash {cash}",
+      "explainLabel": "How this is read",
+      "explain": "Buy the coin, short the same amount of its perpetual: price moves cancel, and you collect funding whenever longs pay shorts. The yield here is trailing funding divided by 1.5, because the trade ties up the full spot amount plus half of it as futures margin. Fees (about 0.3% to get in and out) are left out; they matter only if you switch often.",
+      "backtest": "Backtested on 2024–2025: {apr} a year, worst drawdown {mdd}, passing its pre-registered gate. By half-year it earned {h1}, {h2}, {h3}, {h4}, and the yield has been fading. This card shows today's level so the decision is visible; it is not a trading rule.",
+      "asOf": "last settlement"
+    }
   },
   "scalp": {
     "title": "Scalp desk",

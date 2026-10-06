@@ -4,7 +4,7 @@
  * Desk → Crypto. The Bitcoin market-maker module on the page grammar: the
  * answer first (one sentence, a lean pill, three Stats), then the session
  * clock, the setup, the liquidity map, the chart with the setup's levels,
- * your coins, and the backtest under a Disclosure. Every panel keeps its
+ * your coins, the funding-carry card, and the backtest under a Disclosure. Every panel keeps its
  * place when its feed is down and says why.
  */
 import { useMemo, useState } from "react";
@@ -22,7 +22,7 @@ import Freshness from "@/components/ui/Freshness";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { useMyWatchlistTickers, useUser } from "@/lib/supabase/hooks";
 import { usePalette } from "@/components/heatmap/palette";
-import { cryptoApi } from "@/modules/crypto/api";
+import { cryptoApi, type CarryCard } from "@/modules/crypto/api";
 import { isCryptoTicker } from "@/modules/crypto/flag";
 import { equityPath, leanFromBias, liquidityRows, sessionLine, setupAsPriceAction, setupLabel, type LiquidityRow } from "@/modules/crypto/lib/desk";
 
@@ -109,6 +109,7 @@ export function CryptoDeskPage() {
         </div>
         <aside className="min-w-0 space-y-4 lg:sticky lg:top-[104px]">
           <SessionPanel session={reading?.session ?? liquidity?.session} />
+          <CarryPanel />
           <YourCoinsPanel />
         </aside>
       </div>
@@ -228,6 +229,86 @@ function BacktestPanel({ backtest }: { backtest: import("@/modules/crypto/api").
         </div>
       )}
     </Disclosure>
+  );
+}
+
+// What long spot / short perp on BTC and ETH pays now, against cash. A
+// display of the carry backtest's one input (the funding stream), not a rule:
+// a switching rule would need its own pre-registration (CARRY_GATE.md).
+const CARRY_SYMBOLS = ["BTCUSDT", "ETHUSDT"] as const;
+const apr = (v: number | null | undefined, d = 1) => (v == null ? "—" : `${(v * 100).toFixed(d)}%`);
+
+function CarryPanel() {
+  const t = useTranslations("crypto");
+  const pal = usePalette();
+  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-desk", "carry"], queryFn: cryptoApi.carry, staleTime: 5 * 60_000, refetchInterval: 15 * 60_000, retry: 1 });
+  if (isLoading) return <PanelPending label={t("carry.label")} text={t("loading")} />;
+  if (isError || !data || !data.state) return <PanelUnavailable label={t("carry.label")} reason={t("carry.unavailable")} />;
+  const cash = apr(data.cash_apr);
+  const bt = data.backtest;
+  return (
+    <Panel
+      label={t("carry.label")}
+      qualifier={t("carry.qualifier")}
+      tone={data.state === "above_cash" ? "signal" : "plain"}
+      aside={data.as_of ? <Freshness at={data.as_of} label={t("carry.asOf")} /> : undefined}
+      reading={
+        data.state === "above_cash" ? t("carry.reading.above_cash", { yield: apr(data.book_capital_apr_7d), cash })
+          : data.state === "positive" ? t("carry.reading.positive", { yield: apr(data.book_capital_apr_7d), cash })
+            : t("carry.reading.negative")
+      }
+    >
+      <div className="grid grid-cols-2 gap-3">
+        <Stat size="sm" label={t("carry.stat.book")} value={apr(data.book_capital_apr_7d)} tone={data.state === "above_cash" ? "long" : data.state === "negative" ? "short" : "caution"} sub={t("carry.legendCash", { cash })} />
+        <Stat size="sm" label={t("carry.stat.book30")} value={apr(data.book_capital_apr_30d)} />
+        {CARRY_SYMBOLS.map((s) => {
+          const x = data.symbols[s];
+          return (
+            <Stat key={s} size="sm" label={`${s.replace("USDT", "")} · 7d`} value={apr(x?.capital_apr_7d)}
+                  sub={x ? t("carry.stat.funding", { value: apr(x.funding_apr_7d) }) : undefined} />
+          );
+        })}
+      </div>
+      {pal && <CarrySpark card={data} colors={[pal.chart[0], pal.chart[1]]} cashColor={pal.mutedFg} zeroColor={pal.border} />}
+      <p className="mt-1 flex flex-wrap gap-x-3 font-mono text-[11px] text-muted-foreground">
+        {CARRY_SYMBOLS.map((s, i) => (
+          <span key={s}><span aria-hidden style={{ color: pal?.chart[i] }}>━</span> {s.replace("USDT", "")}</span>
+        ))}
+        <span><span aria-hidden>┅</span> {t("carry.legendCash", { cash })}</span>
+      </p>
+      <p className="mt-2 font-mono text-[11px] text-muted-foreground">
+        {CARRY_SYMBOLS.map((s) => data.symbols[s]).filter(Boolean).slice(0, 1).map((x) => t("carry.stat.next", { time: x!.next_at.slice(11, 16), rate: `${(x!.last_rate * 100).toFixed(4)}%` }))}
+      </p>
+      <Disclosure label={t("carry.explainLabel")} className="mt-3">
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>{t("carry.explain")}</p>
+          {bt?.apr_2024_2025 != null && (
+            <p>{t("carry.backtest", { apr: apr(bt.apr_2024_2025), mdd: apr(bt.mdd, 2), h1: apr(bt.halves["2024H1"]), h2: apr(bt.halves["2024H2"]), h3: apr(bt.halves["2025H1"]), h4: apr(bt.halves["2025H2"]) })}</p>
+          )}
+        </div>
+      </Disclosure>
+    </Panel>
+  );
+}
+
+function CarrySpark({ card, colors, cashColor, zeroColor }: { card: CarryCard; colors: string[]; cashColor: string; zeroColor: string }) {
+  const t = useTranslations("crypto");
+  const W = 320, H = 84, P = 4;
+  const series = CARRY_SYMBOLS.map((s) => card.symbols[s]?.series ?? []);
+  const n = Math.max(...series.map((x) => x.length), 0);
+  if (n < 2) return null;
+  const vals = series.flat().map((p) => p.capital_apr);
+  const lo = Math.min(0, ...vals);
+  const hi = Math.max(card.cash_apr * 1.25, ...vals);
+  const y = (v: number) => H - P - ((v - lo) / (hi - lo || 1)) * (H - 2 * P);
+  const x = (i: number, len: number) => P + (i / (len - 1)) * (W - 2 * P);
+  const path = (pts: Array<{ capital_apr: number }>) => pts.map((p, i) => `${i ? "L" : "M"}${x(i, pts.length).toFixed(1)},${y(p.capital_apr).toFixed(1)}`).join("");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 block h-[84px] w-full" role="img" aria-label={t("carry.chartAria")}>
+      {lo < 0 && <line x1={P} x2={W - P} y1={y(0)} y2={y(0)} stroke={zeroColor} strokeWidth={1} />}
+      <line x1={P} x2={W - P} y1={y(card.cash_apr)} y2={y(card.cash_apr)} stroke={cashColor} strokeWidth={1} strokeDasharray="4 3" />
+      {series.map((pts, i) => pts.length > 1 && <path key={i} d={path(pts)} fill="none" stroke={colors[i]} strokeWidth={1.5} />)}
+    </svg>
   );
 }
 
