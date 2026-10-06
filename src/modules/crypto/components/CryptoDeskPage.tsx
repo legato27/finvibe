@@ -181,7 +181,7 @@ function LiquidityPanel({ rows, pending, analysis }: { rows: LiquidityRow[]; pen
       label={t("liq.label")}
       qualifier={zone?.current_zone ? t("liq.zone", { zone: zone.current_zone.replace(/_/g, " "), eq: usd(zone.equilibrium) }) : undefined}
       aside={
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-2">
           {rows.length > NEAREST && (
             <Segmented
               mode="toggle"

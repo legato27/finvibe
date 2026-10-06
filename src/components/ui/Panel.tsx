@@ -41,14 +41,15 @@ export default function Panel({
   return (
     <Tag className={`card ${toneCls} ${className}`}>
       {(label || aside) && (
-        <div className="mb-3 flex items-start justify-between gap-3">
+        <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
           <div className="card-title flex flex-wrap items-center gap-x-1.5">
             {label}
             {qualifier && (
               <span className="normal-case tracking-normal text-dim">· {qualifier}</span>
             )}
           </div>
-          {aside && <div className="shrink-0 text-xs text-muted-foreground">{aside}</div>}
+          {/* the aside wraps under the label when the card is too narrow for both */}
+          {aside && <div className="max-w-full shrink-0 text-xs text-muted-foreground">{aside}</div>}
         </div>
       )}
       <div className={bodyClassName}>{children}</div>
