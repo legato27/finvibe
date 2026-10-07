@@ -34,3 +34,7 @@ next-env.d.ts
 
 # Supabase CLI cache
 supabase/.temp/
+
+# Local Claude Code settings and the local `next start` log
+.claude/
+.next-start.log
