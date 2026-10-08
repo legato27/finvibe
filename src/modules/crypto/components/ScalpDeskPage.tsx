@@ -19,7 +19,8 @@ import Disclosure from "@/components/ui/Disclosure";
 import DataTable, { type Column } from "@/components/ui/DataTable";
 import Freshness from "@/components/ui/Freshness";
 import { useConfirm } from "@/components/ui/ConfirmDialog";
-import { cryptoApi, type CryptoScorecardBlock, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
+import { cryptoApi, type CryptoScorecardBlock, type H8Status, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
+import { usePalette } from "@/components/heatmap/palette";
 import TradeJournal from "@/components/stock/TradeJournal";
 
 const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", unlogged: "caution", near: "protocol", far: "plain" };
@@ -179,6 +180,9 @@ export function ScalpDeskPage() {
         </Panel>
       )}
 
+      {/* ── H8, the candidate replacement, tracked through its gate ── */}
+      <H8Panel />
+
       {/* ── Ranked setups ── */}
       {isLoading ? (
         <PanelPending label={t("deskLabel")} text={t("loading")} />
@@ -235,5 +239,113 @@ export function ScalpDeskPage() {
         </Panel>
       )}
     </div>
+  );
+}
+
+// H8, the pump distribution short: where its pre-registered research stands,
+// what design and the single test run found, and (if it passes) its paper run.
+const H8_ORDER = ["preregistered", "data", "design", "test", "verdict", "paper"] as const;
+const H8_TONE: Record<string, ChipTone> = { done: "signal", passed: "signal", running: "protocol", failed: "short", pending: "plain", not_started: "plain", only_if_passed: "plain" };
+
+function H8Panel() {
+  const t = useTranslations("scalp");
+  const pal = usePalette();
+  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-h8"], queryFn: cryptoApi.h8, staleTime: 2 * 60_000, refetchInterval: 5 * 60_000, retry: 1 });
+  if (isLoading) return <PanelPending label={t("h8.label")} text={t("loading")} />;
+  if (isError || !data) return <PanelUnavailable label={t("h8.label")} reason={t("h8.unavailable")} />;
+  const st = data.stages;
+  const [dFrom, dTo] = data.periods.design;
+  const [tFrom, tTo] = data.periods.test;
+  const checks = data.test?.checks ?? {};
+  const failed = Object.values(checks).filter((ok) => !ok).length;
+  const reading =
+    st.verdict.state === "passed" ? t("h8.reading.passed")
+      : st.verdict.state === "failed" ? t("h8.reading.failed", { failed, total: Object.keys(checks).length })
+        : st.design.state === "done" && !st.design.chosen ? t("h8.reading.designDead")
+          : st.design.state === "done" ? t("h8.reading.test", { variant: st.design.chosen ?? "—", from: tFrom, to: tTo })
+            : st.data.state === "done" ? t("h8.reading.design", { from: dFrom, to: dTo })
+              : t("h8.reading.data", { fetched: st.data.fetched ?? 0, symbols: st.data.symbols ?? "…" });
+  const curve = data.test_curve ?? data.design_curve ?? null;
+  const designRows = Object.entries(data.design ?? {}).map(([v, g]) => ({ v, g }));
+  const designCols: Column<{ v: string; g: NonNullable<H8Status["design"]>[string] }>[] = [
+    { key: "variant", header: t("h8.col.variant"), cell: (r) => <span className="font-mono font-semibold">{r.v}{r.v === st.design.chosen ? <Chip tone="signal" className="ml-2">{t("h8.chosen")}</Chip> : null}</span> },
+    { key: "rule", header: t("h8.col.rule"), hideBelow: "md", cell: (r) => <span className="text-xs">{data.variants[r.v]}</span> },
+    { key: "trades", header: t("h8.col.trades"), align: "right", cell: (r) => <span className="nums">{r.g.n}</span> },
+    { key: "net", header: t("h8.col.net"), align: "right", cell: (r) => <span className={`nums ${(r.g.avg_r_net ?? 0) < 0 ? "text-signal-short" : ""}`}>{rr(r.g.avg_r_net)}</span> },
+    { key: "gross", header: t("h8.col.gross"), align: "right", hideBelow: "md", cell: (r) => <span className="nums text-muted-foreground">{rr(r.g.avg_r_gross)}</span> },
+    { key: "won", header: t("h8.col.won"), align: "right", hideBelow: "md", cell: (r) => <span className="nums">{pct(r.g.win_rate_net)}</span> },
+    { key: "t", header: t("h8.col.t"), align: "right", hideBelow: "lg", cell: (r) => <span className="nums">{r.g.t_daily == null ? "—" : r.g.t_daily.toFixed(2)}</span> },
+  ];
+  const sum = data.test?.summary ?? {};
+  const num = (k: string) => (typeof sum[k] === "number" ? (sum[k] as number) : null);
+  return (
+    <Panel label={t("h8.label")} qualifier={t("h8.qualifier", { commit: data.gate_commit })}
+           tone={st.verdict.state === "passed" ? "signal" : "plain"} reading={reading}>
+      <ol className="flex flex-wrap items-center gap-1.5" aria-label={t("h8.label")}>
+        {H8_ORDER.map((k, i) => {
+          const s = st[k].state;
+          return (
+            <li key={k} className="flex items-center gap-1.5">
+              <Chip tone={data.current === k && s !== "done" ? "protocol" : H8_TONE[s] ?? "plain"}>
+                {t(`h8.stage.${k}`)} · {k === "data" && s === "running" ? `${st.data.fetched ?? 0}/${st.data.symbols ?? "…"}` : t(`h8.state.${s}` as never)}
+              </Chip>
+              {i < H8_ORDER.length - 1 && <span aria-hidden className="text-dim">›</span>}
+            </li>
+          );
+        })}
+      </ol>
+
+      {data.test && (
+        <div className="mt-4">
+          <p className="card-title">{t("h8.testLabel", { variant: data.test.variant, from: tFrom, to: tTo })}</p>
+          <div className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Stat size="sm" label={t("h8.stat.n")} value={String(num("n") ?? "—")} />
+            <Stat size="sm" label={t("h8.stat.net")} value={rr(num("avg_r_net"))} tone={(num("avg_r_net") ?? 0) >= 0.1 ? "long" : "short"} />
+            <Stat size="sm" label={t("h8.stat.t")} value={num("t_daily") == null ? "—" : num("t_daily")!.toFixed(2)} />
+            <Stat size="sm" label={t("h8.stat.won")} value={pct(num("win_rate_net"))} />
+          </div>
+          <ul className="mt-3 grid gap-1 font-mono text-xs sm:grid-cols-2">
+            {Object.entries(checks).map(([k, ok]) => (
+              <li key={k} className={ok ? "text-signal-long" : "text-signal-short"}>{ok ? "✓" : "✗"} {data.gate_labels[k] ?? k}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {curve && curve.points.length > 1 && pal && (
+        <div className="mt-4">
+          <H8Spark points={curve.points} color={(curve.points[curve.points.length - 1]?.r ?? 0) >= 0 ? pal.long : pal.short} zero={pal.mutedFg} />
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">{data.test_curve ? t("h8.curveTest") : t("h8.curveDesign", { variant: st.design.chosen ?? "—" })} · {curve.n}</p>
+        </div>
+      )}
+
+      {designRows.length > 0 && (
+        <Disclosure label={t("h8.designLabel", { from: dFrom, to: dTo })} className="mt-4">
+          <DataTable caption={t("h8.designCaption")} columns={designCols} rows={designRows} rowKey={(r) => r.v} />
+        </Disclosure>
+      )}
+
+      <Disclosure label={t("h8.whatLabel")} className="mt-3">
+        <div className="space-y-2 text-sm text-muted-foreground">
+          <p>{t("h8.what")}</p>
+          <p className="font-mono text-[11px]">{t("h8.rules", { commit: data.gate_commit, fix: data.fix_commits.join(", ") })}</p>
+        </div>
+      </Disclosure>
+    </Panel>
+  );
+}
+
+function H8Spark({ points, color, zero }: { points: Array<{ t: string; r: number }>; color: string; zero: string }) {
+  const t = useTranslations("scalp");
+  const W = 640, H = 80, P = 4;
+  const vs = points.map((p) => p.r);
+  const lo = Math.min(0, ...vs), hi = Math.max(0, ...vs);
+  const y = (v: number) => H - P - ((v - lo) / (hi - lo || 1)) * (H - 2 * P);
+  const x = (i: number) => P + (i / (points.length - 1)) * (W - 2 * P);
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="block w-full" style={{ height: 80 }} role="img" aria-label={t("h8.curveAria")}>
+      <line x1={P} x2={W - P} y1={y(0)} y2={y(0)} stroke={zero} strokeWidth={1} strokeDasharray="4 3" vectorEffect="non-scaling-stroke" />
+      <path d={points.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.r).toFixed(1)}`).join("")} fill="none" stroke={color} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+    </svg>
   );
 }

@@ -2585,7 +2585,10 @@
       "pending": "Resting",
       "filled": "Filled",
       "closed": "Closed",
-      "unfilled": "Unfilled"
+      "unfilled": "Unfilled",
+      "active": "Active",
+      "paused": "Paused",
+      "halted": "Halted"
     },
     "stat": {
       "state": "State",
@@ -2674,7 +2677,62 @@
         "weak_flow": "A · the rest"
       }
     },
-    "switchJournal": "Journal"
+    "switchJournal": "Journal",
+    "h8": {
+      "label": "H8 · pump distribution short",
+      "qualifier": "candidate replacement · pre-registered {commit}",
+      "unavailable": "H8's research status isn't available yet.",
+      "stage": {
+        "preregistered": "Pre-registered",
+        "data": "Data",
+        "design": "Design",
+        "test": "Test",
+        "verdict": "Verdict",
+        "paper": "Paper run"
+      },
+      "state": {
+        "done": "done",
+        "running": "running",
+        "not_started": "not started",
+        "pending": "pending",
+        "passed": "passed",
+        "failed": "failed",
+        "only_if_passed": "only if it passes"
+      },
+      "reading": {
+        "data": "Downloading 5-minute bars for every USDT perpetual, delisted ones included: {fetched} of {symbols} so far. Nothing has been run yet.",
+        "design": "Data is in. Next: the four variants run on the design period ({from} to {to}); the best by net R with at least 30 trades goes to the single test.",
+        "designDead": "Dead on design: no variant reached 30 trades. Under its gate H8 fails without touching the test period.",
+        "test": "Design chose {variant}. Next: one run on the untouched test period ({from} to {to}), graded by the gate.",
+        "passed": "Passed every gate check on the test period. Next: a paper run under a new engine version, dropped if its first 50 fills are below 0R net.",
+        "failed": "Failed the gate on the test period ({failed} of {total} checks missed). H8 does not replace the halted setups."
+      },
+      "designLabel": "Design · {from} to {to}",
+      "designCaption": "H8 variants on the design period",
+      "col": {
+        "variant": "Variant",
+        "rule": "Rule",
+        "trades": "Trades",
+        "net": "Net R",
+        "gross": "Gross R",
+        "won": "Won",
+        "t": "t"
+      },
+      "chosen": "chosen",
+      "testLabel": "Test · {variant} · {from} to {to}",
+      "stat": {
+        "n": "Trades",
+        "net": "Net R a trade",
+        "t": "t (daily)",
+        "won": "Won"
+      },
+      "curveAria": "Cumulative net R of H8's trades",
+      "curveTest": "cumulative net R, test run",
+      "curveDesign": "cumulative net R, design ({variant})",
+      "whatLabel": "What H8 is",
+      "what": "A short on small-cap perpetuals after a pump runs out of buyers. It waits for a 1-hour jump (10–20 %) on 8× normal volume with open interest up 30 %, skips pumps led by spot buying, then sells only once the high has stalled for 15 minutes, open interest is rolling over and the perp trades at a rich premium: a sell-stop under the stall low. Stop just above the high, half off at a 38 % retrace, the rest trailed, out within 4 hours. It answers why setup B and S2 failed: they faded the first leg too early.",
+      "rules": "Rules frozen in H8_GATE.md ({commit}); code fixed to match them before any run ({fix}). Gate: at least 100 trades, net R ≥ +0.10, t ≥ 2, 2 of 3 thirds positive, still ≥ 0 with fees × 1.5, no symbol over 40 % or event over 15 % of the profit, worst trade ≥ −3R."
+    }
   },
   "journalPage": {
     "title": "Trade journal",
