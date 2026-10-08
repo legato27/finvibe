@@ -9,7 +9,7 @@ Commit H8_GATE.md BEFORE running `fetch`. Then:
 
 Env: H8_CACHE (default data/crypto/_research/h8), H8_LEDGER, H8_WORKERS.
 """
-import argparse, json, math, os, re, sys, time, zipfile, urllib.request, urllib.error
+import argparse, json, math, os, re, sys, time, zipfile, urllib.parse, urllib.request, urllib.error
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
@@ -50,7 +50,8 @@ def get(rel):
     os.makedirs(os.path.dirname(path), exist_ok=True)
     for attempt in range(5):
         try:
-            with urllib.request.urlopen(BASE + rel, timeout=60) as r:
+            # quote the path: some symbols have non-ASCII names (e.g. 哈基米USDT)
+            with urllib.request.urlopen(BASE + urllib.parse.quote(rel), timeout=60) as r:
                 data = r.read()
             tmp = path + ".tmp"
             with open(tmp, "wb") as f:
