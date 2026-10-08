@@ -180,8 +180,8 @@ export function ScalpDeskPage() {
         </Panel>
       )}
 
-      {/* ── H8, the candidate replacement, tracked through its gate ── */}
-      <H8Panel />
+      {/* ── H8b, the candidate replacement, tracked through its gate (H8 as history) ── */}
+      <H8Panel hyp="H8b" />
 
       {/* ── Ranked setups ── */}
       {isLoading ? (
@@ -247,12 +247,15 @@ export function ScalpDeskPage() {
 const H8_ORDER = ["preregistered", "data", "design", "test", "verdict", "paper"] as const;
 const H8_TONE: Record<string, ChipTone> = { done: "signal", passed: "signal", running: "protocol", failed: "short", skipped: "plain", pending: "plain", not_started: "plain", only_if_passed: "plain" };
 
-function H8Panel() {
+function H8Panel({ hyp }: { hyp: "H8" | "H8b" }) {
   const t = useTranslations("scalp");
   const pal = usePalette();
-  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-h8"], queryFn: cryptoApi.h8, staleTime: 2 * 60_000, refetchInterval: 5 * 60_000, retry: 1 });
+  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-h8", hyp], queryFn: () => cryptoApi.h8(hyp), staleTime: 2 * 60_000, refetchInterval: 5 * 60_000, retry: 1 });
+  // the earlier hypothesis, shown as history under its successor
+  const prev = useQuery({ queryKey: ["crypto-h8", "H8"], queryFn: () => cryptoApi.h8("H8"), staleTime: 10 * 60_000, enabled: hyp === "H8b", retry: 1 });
   if (isLoading) return <PanelPending label={t("h8.label")} text={t("loading")} />;
   if (isError || !data) return <PanelUnavailable label={t("h8.label")} reason={t("h8.unavailable")} />;
+  const prevTrades = Object.values(prev.data?.design ?? {}).reduce((a, g) => a + (g.n ?? 0), 0);
   const st = data.stages;
   const [dFrom, dTo] = data.periods.design;
   const [tFrom, tTo] = data.periods.test;
@@ -280,7 +283,7 @@ function H8Panel() {
   const sum = data.test?.summary ?? {};
   const num = (k: string) => (typeof sum[k] === "number" ? (sum[k] as number) : null);
   return (
-    <Panel label={t("h8.label")} qualifier={t("h8.qualifier", { commit: data.gate_commit })}
+    <Panel label={t("h8.labelFor", { id: data.id, name: data.name.toLowerCase() })} qualifier={t("h8.qualifier", { commit: data.gate_commit })}
            tone={st.verdict.state === "passed" ? "signal" : "plain"} reading={reading}>
       <ol className="flex flex-wrap items-center gap-1.5" aria-label={t("h8.label")}>
         {H8_ORDER.map((k, i) => {
@@ -328,10 +331,15 @@ function H8Panel() {
 
       <Disclosure label={t("h8.whatLabel")} className="mt-3">
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{t("h8.what")}</p>
-          <p className="font-mono text-[11px]">{t("h8.rules", { commit: data.gate_commit, fix: data.fix_commits.join(", ") })}</p>
+          <p>{data.id === "H8b" ? t("h8.whatB") : t("h8.what")}</p>
+          <p className="font-mono text-[11px]">{t("h8.rules", { commit: data.gate_commit, fix: data.fix_commits.join(", ") || "none" })}</p>
         </div>
       </Disclosure>
+      {hyp === "H8b" && prev.data && (
+        <Disclosure label={t("h8.historyLabel")} className="mt-3">
+          <p className="text-sm text-muted-foreground">{t("h8.history", { commit: prev.data.gate_commit, trades: prevTrades })}</p>
+        </Disclosure>
+      )}
     </Panel>
   );
 }

@@ -111,7 +111,7 @@ export type TrendPaper = {
 export type H8StageState = "done" | "running" | "not_started" | "pending" | "passed" | "failed" | "skipped" | "only_if_passed";
 export type H8Curve = { n: number; points: Array<{ t: string; r: number }>; trades: Array<Record<string, string | number | boolean | null>> };
 export type H8Status = {
-  id: "H8"; name: string; gate_commit: string; fix_commits: string[];
+  id: "H8" | "H8b"; name: string; gate_commit: string; fix_commits: string[];
   periods: Record<"design" | "test", [string, string]>; variants: Record<string, string>; gate_labels: Record<string, string>;
   current: "preregistered" | "data" | "design" | "test" | "verdict" | "paper";
   stages: {
@@ -130,7 +130,7 @@ export type H8Status = {
 
 export const cryptoApi = {
   today: () => api.get("/api/crypto-desk/today").then((r) => r.data as CryptoToday),
-  h8: () => api.get("/api/crypto-desk/h8").then((r) => r.data as H8Status),
+  h8: (hyp: "H8" | "H8b" = "H8") => api.get(`/api/crypto-desk/h8?hyp=${hyp}`).then((r) => r.data as H8Status),
   carry: () => api.get("/api/crypto-desk/carry").then((r) => r.data as CarryCard),
   trendPaper: () => api.get("/api/crypto-desk/trend/paper", { timeout: 60_000 }).then((r) => r.data as TrendPaper),
   carryPaper: () => api.get("/api/crypto-desk/carry/paper", { timeout: 60_000 }).then((r) => r.data as CarryPaper),
