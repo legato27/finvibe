@@ -41,6 +41,7 @@ interface ScreenerRow {
   skew_25d_pp: number | null;
   n_unusual_oi: number | null;
   summary_date: string | null;
+  summary_at: string | null;
   reco: OptionReco | null;
 }
 
@@ -99,10 +100,15 @@ export default function OptionsScreenerPage() {
   });
   const priceMap = new Map((livePrices ?? []).map((p) => [p.ticker, p.price]));
 
-  // No top-level timestamp on this endpoint — use the newest per-row snapshot
-  // date as the "last updated by job" stamp (ISO dates compare lexically).
+  // No top-level timestamp on this endpoint — use the newest per-row write
+  // time as the "last updated by job" stamp. Not the UTC snap_date: the
+  // snapshot lands at ~21:38 UTC (05:38 SGT), so a date-only stamp parses as
+  // 08:00 SGT and reads "23h ago" for data an hour old.
   const screenerAsOf = (data?.rows ?? []).reduce<string | null>(
-    (max, r) => (r.summary_date && (!max || r.summary_date > max) ? r.summary_date : max),
+    (max, r) => {
+      const at = r.summary_at ?? r.summary_date;
+      return at && (!max || at > max) ? at : max;
+    },
     null,
   );
 
