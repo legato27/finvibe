@@ -199,15 +199,55 @@ def scan(sym, df, excl, start, end, thr):
     qv24 = qv.shift(12).rolling(288).sum()
     age_ok = (g.index - df.index[0]) >= pd.Timedelta(days=P["min_age_days"])
     cond = (ret60 >= thr) & (vol1h >= P["vol_mult"] * med7d) & (qv24 >= P["min_qv24"]) & age_ok
-    out, last = [], None
-    for t in g.index[cond.fillna(False).to_numpy()]:
-        if not (start <= t < end) or sym in excl.get(t.strftime("%Y-%m"), ()):
+    # Every bar meeting the price/volume conditions is a candidate. The 24h cooldown is applied in
+    # select_events, only to candidates that also meet the OI condition: rule 1 defines an event as
+    # all four conditions together.
+    return [dict(sym=sym, t0=t) for t in g.index[cond.fillna(False).to_numpy()]
+            if start <= t < end and sym not in excl.get(t.strftime("%Y-%m"), ())]
+
+
+def select_events(cands, qualifies):
+    """One event per symbol per cooldown_h, counted only on candidates where `qualifies` (the OI
+    condition) holds. A candidate that fails it does not start the cooldown."""
+    out, last, rejected = [], None, 0
+    for e in sorted(cands, key=lambda e: e["t0"]):
+        if last is not None and e["t0"] - last < pd.Timedelta(hours=P["cooldown_h"]):
             continue
-        if last is not None and t - last < pd.Timedelta(hours=P["cooldown_h"]):
+        if not qualifies(e):
+            rejected += 1
             continue
-        out.append(dict(sym=sym, t0=t))
-        last = t
-    return out
+        out.append(e)
+        last = e["t0"]
+    return out, rejected
+
+
+_OI_DAY = {}
+
+
+def oi_day(sym, day):
+    """5m OI (contracts) for one symbol-day from the metrics file, cached."""
+    key = (sym, day)
+    if key not in _OI_DAY:
+        p = get(f"data/futures/um/daily/metrics/{sym}/{sym}-metrics-{day}.zip")
+        if p:
+            r = read_zip(p, 0)
+            _OI_DAY[key] = pd.Series(r["sum_open_interest"].astype(float).to_numpy(),
+                                     index=pd.to_datetime(r["create_time"], utc=True))
+        else:
+            _OI_DAY[key] = pd.Series(dtype=float)
+    return _OI_DAY[key]
+
+
+def oi_up(sym, t0):
+    """Rule 1 OI condition: OI up >= oi_up over the 2h to the decision time (t0 + 5m)."""
+    dec0 = t0 + M5
+    days = sorted({(dec0 - pd.Timedelta(hours=2)).strftime("%Y-%m-%d"), dec0.strftime("%Y-%m-%d")})
+    parts = [x for x in (oi_day(sym, d) for d in days) if len(x)]
+    if not parts:
+        return False
+    oi = pd.concat(parts).sort_index()
+    a, b = oi[oi.index <= dec0], oi[oi.index <= dec0 - pd.Timedelta(hours=2)]
+    return bool(len(a) and len(b) and a.iloc[-1] >= (1 + P["oi_up"]) * b.iloc[-1])
 
 
 # ---------------------------------------------------------------- stage 2: trade
@@ -354,10 +394,13 @@ def run_period(period, vname):
     def work(s):
         g = perp5m(s)
         g = g.reindex(pd.date_range(g.index[0], g.index[-1], freq="5min")).ffill()
-        return [simulate(e, g, var) for e in by_sym[s]]
+        evs, rejected = select_events(by_sym[s], lambda e: oi_up(s, e["t0"]))
+        return [simulate(e, g, var) for e in evs], rejected
 
     with ThreadPoolExecutor(WORKERS) as ex:
-        rows = [r for rs in ex.map(work, sorted(by_sym)) for r in rs]
+        res = list(ex.map(work, sorted(by_sym)))
+    rows = [r for rs, _ in res for r in rs]
+    run_period.candidates = dict(price_volume_bars=len(events), failed_oi=sum(k for _, k in res))
     return rows, start, end
 
 
@@ -418,6 +461,7 @@ def cmd_design(_):
     for v in VARIANTS:
         rows, s, e = run_period("design", v)
         g = gate(rows, s, e)
+        g["candidates"] = run_period.candidates
         save_trades(rows, f"design_{v}")
         summary[v] = g
         print(f"{v}: events={g['events']} n={g['n']} net={g.get('avg_r_net', float('nan')):+.3f}R "
@@ -439,6 +483,7 @@ def cmd_oos(a):
                 sys.exit(f"refused: H8/{v} already has a test run in {LEDGER}. A changed rule needs a new id.")
     rows, s, e = run_period("test", v)
     g = gate(rows, s, e)
+    g["candidates"] = run_period.candidates
     save_trades(rows, f"test_{v}")
     os.makedirs(os.path.dirname(LEDGER) or ".", exist_ok=True)
     with open(LEDGER, "a") as f:
@@ -501,6 +546,12 @@ def cmd_selftest(_):
     rows = [r]
     g2 = gate(rows, pd.Timestamp("2026-01-01", tz="UTC"), pd.Timestamp("2026-01-10", tz="UTC"))
     assert g2["n"] == 1 and not g2["pass"]  # n=1 can never pass
+    # 5) cooldown counts only full events: a first bar failing OI must not block the next one
+    t = pd.Timestamp("2026-01-01 00:00", tz="UTC")
+    cands = [dict(sym="X", t0=t), dict(sym="X", t0=t + M5), dict(sym="X", t0=t + 10 * M5),
+             dict(sym="X", t0=t + pd.Timedelta(hours=25))]
+    evs, rej = select_events(cands, lambda e: e["t0"] != t)
+    assert [e["t0"] for e in evs] == [t + M5, t + pd.Timedelta(hours=25)] and rej == 1, (evs, rej)
     print("selftest OK:", {k: (round(v, 3) if isinstance(v, float) else v) for k, v in r.items()})
 
 
