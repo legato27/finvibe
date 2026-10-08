@@ -245,7 +245,7 @@ export function ScalpDeskPage() {
 // H8, the pump distribution short: where its pre-registered research stands,
 // what design and the single test run found, and (if it passes) its paper run.
 const H8_ORDER = ["preregistered", "data", "design", "test", "verdict", "paper"] as const;
-const H8_TONE: Record<string, ChipTone> = { done: "signal", passed: "signal", running: "protocol", failed: "short", pending: "plain", not_started: "plain", only_if_passed: "plain" };
+const H8_TONE: Record<string, ChipTone> = { done: "signal", passed: "signal", running: "protocol", failed: "short", skipped: "plain", pending: "plain", not_started: "plain", only_if_passed: "plain" };
 
 function H8Panel() {
   const t = useTranslations("scalp");
@@ -260,6 +260,7 @@ function H8Panel() {
   const failed = Object.values(checks).filter((ok) => !ok).length;
   const reading =
     st.verdict.state === "passed" ? t("h8.reading.passed")
+      : st.verdict.state === "failed" && st.verdict.at === "design" ? t("h8.reading.designDead")
       : st.verdict.state === "failed" ? t("h8.reading.failed", { failed, total: Object.keys(checks).length })
         : st.design.state === "done" && !st.design.chosen ? t("h8.reading.designDead")
           : st.design.state === "done" ? t("h8.reading.test", { variant: st.design.chosen ?? "—", from: tFrom, to: tTo })
@@ -286,7 +287,7 @@ function H8Panel() {
           const s = st[k].state;
           return (
             <li key={k} className="flex items-center gap-1.5">
-              <Chip tone={data.current === k && s !== "done" ? "protocol" : H8_TONE[s] ?? "plain"}>
+              <Chip tone={data.current === k && !["done", "failed", "passed"].includes(s) ? "protocol" : H8_TONE[s] ?? "plain"}>
                 {t(`h8.stage.${k}`)} · {k === "data" && s === "running" ? `${st.data.fetched ?? 0}/${st.data.symbols ?? "…"}` : t(`h8.state.${s}` as never)}
               </Chip>
               {i < H8_ORDER.length - 1 && <span aria-hidden className="text-dim">›</span>}

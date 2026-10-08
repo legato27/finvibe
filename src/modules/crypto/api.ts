@@ -108,7 +108,7 @@ export type TrendPaper = {
 
 // H8, the pump distribution short: the scalp desk's candidate replacement, tracked from
 // pre-registration through design, the single test run and (if it passes) a paper run.
-export type H8StageState = "done" | "running" | "not_started" | "pending" | "passed" | "failed" | "only_if_passed";
+export type H8StageState = "done" | "running" | "not_started" | "pending" | "passed" | "failed" | "skipped" | "only_if_passed";
 export type H8Curve = { n: number; points: Array<{ t: string; r: number }>; trades: Array<Record<string, string | number | boolean | null>> };
 export type H8Status = {
   id: "H8"; name: string; gate_commit: string; fix_commits: string[];
@@ -119,7 +119,7 @@ export type H8Status = {
     data: { state: H8StageState; symbols?: number; fetched?: number };
     design: { state: H8StageState; chosen?: string | null; verdict?: string };
     test: { state: H8StageState; variant?: string; ran_at?: string };
-    verdict: { state: H8StageState };
+    verdict: { state: H8StageState; at?: "design" };
     paper: { state: H8StageState };
   };
   design?: Record<string, { events: number; n: number; avg_r_net: number | null; avg_r_gross: number | null; win_rate_net: number | null; t_daily: number | null; tp1_rate: number | null; worst_r: number | null }>;

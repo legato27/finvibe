@@ -2697,7 +2697,8 @@
         "pending": "pending",
         "passed": "passed",
         "failed": "failed",
-        "only_if_passed": "only if it passes"
+        "only_if_passed": "only if it passes",
+        "skipped": "skipped"
       },
       "reading": {
         "data": "Downloading 5-minute bars for every USDT perpetual, delisted ones included: {fetched} of {symbols} so far. Nothing has been run yet.",
