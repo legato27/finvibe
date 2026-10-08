@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
-"""H8 - pump distribution short. Standalone backtester. Rules: docs/crypto/H8_GATE.md.
+"""H8 / H8b - pump distribution short. Standalone backtester. Rules: H8_GATE.md, H8b_GATE.md.
 
 Commit H8_GATE.md BEFORE running `fetch`. Then:
   python h8_pump_fade.py selftest              # fill/exit logic on synthetic bars
   python h8_pump_fade.py fetch                 # 5m perp klines, all USDT perps incl. delisted
   python h8_pump_fade.py design                # V1-V4 on the design period (2025-10 -> 2026-03)
   python h8_pump_fade.py oos --variant V?      # ONE run on the test period (2026-04 -> 2026-09)
+  python h8_pump_fade.py design --hyp H8b      # H8b variants B1-B4 (premium at the pump; H8b_GATE.md)
+  python h8_pump_fade.py oos --hyp H8b --variant B?
 
 Env: H8_CACHE (default data/crypto/_research/h8), H8_LEDGER, H8_WORKERS.
 """
@@ -30,6 +32,14 @@ VARIANTS = {
     "V3": dict(thr=0.20, oi_rollover=True),
     "V4": dict(thr=0.15, oi_rollover=False),
 }
+# H8b (H8b_GATE.md): pump >= 10 %, premium judged at the pump (not after the stall), stop cap 8 or 15 %
+VARIANTS_B = {
+    "B1": dict(thr=0.10, oi_rollover=True, max_stop=0.08, prem_mode="at_pump"),
+    "B2": dict(thr=0.10, oi_rollover=False, max_stop=0.08, prem_mode="at_pump"),
+    "B3": dict(thr=0.10, oi_rollover=True, max_stop=0.15, prem_mode="at_pump"),
+    "B4": dict(thr=0.10, oi_rollover=False, max_stop=0.15, prem_mode="at_pump"),
+}
+HYPS = {"H8": VARIANTS, "H8b": VARIANTS_B}
 P = dict(vol_mult=8.0, oi_up=0.30, min_qv24=5e6, top_n_excl=30, min_age_days=7,
          cooldown_h=24, setup_window_bars=72, stall_min=15, break_window_min=60,
          atr_mult=0.5, max_stop_pct=0.08, tp1_frac=0.382, trail_bars=15, time_stop_min=240,
@@ -339,6 +349,13 @@ def simulate(ev, g, var, E=None):
     A = atr(g)
     phist = prem[(prem.index > t0 - pd.Timedelta(days=30)) & (prem.index <= t0 - pd.Timedelta(hours=1))]
     pthr = phist.quantile(P["prem_pct"]) if len(phist) >= P["prem_min_bars"] else np.nan
+    prem_mode = var.get("prem_mode", "after_stall")
+    max_stop = var.get("max_stop", P["max_stop_pct"])
+    if prem_mode == "at_pump":
+        # H8b rule 2: the highest 5m premium in the pump hour (12 bars ending at the trigger bar) is rich
+        pp = prem[(prem.index >= t0 - 11 * M5) & (prem.index <= t0)]
+        if not (len(pp) and pp.max() > 0 and pp.max() >= pthr):
+            return dict(sym=sym, t0=t0, skip="prem_not_rich_at_pump")
     j, jend = i0 + 1, min(i0 + 1 + P["setup_window_bars"], len(g))
     while j < jend:
         tj = g.index[j]
@@ -354,8 +371,9 @@ def simulate(ev, g, var, E=None):
         if var["oi_rollover"]:
             o = oi[oi.index <= dec].iloc[-3:]
             ok = len(o) == 3 and bool((o.diff().iloc[1:] < 0).all())
-        pr = prem[prem.index <= tj]
-        ok = ok and len(pr) > 0 and pr.iloc[-1] > 0 and pr.iloc[-1] >= pthr
+        if prem_mode == "after_stall":   # H8 only; H8b judges the premium at the pump (rule 2)
+            pr = prem[prem.index <= tj]
+            ok = ok and len(pr) > 0 and pr.iloc[-1] > 0 and pr.iloc[-1] >= pthr
         if not ok:
             j += 1
             continue
@@ -363,7 +381,7 @@ def simulate(ev, g, var, E=None):
         trig = stall_low * (1 - P["tick"])
         stop0 = H + P["atr_mult"] * A.iloc[j]
         tp1 = H - P["tp1_frac"] * (H - L)
-        if (stop0 - trig) / trig > P["max_stop_pct"] or trig <= tp1:
+        if (stop0 - trig) / trig > max_stop or trig <= tp1:
             j += 1
             continue
         kind, ts, fill = try_entry(m1, dec, trig, H)
@@ -380,11 +398,11 @@ def simulate(ev, g, var, E=None):
 
 
 # ---------------------------------------------------------------- runs and gate
-def run_period(period, vname):
+def run_period(period, vname, hyp="H8"):
     start, end = (pd.Timestamp(x, tz="UTC") for x in PERIODS[period])
     syms = list_symbols()
     excl = universe(syms)
-    var = VARIANTS[vname]
+    var = HYPS[hyp][vname]
     events = []
     for s in syms:
         events += scan(s, perp5m(s), excl, start, end, var["thr"])
@@ -457,38 +475,47 @@ def cmd_fetch(_):
     print("universe months:", len(excl))
 
 
-def cmd_design(_):
+def _tag(hyp, stage, v):
+    """Result names: H8 keeps its original names; H8b's carry the hypothesis."""
+    return f"{stage}_{v}" if hyp == "H8" else f"{stage}_{hyp}_{v}"
+
+
+def cmd_design(a):
+    hyp = a.hyp
     summary = {}
-    for v in VARIANTS:
-        rows, s, e = run_period("design", v)
+    for v in HYPS[hyp]:
+        rows, s, e = run_period("design", v, hyp)
         g = gate(rows, s, e)
         g["candidates"] = run_period.candidates
-        save_trades(rows, f"design_{v}")
+        save_trades(rows, _tag(hyp, "design", v))
         summary[v] = g
         print(f"{v}: events={g['events']} n={g['n']} net={g.get('avg_r_net', float('nan')):+.3f}R "
               f"gross={g.get('avg_r_gross', float('nan')):+.3f}R t={g.get('t_daily', float('nan')):.2f} skips={g['skips']}")
-    ok = {v: g for v, g in summary.items() if g["n"] >= 30}
+    # H8: best net R with n >= 30. H8b (stricter): best net R with n >= 30 and net R > 0.
+    ok = {v: g for v, g in summary.items() if g["n"] >= 30 and (hyp == "H8" or g.get("avg_r_net", -1) > 0)}
     pick = max(ok, key=lambda v: ok[v]["avg_r_net"]) if ok else None
     summary["_chosen"] = pick
-    p = os.path.join(CACHE, "results", "design_summary.json")
+    p = os.path.join(CACHE, "results", "design_summary.json" if hyp == "H8" else f"design_summary_{hyp}.json")
     json.dump(summary, open(p, "w"), indent=2, default=str)
     print("chosen by rule (best net R with n>=30):", pick, "->", p)
 
 
 def cmd_oos(a):
-    v = a.variant
+    hyp, v = a.hyp, a.variant
+    if v not in HYPS[hyp]:
+        sys.exit(f"{v} is not a {hyp} variant ({', '.join(HYPS[hyp])})")
     if os.path.exists(LEDGER):
         for line in open(LEDGER):
             r = json.loads(line)
-            if r.get("hypothesis") == "H8" and r.get("variant") == v:
-                sys.exit(f"refused: H8/{v} already has a test run in {LEDGER}. A changed rule needs a new id.")
-    rows, s, e = run_period("test", v)
+            if r.get("hypothesis") == hyp and r.get("variant") == v:
+                sys.exit(f"refused: {hyp}/{v} already has a test run in {LEDGER}. A changed rule needs a new id.")
+    rows, s, e = run_period("test", v, hyp)
     g = gate(rows, s, e)
     g["candidates"] = run_period.candidates
-    save_trades(rows, f"test_{v}")
+    save_trades(rows, _tag(hyp, "test", v))
     os.makedirs(os.path.dirname(LEDGER) or ".", exist_ok=True)
     with open(LEDGER, "a") as f:
-        f.write(json.dumps(dict(hypothesis="H8", variant=v, period=PERIODS["test"],
+        f.write(json.dumps(dict(hypothesis=hyp, variant=v, period=PERIODS["test"],
                                 ran_at=pd.Timestamp.now(tz="UTC").isoformat(), result=g), default=str) + "\n")
     print(json.dumps(g, indent=2, default=str))
     print("GATE:", "PASS" if g["pass"] else "FAIL")
@@ -519,6 +546,12 @@ def _synthetic():
     return m1, g, t0, dict(m1=m1, oi=oi, prem=prem, fund=fund, spot=None)
 
 
+def idx_pump_start(E):
+    """Selftest helper: the synthetic premium turns rich at the pump's first bar."""
+    pr = E["prem"]
+    return pr.index[(pr >= 0.002).to_numpy().argmax()]
+
+
 def cmd_selftest(_):
     # 1) microsecond spot timestamps parse to the same time as ms
     raw = pd.DataFrame([[1735689600000000, 1, 2, 0.5, 1.5, 10, 0, 15, 1, 0, 0, 0],
@@ -547,6 +580,12 @@ def cmd_selftest(_):
     rows = [r]
     g2 = gate(rows, pd.Timestamp("2026-01-01", tz="UTC"), pd.Timestamp("2026-01-10", tz="UTC"))
     assert g2["n"] == 1 and not g2["pass"]  # n=1 can never pass
+    # 6) H8b: rich premium during the pump -> trades without any post-stall premium check
+    rb = simulate(dict(sym="SYN", t0=t0), g, VARIANTS_B["B2"], E)
+    assert "skip" not in rb and rb["tp1_hit"], rb
+    E_flat = dict(E, prem=E["prem"].where(E["prem"].index < idx_pump_start(E), 0.0))
+    rf = simulate(dict(sym="SYN", t0=t0), g, VARIANTS_B["B2"], E_flat)
+    assert rf.get("skip") == "prem_not_rich_at_pump", rf
     # 5) cooldown counts only full events: a first bar failing OI must not block the next one
     t = pd.Timestamp("2026-01-01 00:00", tz="UTC")
     cands = [dict(sym="X", t0=t), dict(sym="X", t0=t + M5), dict(sym="X", t0=t + 10 * M5),
@@ -559,9 +598,12 @@ def cmd_selftest(_):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("selftest", "fetch", "design"):
+    for name in ("selftest", "fetch"):
         sub.add_parser(name)
+    d = sub.add_parser("design")
+    d.add_argument("--hyp", default="H8", choices=sorted(HYPS))
     o = sub.add_parser("oos")
-    o.add_argument("--variant", required=True, choices=sorted(VARIANTS))
+    o.add_argument("--hyp", default="H8", choices=sorted(HYPS))
+    o.add_argument("--variant", required=True, choices=sorted(set(VARIANTS) | set(VARIANTS_B)))
     a = ap.parse_args()
     {"selftest": cmd_selftest, "fetch": cmd_fetch, "design": cmd_design, "oos": cmd_oos}[a.cmd](a)
