@@ -128,7 +128,13 @@ export type H8Status = {
   test_curve?: H8Curve | null;
 };
 
+export type LabStatus = "live" | "halted" | "paper" | "preregistered" | "awaiting_test" | "failed_design" | "failed_test" | "passed";
+export type LabStrategy = { id: string; batch: string; name: string; what: string; how: string; horizon: string; universe: string; status: LabStatus; result: string | null; lesson: string | null };
+export type LabBatch = { id: string; name: string; note: string; date: string; gate?: string; report?: string };
+export type StrategyLab = { batches: LabBatch[]; strategies: LabStrategy[]; counts: Partial<Record<LabStatus, number>> };
+
 export const cryptoApi = {
+  strategies: () => api.get("/api/crypto-desk/strategies").then((r) => r.data as StrategyLab),
   today: () => api.get("/api/crypto-desk/today").then((r) => r.data as CryptoToday),
   h8: (hyp: "H8" | "H8b" = "H8") => api.get(`/api/crypto-desk/h8?hyp=${hyp}`).then((r) => r.data as H8Status),
   carry: () => api.get("/api/crypto-desk/carry").then((r) => r.data as CarryCard),

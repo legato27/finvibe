@@ -22,6 +22,7 @@ import { useConfirm } from "@/components/ui/ConfirmDialog";
 import { cryptoApi, type CryptoScorecardBlock, type H8Status, type ScalpRow, type ScalpSignal } from "@/modules/crypto/api";
 import { usePalette } from "@/components/heatmap/palette";
 import TradeJournal from "@/components/stock/TradeJournal";
+import { StrategyLab } from "@/modules/crypto/components/StrategyLab";
 
 const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", unlogged: "caution", near: "protocol", far: "plain" };
 const EXECUTION_TONE: Record<ScalpSignal["execution"], ChipTone> = { pending: "protocol", filled: "signal", closed: "plain", unfilled: "caution" };
@@ -179,6 +180,9 @@ export function ScalpDeskPage() {
           </div>
         </Panel>
       )}
+
+      {/* ── Every strategy run or researched: what it is, what it does, where it stands ── */}
+      <StrategyLab />
 
       {/* ── H8b, the candidate replacement, tracked through its gate (H8 as history) ── */}
       <H8Panel hyp="H8b" />

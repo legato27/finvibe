@@ -2737,6 +2737,35 @@
       "whatB": "H8b is H8 with the one condition that blocked it moved. H8 asked for a rich perp premium after the pump's high had stalled, by which time arbitrage had usually closed it; H8b asks for the premium to have been rich during the pump hour instead. The rest is H8: a 10 % one-hour pump on 8× volume with open interest up 30 %, a sell-stop under the stall low once the high stalls, stop just above the high, half off at a 38 % retrace, the rest trailed, out within 4 hours. Variants: open-interest rollover on or off, stop cap 8 % or 15 %.",
       "historyLabel": "Earlier: H8",
       "history": "H8 (pre-registered {commit}) failed on design: {trades} trades over six months across its four variants, against the 30 a variant needed. Its conditions almost never lined up, which is what H8b changes. The test period was never run, so H8b can still be graded on it."
+    },
+    "lab": {
+      "label": "Strategy lab",
+      "qualifier": "{total} strategies · every one pre-registered and graded",
+      "reading": "{paper} on paper, {open} waiting to be tested, {failed} failed. The scalp desk stays halted until a strategy passes its test.",
+      "unavailable": "The strategy list isn't available right now.",
+      "filter": {
+        "all": "All",
+        "active": "In progress",
+        "paper": "On paper",
+        "failed": "Failed"
+      },
+      "status": {
+        "live": "Live",
+        "halted": "Halted",
+        "paper": "On paper",
+        "preregistered": "Pre-registered",
+        "awaiting_test": "Awaiting test",
+        "failed_design": "Failed on design",
+        "failed_test": "Failed its test",
+        "passed": "Passed"
+      },
+      "how": "How it trades",
+      "horizon": "Holds",
+      "universe": "Trades",
+      "lesson": "What it taught",
+      "gate": "Documents",
+      "empty": "No strategies in this view.",
+      "count": "{n, plural, one {# strategy} other {# strategies}}"
     }
   },
   "journalPage": {
