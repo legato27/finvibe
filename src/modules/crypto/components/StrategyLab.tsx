@@ -65,19 +65,42 @@ export function StrategyLab() {
 
       {groups.length === 0 && <p className="text-sm text-muted-foreground">{t("empty")}</p>}
 
-      <div className="space-y-6">
-        {groups.map(({ b, rows }) => (
-          <section key={b.id} aria-labelledby={`lab-${b.id}`}>
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-border pb-1.5">
-              <h3 id={`lab-${b.id}`} className="card-title">{b.name}</h3>
-              <span className="font-mono text-[11px] text-dim">{b.date} · {t("count", { n: rows.length })}</span>
-            </div>
-            <p className="mt-1.5 text-xs text-muted-foreground">{b.note}</p>
-            <ul className="mt-2 space-y-2">
-              {rows.map((s) => <StrategyRow key={s.id} s={s} gate={b.gate} report={b.report} />)}
-            </ul>
-          </section>
-        ))}
+      <div className="space-y-4">
+        {groups.map(({ b, rows }) => {
+          const list = (
+            <>
+              <p className="mt-1.5 text-xs text-muted-foreground">{b.note}</p>
+              <ul className="mt-2 space-y-2">
+                {rows.map((s) => <StrategyRow key={s.id} s={s} gate={b.gate} report={b.report} />)}
+              </ul>
+            </>
+          );
+          // every batch folds to one line except work still waiting to be tested; the paper runs are
+          // already the page's first panel, so the lab reads as an index
+          const closed = !rows.some((s) => IN.active.includes(s.status));
+          if (closed && filter === "all") {
+            const ids = rows.map((s) => s.id).join(", ");
+            const kind = rows.every((s) => IN.failed.includes(s.status)) ? "closedCount" : rows.every((s) => IN.paper.includes(s.status)) ? "paperCount" : "count";
+            return (
+              <details key={b.id} className="group/batch">
+                <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-border pb-1.5 [&::-webkit-details-marker]:hidden">
+                  <span className="card-title"><ChevronDown aria-hidden="true" className="mr-1 inline h-3.5 w-3.5 -rotate-90 transition-transform group-open/batch:rotate-0" />{b.name}</span>
+                  <span className="font-mono text-[11px] text-dim">{b.date} · {t(kind, { n: rows.length, ids })}</span>
+                </summary>
+                {list}
+              </details>
+            );
+          }
+          return (
+            <section key={b.id} aria-labelledby={`lab-${b.id}`}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b border-border pb-1.5">
+                <h3 id={`lab-${b.id}`} className="card-title">{b.name}</h3>
+                <span className="font-mono text-[11px] text-dim">{b.date} · {t("count", { n: rows.length })}</span>
+              </div>
+              {list}
+            </section>
+          );
+        })}
       </div>
     </Panel>
   );

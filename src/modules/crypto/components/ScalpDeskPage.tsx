@@ -23,6 +23,7 @@ import { cryptoApi, type CryptoScorecardBlock, type H8Status, type ScalpRow, typ
 import { usePalette } from "@/components/heatmap/palette";
 import TradeJournal from "@/components/stock/TradeJournal";
 import { StrategyLab } from "@/modules/crypto/components/StrategyLab";
+import { RunningNow } from "@/modules/crypto/components/RunningNow";
 
 const STATUS_TONE: Record<ScalpRow["status"], ChipTone> = { fired: "signal", unlogged: "caution", near: "protocol", far: "plain" };
 const EXECUTION_TONE: Record<ScalpSignal["execution"], ChipTone> = { pending: "protocol", filled: "signal", closed: "plain", unfilled: "caution" };
@@ -138,6 +139,16 @@ export function ScalpDeskPage() {
         />
       </header>
 
+      {/* ── What is running: the answer first ── */}
+      <RunningNow risk={risk} />
+
+      {/* ── Every strategy run or researched: what it is, what it does, where it stands ── */}
+      <StrategyLab />
+
+      {/* ── The halted A/B/C setups: controls, ranked setups, signals, journal, record.
+             Collapsed unless the sleeve is active, when it must be in view. ── */}
+      <Disclosure label={t("abcSection")} qualifier={t("abcSectionQualifier", { state: risk ? t(`state.${risk.state}` as never) : "…" })} open={risk?.state === "active"}>
+      <div className="space-y-4">
       {/* ── Risk: the answer first ── */}
       {isLoading ? (
         <PanelPending label={t("riskLabel")} text={t("loading")} />
@@ -181,11 +192,6 @@ export function ScalpDeskPage() {
         </Panel>
       )}
 
-      {/* ── Every strategy run or researched: what it is, what it does, where it stands ── */}
-      <StrategyLab />
-
-      {/* ── H8b, the candidate replacement, tracked through its gate (H8 as history) ── */}
-      <H8Panel hyp="H8b" />
 
       {/* ── Ranked setups ── */}
       {isLoading ? (
@@ -242,6 +248,12 @@ export function ScalpDeskPage() {
           )}
         </Panel>
       )}
+      </div>
+      </Disclosure>
+
+      <Disclosure label={t("h8Section")} qualifier={t("h8SectionQualifier")}>
+        <H8Panel hyp="H8b" />
+      </Disclosure>
     </div>
   );
 }

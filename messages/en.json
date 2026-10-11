@@ -2596,7 +2596,7 @@
   },
   "scalp": {
     "title": "Scalp desk",
-    "subtitle": "Binance USDⓈ-M setups A/B/C on the phase 2 features · paper until live crypto exists · nothing here places an order",
+    "subtitle": "Crypto strategies: what runs on paper, what was tested and why it failed, and the halted scalp setups A/B/C.",
     "deskSwitch": "Desk",
     "switchPuts": "Sell puts",
     "switchCalls": "Covered calls",
@@ -2795,8 +2795,54 @@
       "lesson": "What it taught",
       "gate": "Documents",
       "empty": "No strategies in this view.",
-      "count": "{n, plural, one {# strategy} other {# strategies}}"
-    }
+      "count": "{n, plural, one {# strategy} other {# strategies}}",
+      "closedCount": "{n, plural, one {# failed} other {# failed}}: {ids}",
+      "paperCount": "{n} on paper: {ids}"
+    },
+    "running": {
+      "label": "Running now",
+      "qualifier": "paper only · nothing here places an order",
+      "reading": {
+        "halted": "Three slower strategies are on paper. The old scalp setups (A/B/C) are halted: every test found they lose money after fees.",
+        "active": "Three slower strategies are on paper. The old scalp setups (A/B/C) are active, although every test found they lose money after fees."
+      },
+      "loading": "reading…",
+      "notStarted": "not started",
+      "startsOn": "starts {date}",
+      "dayOf": "day {day} of {total}",
+      "weekOf": "week {week} of {total}",
+      "passed": "passed",
+      "failed": "failed",
+      "dropped": "dropped",
+      "r4b": {
+        "name": "Funding carry long/short",
+        "what": "Long the 3 top-30 coins whose funding pays longs most, short the 3 whose funding pays shorts most; a 30 % stop on each. Rebalanced daily at 00:00 UTC.",
+        "line": "{stops} stops so far · graded {gate}"
+      },
+      "c1": {
+        "name": "Funding carry (BTC, ETH)",
+        "what": "Owns BTC and ETH and shorts the same amount on the perpetual, collecting the funding that longs pay.",
+        "line": "verdict {end}"
+      },
+      "t1": {
+        "name": "Weekly trend (BTC, ETH)",
+        "what": "Holds BTC and ETH while their 4-week return is positive, sized to 40 % volatility; otherwise cash. Rebalanced Mondays.",
+        "line": "ends {end}"
+      },
+      "abc": {
+        "name": "Old scalp setups",
+        "halted": "halted",
+        "active": "active",
+        "whyHalted": "30-minute scalps that lost −0.33R a trade after fees. Kept for the record below; nothing trades.",
+        "whyActive": "These are trading on paper again. Every test found they lose money after fees; halt them in the section below."
+      },
+      "more": "Each run's positions, curve and gate checks are on",
+      "moreLink": "Desk → Crypto"
+    },
+    "abcSection": "Old scalp setups A/B/C",
+    "abcSectionQualifier": "{state} · controls, ranked setups, signals, journal and record",
+    "h8Section": "H8b research detail",
+    "h8SectionQualifier": "pump-fade short · failed its test"
   },
   "journalPage": {
     "title": "Trade journal",
