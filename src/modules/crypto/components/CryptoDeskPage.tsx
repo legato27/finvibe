@@ -22,7 +22,7 @@ import Freshness from "@/components/ui/Freshness";
 import { PriceChart } from "@/components/stock/PriceChart";
 import { useMyWatchlistTickers, useUser } from "@/lib/supabase/hooks";
 import { usePalette } from "@/components/heatmap/palette";
-import { cryptoApi, type CarryCard, type CarryPaper, type TrendPaper } from "@/modules/crypto/api";
+import { cryptoApi, type CarryCard, type CarryPaper, type R4bPaper, type TrendPaper } from "@/modules/crypto/api";
 import { isCryptoTicker } from "@/modules/crypto/flag";
 import { equityPath, leanFromBias, liquidityRows, sessionLine, setupAsPriceAction, setupLabel, type LiquidityRow } from "@/modules/crypto/lib/desk";
 
@@ -112,6 +112,7 @@ export function CryptoDeskPage() {
           <CarryPanel />
           <CarryPaperPanel />
           <TrendPaperPanel />
+          <R4bPaperPanel />
           <YourCoinsPanel />
         </aside>
       </div>
@@ -391,6 +392,80 @@ function PaperSpark({ nav, color, baseColor }: { nav: Array<{ t: string; v: numb
       <line x1={P} x2={W - P} y1={y(1)} y2={y(1)} stroke={baseColor} strokeWidth={1} strokeDasharray="4 3" />
       <path d={nav.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join("")} fill="none" stroke={color} strokeWidth={1.5} />
     </svg>
+  );
+}
+
+// R4b, the funding carry long/short with a 30 % stop, on forward paper. The backend
+// rebuilds the book hourly from Binance data; this only renders the snapshot.
+function R4bPaperPanel() {
+  const t = useTranslations("crypto");
+  const pal = usePalette();
+  const { data, isLoading, isError } = useQuery({ queryKey: ["crypto-desk", "r4b-paper"], queryFn: cryptoApi.r4bPaper, staleTime: 5 * 60_000, refetchInterval: 15 * 60_000, retry: 1 });
+  if (isLoading) return <PanelPending label={t("r4bPaper.label")} text={t("loading")} />;
+  if (isError || !data) return <PanelUnavailable label={t("r4bPaper.label")} reason={t("unavailable")} />;
+  if (data.status === "not_started") return <PanelUnavailable label={t("r4bPaper.label")} reason={t("r4bPaper.notStarted")} />;
+  const capital = (data.capital_usd ?? 10000).toLocaleString();
+  if (data.status === "starting") {
+    return (
+      <Panel label={t("r4bPaper.label")} qualifier={t("r4bPaper.qualifierPending", { capital })}
+             reading={t("r4bPaper.starting", { date: (data.started_at ?? "").slice(0, 10) })}>
+        {data.preview && Object.keys(data.preview).length > 0 && (
+          <>
+            <p className="card-title">{t("r4bPaper.previewLabel")}</p>
+            <p className="mt-1 font-mono text-[11px]">
+              {Object.entries(data.preview).map(([s, side]) => `${side > 0 ? "+" : "−"}${s.replace("USDT", "")}`).join("  ")}
+            </p>
+          </>
+        )}
+        <p className="mt-2 font-mono text-[11px] text-muted-foreground">{t("r4bPaper.rule")}</p>
+      </Panel>
+    );
+  }
+  const g = data.gate_so_far;
+  const pnl = data.equity_usd ?? 0;
+  const args = { sign: pnl >= 0 ? "+" : "−", pnl: Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 0 }), gate: (data.gate_day ?? "").slice(0, 10), reason: data.verdict?.reason ?? "" };
+  const reading = data.status === "failed" ? t("r4bPaper.reading.failed", args) : data.status === "passed_running" ? t("r4bPaper.reading.passed", args) : t("r4bPaper.reading.running", args);
+  const nav = (data.curve ?? []).map((p) => ({ t: p.t, v: 1 + p.equity / (data.capital_usd ?? 10000) }));
+  const money2 = (v: number) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  const px = (v: number) => (v >= 100 ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : v.toPrecision(4));
+  const barred = Object.keys(data.barred ?? {});
+  return (
+    <Panel label={t("r4bPaper.label")} qualifier={t("r4bPaper.qualifier", { day: Math.min((g?.days ?? 0) + 1, 90), capital })}
+           tone={data.status === "passed_running" ? "signal" : "plain"}
+           aside={data.as_of ? <Freshness at={data.as_of} /> : undefined} reading={reading}>
+      <div className="grid grid-cols-2 gap-3">
+        <Stat size="sm" label={t("r4bPaper.stat.pnl")} value={money2(pnl)} tone={pnl >= 0 ? "long" : "short"} />
+        <Stat size="sm" label={t("r4bPaper.stat.day")} value={`${g?.days ?? 0} / 90`} />
+        <Stat size="sm" label={t("r4bPaper.stat.stops")} value={String(data.stops ?? 0)} />
+        <Stat size="sm" label={t("r4bPaper.stat.dd")} value={g ? `${(g.drawdown * 100).toFixed(1)}%` : "—"} tone={g && g.drawdown >= 0.1 ? "short" : "plain"} />
+      </div>
+      {pal && nav.length > 1 && <PaperSpark nav={nav} color={pnl >= 0 ? pal.long : pal.short} baseColor={pal.mutedFg} />}
+      <Disclosure label={t("r4bPaper.positionsLabel")} className="mt-3">
+        <ul className="space-y-2 font-mono text-[11px]">
+          {(data.positions ?? []).map((p) => (
+            <li key={p.sym} className="border-b border-border/60 pb-1.5 last:border-0">
+              <div className="flex items-baseline justify-between gap-2">
+                <span><span className="font-semibold">{p.sym.replace("USDT", "")}</span> <span className={p.side === "long" ? "text-signal-long" : "text-signal-short"}>{t(`r4bPaper.side.${p.side}`)}</span></span>
+                <span className={`nums ${p.unrealised_usd >= 0 ? "text-signal-long" : "text-signal-short"}`}>{money2(p.unrealised_usd)}</span>
+              </div>
+              <div className="nums text-muted-foreground">{t("r4bPaper.levels", { entry: px(p.entry_px), mark: px(p.mark_px), stop: px(p.stop_px) })}</div>
+            </li>
+          ))}
+        </ul>
+        {barred.length > 0 && <p className="mt-2 font-mono text-[11px] text-muted-foreground">{t("r4bPaper.barred", { list: barred.map((s) => s.replace("USDT", "")).join(", ") })}</p>}
+      </Disclosure>
+      {g && (
+        <Disclosure label={t("r4bPaper.gateLabel")} className="mt-3">
+          <ul className="grid gap-1 font-mono text-xs sm:grid-cols-2">
+            {Object.entries(g.checks).map(([k, c]) => (
+              <li key={k} className={c.ok ? "text-signal-long" : "text-muted-foreground"}>{c.ok ? "✓" : "·"} {data.labels?.[k] ?? k}{c.value != null ? ` (${c.value})` : ""}</li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted-foreground">{t("r4bPaper.gateNote")}</p>
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">{t("r4bPaper.rule")}</p>
+        </Disclosure>
+      )}
+    </Panel>
   );
 }
 

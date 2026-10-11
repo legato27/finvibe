@@ -93,6 +93,21 @@ export type CarryPaper = {
   nav?: Array<{ t: string; v: number }>;
 };
 
+// R4b, the funding carry long/short with a 30 % stop, on forward paper (R4B_GATE.md).
+export type R4bCheck = { value: number | null; ok: boolean };
+export type R4bPaper = {
+  status: "not_started" | "starting" | "running" | "passed_running" | "failed";
+  id?: string; capital_usd?: number; started_at?: string; gate_day?: string; as_of?: string; next_rebalance?: string;
+  labels?: Record<string, string>;
+  preview?: Record<string, number> | null;
+  equity_usd?: number; stops?: number;
+  verdict?: { status: "passed" | "failed"; reason: string; frozen_at: string } | null;
+  gate_so_far?: { days: number; drawdown: number; total_usd: number; passed: boolean; checks: Record<string, R4bCheck> };
+  positions?: Array<{ sym: string; side: "long" | "short"; entry_at: string; entry_px: number; mark_px: number; stop_px: number; notional_usd: number; unrealised_usd: number }>;
+  barred?: Record<string, string>;
+  curve?: Array<{ t: string; equity: number }>;
+};
+
 // The 8-week trend paper stage: rule T1 against the 50/50 BTC/ETH hold, rebuilt from its first Monday.
 export type TrendSignal = { ret_4w: number | null; vol_30d: number | null; weight_if_rebalanced: number };
 export type TrendPaper = {
@@ -139,6 +154,7 @@ export const cryptoApi = {
   h8: (hyp: "H8" | "H8b" = "H8") => api.get(`/api/crypto-desk/h8?hyp=${hyp}`).then((r) => r.data as H8Status),
   carry: () => api.get("/api/crypto-desk/carry").then((r) => r.data as CarryCard),
   trendPaper: () => api.get("/api/crypto-desk/trend/paper", { timeout: 60_000 }).then((r) => r.data as TrendPaper),
+  r4bPaper: () => api.get("/api/crypto-desk/r4b/paper").then((r) => r.data as R4bPaper),
   carryPaper: () => api.get("/api/crypto-desk/carry/paper", { timeout: 60_000 }).then((r) => r.data as CarryPaper),
   scalpDesk: (symbol?: string) => api.get(`/api/crypto-desk/scalp/desk${symbol ? `?symbol=${encodeURIComponent(symbol)}` : ""}`, { timeout: 60_000 }).then((r) => r.data as ScalpDesk),
   signals: (status: "active" | "today" | "recent" = "active", limit = 50) => api.get(`/api/crypto-desk/signals?status=${status}&limit=${limit}`).then((r) => r.data as { status: string; count: number; signals: ScalpSignal[] }),

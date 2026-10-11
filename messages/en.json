@@ -2562,6 +2562,36 @@
       "legendRule": "T1",
       "legendBench": "hold 50/50",
       "rule": "Pre-registered in TREND_GATE.md: 8 weekly rebalances on paper before any capital. Nothing is ordered; both books are rebuilt every few minutes from Binance's daily prices with the backtest's engine and costs."
+    },
+    "r4bPaper": {
+      "label": "R4b paper run · funding long/short",
+      "qualifier": "day {day} of 90 · ${capital} on paper",
+      "qualifierPending": "90 days minimum · ${capital} on paper",
+      "notStarted": "The R4b paper run hasn't started yet.",
+      "starting": "The run starts at 00:00 UTC on {date}: long the 3 top-30 coins with the most negative 7-day funding, short the 3 with the most positive, $1,667 each, with a 30 % stop on every position.",
+      "previewLabel": "If it rebalanced now",
+      "reading": {
+        "running": "{sign}${pnl} so far on $10,000 after fees and funding. Graded on day 90 ({gate}); the run stops early if it ever falls 20 % from its peak.",
+        "passed": "Passed its day-90 gate with {sign}${pnl}. It keeps running on paper; real money needs your approval and about six months of evidence.",
+        "failed": "Failed ({reason}) with {sign}${pnl}. R4b is dropped and the funding long/short family is closed."
+      },
+      "stat": {
+        "pnl": "Profit and loss",
+        "day": "Full days done",
+        "stops": "Stops hit",
+        "dd": "Worst drawdown"
+      },
+      "positionsLabel": "Positions",
+      "side": {
+        "long": "long",
+        "short": "short"
+      },
+      "gateLabel": "Gate checks so far",
+      "gateNote": "Provisional until day 90; only the day-90 reading counts.",
+      "barred": "Barred after a stop: {list}",
+      "chartAria": "R4b paper book value since the start of the run",
+      "rule": "Rules: R4B_GATE.md. Daily 00:00 UTC rebalance; unchanged names aren't traded; a coin stopped out is barred for 7 days.",
+      "levels": "entry {entry} · now {mark} · stop {stop}"
     }
   },
   "scalp": {
