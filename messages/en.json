@@ -2591,7 +2591,18 @@
       "barred": "Barred after a stop: {list}",
       "chartAria": "R4b paper book value since the start of the run",
       "rule": "Rules: R4B_GATE.md. Daily 00:00 UTC rebalance; unchanged names aren't traded; a coin stopped out is barred for 7 days.",
-      "levels": "entry {entry} · now {mark} · stop {stop}"
+      "levels": "entry {entry} · now {mark} · stop {stop}",
+      "historyLabel": "Trade history ({n})",
+      "historyEmpty": "No closed trades yet. A trade closes when its coin leaves its leg at a 00:00 rebalance, or when its 30 % stop is hit.",
+      "historySummary": "{n} closed · {won} won · net {total} · {stops} stopped",
+      "why": {
+        "rebalance": "left at rebalance",
+        "stop": "30 % stop"
+      },
+      "tradeLine": "in {inAt} at {entry} → out {outAt} UTC at {exit} · {days, plural, one {# day} other {# days}}",
+      "tradeCosts": "price {move} · funding {funding} · fees {fees}",
+      "historyMore": "show {n} more",
+      "openCosts": "since {since}: funding {funding} · fees {fees} (in the P&L)"
     }
   },
   "scalp": {

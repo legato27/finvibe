@@ -103,7 +103,8 @@ export type R4bPaper = {
   equity_usd?: number; stops?: number;
   verdict?: { status: "passed" | "failed"; reason: string; frozen_at: string } | null;
   gate_so_far?: { days: number; drawdown: number; total_usd: number; passed: boolean; checks: Record<string, R4bCheck> };
-  positions?: Array<{ sym: string; side: "long" | "short"; entry_at: string; entry_px: number; mark_px: number; stop_px: number; notional_usd: number; unrealised_usd: number }>;
+  positions?: Array<{ sym: string; side: "long" | "short"; entry_at: string; entry_px: number; mark_px: number; stop_px: number; notional_usd: number; unrealised_usd: number; funding_usd?: number; fees_usd?: number; pnl_usd?: number }>;
+  trades?: Array<{ sym: string; side: "long" | "short"; entry_at: string; entry_px: number; exit_at: string; exit_px: number; why: "rebalance" | "stop"; days: number; move_usd: number; fees_usd: number; funding_usd: number; pnl_usd: number; pnl_pct: number }>;
   barred?: Record<string, string>;
   curve?: Array<{ t: string; equity: number }>;
 };

@@ -446,13 +446,17 @@ function R4bPaperPanel() {
             <li key={p.sym} className="border-b border-border/60 pb-1.5 last:border-0">
               <div className="flex items-baseline justify-between gap-2">
                 <span><span className="font-semibold">{p.sym.replace("USDT", "")}</span> <span className={p.side === "long" ? "text-signal-long" : "text-signal-short"}>{t(`r4bPaper.side.${p.side}`)}</span></span>
-                <span className={`nums ${p.unrealised_usd >= 0 ? "text-signal-long" : "text-signal-short"}`}>{money2(p.unrealised_usd)}</span>
+                <span className={`nums ${(p.pnl_usd ?? p.unrealised_usd) >= 0 ? "text-signal-long" : "text-signal-short"}`}>{money2(p.pnl_usd ?? p.unrealised_usd)}</span>
               </div>
               <div className="nums text-muted-foreground">{t("r4bPaper.levels", { entry: px(p.entry_px), mark: px(p.mark_px), stop: px(p.stop_px) })}</div>
+              {p.funding_usd != null && <div className="nums text-dim">{t("r4bPaper.openCosts", { since: p.entry_at.slice(5, 10), funding: money2(p.funding_usd), fees: money2(-(p.fees_usd ?? 0)) })}</div>}
             </li>
           ))}
         </ul>
         {barred.length > 0 && <p className="mt-2 font-mono text-[11px] text-muted-foreground">{t("r4bPaper.barred", { list: barred.map((s) => s.replace("USDT", "")).join(", ") })}</p>}
+      </Disclosure>
+      <Disclosure label={t("r4bPaper.historyLabel", { n: data.trades?.length ?? 0 })} className="mt-3">
+        <R4bTrades trades={data.trades ?? []} money={money2} px={px} />
       </Disclosure>
       {g && (
         <Disclosure label={t("r4bPaper.gateLabel")} className="mt-3">
@@ -466,6 +470,42 @@ function R4bPaperPanel() {
         </Disclosure>
       )}
     </Panel>
+  );
+}
+
+// R4b's closed trades, newest first: why each closed (daily rebalance or the 30 % stop),
+// prices and dates, and the P&L after fees and funding. Long lists show 15 at a time.
+function R4bTrades({ trades, money, px }: { trades: NonNullable<R4bPaper["trades"]>; money: (v: number) => string; px: (v: number) => string }) {
+  const t = useTranslations("crypto");
+  const [shown, setShown] = useState(15);
+  if (!trades.length) return <p className="text-xs text-muted-foreground">{t("r4bPaper.historyEmpty")}</p>;
+  const total = trades.reduce((a, x) => a + x.pnl_usd, 0);
+  const won = trades.filter((x) => x.pnl_usd > 0).length;
+  return (
+    <>
+      <p className="mb-2 font-mono text-[11px] text-muted-foreground">{t("r4bPaper.historySummary", { n: trades.length, won, total: money(total), stops: trades.filter((x) => x.why === "stop").length })}</p>
+      <ul className="space-y-2 font-mono text-[11px]">
+        {trades.slice(0, shown).map((x, i) => (
+          <li key={`${x.sym}-${x.exit_at}-${i}`} className="border-b border-border/60 pb-1.5 last:border-0">
+            <div className="flex items-baseline justify-between gap-2">
+              <span>
+                <span className="font-semibold">{x.sym.replace("USDT", "")}</span>{" "}
+                <span className={x.side === "long" ? "text-signal-long" : "text-signal-short"}>{t(`r4bPaper.side.${x.side}`)}</span>{" "}
+                <span className={x.why === "stop" ? "text-signal-short" : "text-dim"}>· {t(`r4bPaper.why.${x.why}`)}</span>
+              </span>
+              <span className={`shrink-0 whitespace-nowrap nums ${x.pnl_usd >= 0 ? "text-signal-long" : "text-signal-short"}`}>{money(x.pnl_usd)} ({x.pnl_pct >= 0 ? "+" : "−"}{Math.abs(x.pnl_pct * 100).toFixed(1)}%)</span>
+            </div>
+            <div className="nums text-muted-foreground">{t("r4bPaper.tradeLine", { inAt: x.entry_at.slice(5, 10), entry: px(x.entry_px), outAt: x.exit_at.slice(5, 16).replace("T", " "), exit: px(x.exit_px), days: x.days })}</div>
+            <div className="nums text-dim">{t("r4bPaper.tradeCosts", { move: money(x.move_usd), funding: money(x.funding_usd), fees: money(-x.fees_usd) })}</div>
+          </li>
+        ))}
+      </ul>
+      {trades.length > shown && (
+        <button type="button" onClick={() => setShown((n) => n + 15)} className="mt-2 font-mono text-[11px] font-semibold underline underline-offset-2">
+          {t("r4bPaper.historyMore", { n: Math.min(15, trades.length - shown) })}
+        </button>
+      )}
+    </>
   );
 }
 
