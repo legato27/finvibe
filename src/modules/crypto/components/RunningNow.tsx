@@ -34,7 +34,7 @@ export function RunningNow({ risk }: { risk?: ScalpRisk | null }) {
       id: "R4b", name: t("r4b.name"), what: t("r4b.what"),
       tone: d?.status === "failed" ? "short" : d?.status === "starting" ? "protocol" : "signal",
       status: !d ? t("loading") : d.status === "starting" ? t("startsOn", { date: day(d.started_at) }) : d.status === "failed" ? t("failed")
-        : d.status === "passed_running" ? t("passed") : d.status === "not_started" ? t("notStarted") : t("dayOf", { day: days, total: 90 }),
+        : d.status === "passed_running" ? t("passed") : d.status === "not_started" ? t("notStarted") : t("dayOf", { day: Math.min(days + 1, 90), total: 90 }),
       line: d?.status === "running" || d?.status === "passed_running" ? t("r4b.line", { stops: d.stops ?? 0, gate: day(d.gate_day) }) : null,
       pnl: d?.equity_usd ?? null,
     });

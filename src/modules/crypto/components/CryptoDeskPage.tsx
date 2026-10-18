@@ -426,7 +426,8 @@ function R4bPaperPanel() {
   const args = { sign: pnl >= 0 ? "+" : "−", pnl: Math.abs(pnl).toLocaleString(undefined, { maximumFractionDigits: 0 }), gate: (data.gate_day ?? "").slice(0, 10), reason: data.verdict?.reason ?? "" };
   const reading = data.status === "failed" ? t("r4bPaper.reading.failed", args) : data.status === "passed_running" ? t("r4bPaper.reading.passed", args) : t("r4bPaper.reading.running", args);
   const nav = (data.curve ?? []).map((p) => ({ t: p.t, v: 1 + p.equity / (data.capital_usd ?? 10000) }));
-  const money2 = (v: number) => `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  // whole dollars; anything that rounds to $0 shows unsigned, so a few cents of funding never reads "−$0"
+  const money2 = (v: number) => (Math.abs(v) < 0.5 ? "$0" : `${v >= 0 ? "+" : "−"}$${Math.abs(v).toLocaleString(undefined, { maximumFractionDigits: 0 })}`);
   const px = (v: number) => (v >= 100 ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : v.toPrecision(4));
   const barred = Object.keys(data.barred ?? {});
   return (
