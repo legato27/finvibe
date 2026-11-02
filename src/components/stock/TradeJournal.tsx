@@ -132,17 +132,16 @@ export default function TradeJournal({
     const openCredit = open.reduce((a, tr) => a + tr.premium * tr.contracts * 100, 0);
     const realized = done.reduce((a, tr) => a + (tr.realized_pnl ?? 0), 0);
     const assigned = done.filter((tr) => tr.status === "assigned");
-    // Win rate over trades that RESOLVED without assignment. Counting an
-    // assignment as a win is the distortion this whole panel guards against.
-    const clean = done.filter((tr) => tr.status !== "assigned");
-    const wins = clean.filter((tr) => tr.was_profitable).length;
+    // Over every resolved trade. An assigned put carries its share leg's
+    // mark, so was_profitable is the position's result, not the credit's.
+    const wins = done.filter((tr) => tr.was_profitable).length;
     return {
       collateral,
       openCredit,
       realized,
       nDone: done.length,
       nAssigned: assigned.length,
-      winRate: clean.length ? wins / clean.length : null,
+      winRate: done.length ? wins / done.length : null,
       assignRate: done.length ? assigned.length / done.length : null,
     };
   }, [open, done]);
@@ -301,12 +300,15 @@ export default function TradeJournal({
         <span
           className={`nums font-semibold ${
             tr.realized_pnl == null ? "text-muted-foreground"
-            : tr.status === "assigned" ? "text-signal-caution"
             : tr.realized_pnl > 0 ? "text-signal-long" : "text-signal-short"
           }`}
         >
           {tr.realized_pnl == null ? "—" : usd(tr.realized_pnl)}
-          {tr.status === "assigned" ? (
+          {tr.status === "assigned" && tr.strategy === "cash_secured_put" && tr.underlying_price_at_close != null ? (
+            <span className="block text-[10px] font-normal text-muted-foreground">
+              {t("markedAt", { spot: tr.underlying_price_at_close.toFixed(2) })}
+            </span>
+          ) : tr.status === "assigned" ? (
             <span className="block text-[10px] font-normal text-muted-foreground">
               {t("holdingAt", { basis: (tr.strike_price - tr.premium).toFixed(2) })}
             </span>
@@ -604,7 +606,7 @@ function CloseForm({
         ) : null}
         <button
           type="button"
-          disabled={pending}
+          disabled={pending || (status === "assigned" && trade.strategy === "cash_secured_put" && !spot)}
           onClick={() =>
             onSubmit({
               status,

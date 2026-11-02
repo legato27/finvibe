@@ -2138,11 +2138,12 @@
         "closed": "closed",
         "assigned": "assigned"
       },
-      "assignedTitle": "Net basis ${basis} — the option kept its credit, but you hold the shares.",
+      "assignedTitle": "Net basis ${basis}. An assigned put is valued with its shares, marked at the assignment close.",
       "resolve": "resolve",
       "delete": "delete",
       "holdingAt": "holding at ${basis}",
-      "reading": "The win rate counts only trades that resolved <em>without</em> assignment. An assigned put keeps its whole credit, so counting it as a win would push a wheel journal toward 100% while the account fills with underwater stock. Assignments are shown separately and judged on the position — spot against the net basis of strike minus premium.",
+      "markedAt": "shares marked at ${spot}",
+      "reading": "An assigned put is valued with its shares: the credit less how far the stock closed under the strike on assignment day. Booking the credit alone would push a wheel journal toward 100% wins while the account fills with underwater stock. So realised P&L and the win rate count every resolved trade, assignments included, at the position's result.",
       "form": {
         "ticker": "Ticker",
         "tickerPlaceholder": "ORCL",
@@ -2163,7 +2164,7 @@
         "paidToClose": "Paid to close / share",
         "spotAtAssignment": "Spot at assignment",
         "record": "Record",
-        "assignedNote": "You keep the ${credit} credit, and now hold {shares} shares at a net basis of ${basis}. This will not count as a win."
+        "assignedNote": "The ${credit} credit less (strike − spot) × {shares} shares: it is a win only if the stock closed above the net basis of ${basis}."
       },
       "paper": "paper",
       "cryptoEmpty": "No crypto scalps in the journal yet. The paper broker (phase 5) writes them through log_trade; until then nothing is here.",

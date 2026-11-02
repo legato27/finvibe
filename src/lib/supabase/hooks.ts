@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { createClient } from "./client";
 import { stocksApi } from "@/lib/api";
+import { settleOption } from "@/lib/optionSettle";
 
 const supabase = createClient();
 
@@ -1122,22 +1123,13 @@ export function useAddOptionsTrade() {
 /**
  * Close a trade and write its outcome.
  *
- * The P&L arithmetic is here rather than in a database trigger so it stays
- * readable next to the rules it encodes, and there are two rules worth being
- * explicit about.
+ * The P&L arithmetic lives in `settleOption` (src/lib/optionSettle.ts),
+ * shared with the MCP resolve tools so both write the same row.
  *
- * A short option that EXPIRES worthless keeps the whole credit. One bought back
- * early keeps the difference. Both are straightforward.
- *
- * ASSIGNMENT IS NOT A WIN, and this is the one that distorts a wheel journal if
- * you let it. The option leg did technically profit — you keep every cent of
- * the premium — but you are now holding shares at a strike the market has moved
- * below. Recording the credit as realised profit would make every assignment
- * look like a success and quietly inflate the win rate of the exact scenario
- * the desk's whole quality gate exists to survive. So an assigned trade records
- * the credit as the option P&L, marks `was_profitable` from the POSITION (spot
- * against the net basis of strike minus premium), and leaves the share leg to
- * the portfolio where it belongs.
+ * ASSIGNMENT IS NOT A WIN. Recording the credit alone would make every
+ * assignment look like a success while the shares sit under the strike, so
+ * an assigned put is marked at intrinsic on the assignment close and carries
+ * its share leg's loss.
  */
 export function useCloseOptionsTrade() {
   const qc = useQueryClient();
@@ -1159,35 +1151,11 @@ export function useCloseOptionsTrade() {
       if (readErr) throw readErr;
 
       const t = trade as OptionsTrade;
-      const shares = t.contracts * 100;
-      const credit = t.premium * shares;
-      const paidBack = (args.close_price ?? 0) * shares;
-
-      // The option leg. Assigned and expired both keep the full credit; a
-      // buy-back keeps the difference.
-      const realized = args.status === "closed" ? credit - paidBack : credit;
-
-      // Capital at risk is the collateral, which is what the return is earned
-      // on — not the premium.
-      const capital = t.strike_price * shares;
       const closeDate = args.close_date || new Date().toISOString().slice(0, 10);
-      const days = Math.max(
-        1,
-        Math.round(
-          (new Date(closeDate).getTime() - new Date(t.entry_date).getTime()) / 86_400_000,
-        ),
-      );
-      const roc = capital > 0 ? realized / capital : null;
-
-      // Assignment is judged on the position, not on the option leg.
-      const netBasis = t.strike_price - t.premium;
       const spot = args.underlying_price_at_close ?? null;
-      const profitable =
-        args.status === "assigned"
-          ? spot != null
-            ? spot >= netBasis
-            : null
-          : realized > 0;
+      const s = settleOption(t, {
+        status: args.status, close_date: closeDate, close_price: args.close_price, underlying_price_at_close: spot,
+      });
 
       const now = new Date().toISOString();
       const { data, error } = await supabase
@@ -1196,12 +1164,12 @@ export function useCloseOptionsTrade() {
           status: args.status,
           close_date: closeDate,
           exit_ts: now,
-          close_price: args.close_price ?? null,
+          close_price: s.close_price,
           underlying_price_at_close: spot,
-          realized_pnl: realized,
-          return_on_capital: roc,
-          annualized_return: roc != null ? (roc * 365) / days : null,
-          was_profitable: profitable,
+          realized_pnl: s.realized_pnl,
+          return_on_capital: s.return_on_capital,
+          annualized_return: s.annualized_return,
+          was_profitable: s.was_profitable,
           outcome_notes: args.outcome_notes ?? t.outcome_notes ?? null,
         })
         .eq("id", args.id)
@@ -1209,7 +1177,7 @@ export function useCloseOptionsTrade() {
         .single();
       if (error) throw error;
       await recordTradeEvent(t.user_id, args.id, args.status, {
-        close_price: args.close_price ?? null, underlying_price_at_close: spot, realized_pnl: realized,
+        close_price: s.close_price, underlying_price_at_close: spot, realized_pnl: s.realized_pnl,
       }, now);
       return data;
     },

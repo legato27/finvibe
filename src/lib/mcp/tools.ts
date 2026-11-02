@@ -523,7 +523,7 @@ export function registerTools(server: McpServer, ctx: ToolContext) {
     async (args) => {
       const strategy = args.strategy ?? "csp";
       if (strategy.startsWith("scalp")) return ok(await readings.readScalpTrackRecord(ctx.userId, ctx.supabase, strategy, args.mode ?? "paper"));
-      return ok(await readings.readTrackRecord(ctx.userId, ctx.supabase, strategy as "csp" | "covered_call"));
+      return ok(await readings.readTrackRecord(ctx.userId, ctx.supabase, strategy as "csp" | "covered_call", args.mode ?? "live"));
     },
   );
 

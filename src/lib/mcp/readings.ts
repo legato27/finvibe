@@ -273,8 +273,11 @@ export async function readHeatmap(userId: string, supabase: ServiceSupabase, sec
 
 // ── Track record ───────────────────────────────────────────────────────
 
-export async function readTrackRecord(userId: string, supabase: ServiceSupabase, strategy: "csp" | "covered_call") {
-  const { data: trades, error } = await supabase.from("options_trades").select("*").eq("user_id", userId).order("expiry_date", { ascending: false });
+export async function readTrackRecord(userId: string, supabase: ServiceSupabase, strategy: "csp" | "covered_call", mode: "live" | "paper" | "backtest" = "live") {
+  // Options rows only: the journal is shared with the crypto scalp family,
+  // whose rows carry no expiry_date (the closes loop below reads it).
+  const { data: trades, error } = await supabase.from("options_trades").select("*").eq("user_id", userId)
+    .eq("asset_class", "options").eq("mode", mode).not("expiry_date", "is", null).order("expiry_date", { ascending: false });
   if (error) throw new Error(error.message);
   const settled = ((trades ?? []) as TradeInput[]).filter((t) => t.status !== "open");
   const tickers = [...new Set(settled.map((t) => t.ticker.toUpperCase()))].sort();

@@ -8,6 +8,7 @@
 import type { ServiceSupabase } from "@/lib/supabase/service";
 import { market } from "./market";
 import { pooledMap } from "@/lib/util/pool";
+import { settleOption } from "@/lib/optionSettle";
 
 function tickerOf(t: string): string {
   return t.trim().toUpperCase();
@@ -913,10 +914,10 @@ export type ResolveCryptoArgs = {
 };
 
 /**
- * Same arithmetic as the web journal's resolve: assigned and expired keep
- * the full credit, a buy-back keeps the difference; return on capital is
- * earned on the collateral; an assignment is judged on the position
- * (spot against strike minus premium), not on the option leg.
+ * Options settle through `settleOption`, the web journal's arithmetic: an
+ * expiry keeps the full credit, a buy-back keeps the difference, an assigned
+ * put is marked at intrinsic on the assignment close; return on capital is
+ * earned on the collateral.
  *
  * A crypto row settles on its fill: P&L is the signed price move times size
  * net of fees and funding, R is that P&L over the planned loss all in (entry
@@ -992,17 +993,13 @@ export async function resolveTrade(
   }
 
   const a = args;
-  const shares = Number(t.contracts) * 100;
-  const credit = Number(t.premium) * shares;
-  const paidBack = (a.close_price ?? 0) * shares;
-  const realized = a.status === "closed" ? credit - paidBack : credit;
-  const capital = Number(t.strike_price) * shares;
   const closeDate = a.close_date || new Date().toISOString().slice(0, 10);
-  const days = Math.max(1, Math.round((Date.parse(closeDate) - Date.parse(String(t.entry_date))) / 86_400_000));
-  const roc = capital > 0 ? realized / capital : null;
-  const netBasis = Number(t.strike_price) - Number(t.premium);
   const spot = a.underlying_price_at_close ?? null;
-  const profitable = a.status === "assigned" ? (spot != null ? spot >= netBasis : null) : realized > 0;
+  const s = settleOption(
+    { strategy: String(t.strategy), strike_price: Number(t.strike_price), premium: Number(t.premium), contracts: Number(t.contracts), entry_date: String(t.entry_date) },
+    { status: a.status, close_date: closeDate, close_price: a.close_price, underlying_price_at_close: spot },
+  );
+  const realized = s.realized_pnl;
 
   const now = new Date().toISOString();
   const { data, error } = await supabase
@@ -1011,12 +1008,12 @@ export async function resolveTrade(
       status: a.status,
       close_date: closeDate,
       exit_ts: now,
-      close_price: a.close_price ?? null,
+      close_price: s.close_price,
       underlying_price_at_close: spot,
       realized_pnl: realized,
-      return_on_capital: roc,
-      annualized_return: roc != null ? (roc * 365) / days : null,
-      was_profitable: profitable,
+      return_on_capital: s.return_on_capital,
+      annualized_return: s.annualized_return,
+      was_profitable: s.was_profitable,
       outcome_notes: a.outcome_notes ?? t.outcome_notes ?? null,
     })
     .eq("id", args.id)
@@ -1025,7 +1022,7 @@ export async function resolveTrade(
     .single();
   if (error) throw new Error(error.message);
   await recordTradeEvent(userId, supabase, args.id, a.status,
-    { close_price: a.close_price ?? null, underlying_price_at_close: spot, realized_pnl: realized }, now);
+    { close_price: s.close_price, underlying_price_at_close: spot, realized_pnl: realized }, now);
   return data;
 }
 

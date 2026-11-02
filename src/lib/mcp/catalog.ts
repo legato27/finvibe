@@ -727,13 +727,15 @@ export const TOOL_CATALOG: ToolDoc[] = [
     title: "Resolve a journal trade",
     description:
       "Close a trade as expired, assigned or bought back, with the same arithmetic the web journal uses: " +
-      "realised P&L, return on collateral, annualised return, and whether it was profitable. Alias of resolve_trade with asset_class options.",
+      "realised P&L, return on collateral, annualised return, and whether it was profitable. An assigned cash-secured put is " +
+      "marked at intrinsic on the assignment close (credit − (strike − spot) × shares), so it needs underlying_price_at_close. " +
+      "Alias of resolve_trade with asset_class options.",
     params: [
       { name: "id", type: "integer", required: true },
       { name: "status", type: "string", required: true, description: "closed | expired | assigned" },
       { name: "close_date", type: "string", required: false, description: "YYYY-MM-DD. Default today." },
       { name: "close_price", type: "number", required: false, description: "Premium paid per share to buy back (closed only)." },
-      { name: "underlying_price_at_close", type: "number", required: false },
+      { name: "underlying_price_at_close", type: "number", required: false, description: "Underlying close on the settle date. Required to assign a cash-secured put." },
       { name: "outcome_notes", type: "string", required: false },
     ],
     returns: "The updated options_trades row.",
